@@ -81,7 +81,9 @@ def setup_sidebar():
         
         # Environment indicator
         st.markdown("### Environment: 🟢 POC")
-        st.caption("UC: `onr_demo.bronze` · `silver` · `gold` · `app`")
+        st.caption("UC: `onr_demo` · bronze / silver / gold / app")
+        st.caption("SQL: `onr demo warehouse`")
+        st.caption("Notebooks: `onr demo cluster`")
         
         st.markdown("---")
         

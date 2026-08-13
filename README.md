@@ -34,8 +34,10 @@ Landing path: `/Volumes/onr_demo/bronze/landing/`
 1. **Add the Git repo** to the Databricks workspace (Repos / Git folder).
 2. Open **`notebooks/00_bootstrap.py`**, set `repo_root` to that folder, **Run all**.  
    This creates UC objects and loads 400 grants + 1,200 ERP rows.
-3. Create a **Databricks App** from `app-onr-demo/` (or `databricks bundle deploy -t poc`).  
-   Warehouse name in `app.yml`: `onr-demo-warehouse`.
+3. Use existing compute only:
+   - SQL: **`onr demo warehouse`**
+   - Notebooks: **`onr demo cluster`**
+4. Create a **Databricks App** from `app-onr-demo/` (binds to `onr demo warehouse` in `app.yml`).
 4. Follow **[DEMO_SCRIPT.md](DEMO_SCRIPT.md)** (50 minutes, including a live 8-row file drop).
 
 Optional SQL-only create: `sql/setup_uc_objects.sql` (no extra S3 bucket).
@@ -54,7 +56,10 @@ After bootstrap, extra files sit in:
 | `batch_quality_fail.csv` | 3 bad rows — show silver rejecting them |
 | `sample_grants.csv` / `sample_financial.csv` | Full seed extracts |
 
-Then run `01_bronze_ingestion.py` → `02_silver_quality.py` → `03_gold_aggregation.py`.  
+**In the app:** Ingestion → **Drop live file (8 grants)** (writes via **onr demo warehouse**).
+
+**Or on the cluster:** attach `01`–`03` to **onr demo cluster** after copying the staged CSV into `landing/grants/`.
+
 App count moves **400 → 408**.
 
 ---

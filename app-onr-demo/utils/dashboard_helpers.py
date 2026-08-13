@@ -184,14 +184,40 @@ def render_simulated_overview():
 # -------------------------------
 # BUDGET EXECUTION DASHBOARD
 # -------------------------------
-def render_budget_execution():
-    """Display budget execution dashboard."""
-    st.markdown("### 💰 Budget Execution Tracker")
-    
-    # Simulated budget data
-    categories = ["Personnel", "Equipment", "Travel", "Contractors", "Supplies", "Training"]
-    budget = [120, 85, 25, 45, 15, 10]
-    actual = [115, 78, 22, 48, 14, 9]
+def render_budget_execution(cursor=None, catalog: str = "onr_demo"):
+    """Budget vs actual from gold (falls back to derived ERP fixture)."""
+    st.markdown("### Budget execution")
+
+    categories, budget, actual = None, None, None
+    if cursor:
+        try:
+            cursor.execute(
+                f"""
+                SELECT category,
+                       SUM(budget_plan) / 1e6,
+                       SUM(actual_spend) / 1e6
+                FROM `{catalog}`.`gold`.budget_execution
+                GROUP BY category
+                ORDER BY 2 DESC
+                """
+            )
+            rows = cursor.fetchall()
+            if rows:
+                categories = [r[0] for r in rows]
+                budget = [float(r[1] or 0) for r in rows]
+                actual = [float(r[2] or 0) for r in rows]
+        except Exception:
+            pass
+    if not categories:
+        from utils.portfolio_data import financial_dataframe
+
+        f = financial_dataframe()
+        g = f.groupby("category", as_index=False).agg(
+            budget=("budget_allocated", "sum"), actual=("actual_expenditure", "sum")
+        )
+        categories = g["category"].tolist()
+        budget = (g["budget"] / 1e6).tolist()
+        actual = (g["actual"] / 1e6).tolist()
     
     fig = go.Figure()
     
@@ -224,7 +250,7 @@ def render_budget_execution():
     with col1:
         fig_gauge = go.Figure(go.Indicator(
             mode="gauge+number+delta",
-            value=94.2,
+            value=round(100 * sum(actual) / sum(budget), 1) if sum(budget) else 0,
             title={"text": "Overall Execution Rate"},
             delta={"reference": 90},
             gauge={
@@ -248,8 +274,8 @@ def render_budget_execution():
     with col2:
         st.markdown("#### 📊 Category Performance")
         for cat, b, a in zip(categories[:3], budget[:3], actual[:3]):
-            rate = (a / b) * 100
-            st.progress(rate / 100, text=f"{cat}: {rate:.1f}%")
+            rate = (a / b) * 100 if b else 0
+            st.progress(min(rate / 100, 1.0), text=f"{cat}: {rate:.1f}%")
     
     with col3:
         st.markdown("#### ⚠️ Alerts")

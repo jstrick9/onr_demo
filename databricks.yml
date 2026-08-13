@@ -1,6 +1,8 @@
-# Slim DAB for a brand-new workspace (single POC target).
-# Set your workspace with: databricks configure
-# Then: databricks bundle deploy -t poc
+# Slim DAB. Does NOT create compute — use the existing workspace objects:
+#   SQL warehouse:  onr demo warehouse
+#   All-purpose:    onr demo cluster
+#
+# databricks bundle deploy -t poc
 
 bundle:
   name: onr_demo
@@ -12,8 +14,10 @@ targets:
 
 variables:
   catalog:
-    description: Unity Catalog catalog
     default: onr_demo
+  cluster_id:
+    description: Cluster id for "onr demo cluster" (set after first lookup)
+    default: ""
 
 resources:
   volumes:
@@ -28,21 +32,8 @@ resources:
       schema_name: bronze
       volume_type: MANAGED
 
-  sql_warehouses:
-    serverless:
-      name: onr-demo-warehouse
-      cluster_size: 2X-Small
-      auto_stop_mins: 10
-      warehouse_type: PRO
-      enable_serverless_compute: true
-
   apps:
     onr_demo_app:
       name: onr-demo-poc
       description: "ONR ITSS POC — Elements 3–7"
       source_code_path: ./app-onr-demo
-      resources:
-        - name: onr-sql-warehouse
-          sql_warehouse:
-            id: ${resources.sql_warehouses.serverless.id}
-            permission: CAN_USE

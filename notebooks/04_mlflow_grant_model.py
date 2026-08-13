@@ -1,5 +1,7 @@
 # Databricks notebook source
 # MAGIC %md
+# MAGIC **Compute:** all-purpose cluster **`onr demo cluster`**  
+# MAGIC **SQL / App:** serverless warehouse **`onr demo warehouse`**  
 # MAGIC # 04 — Tiny MLflow demo (Element 5)
 # MAGIC Trains a simple model on `onr_demo.silver.grants` to predict whether an award
 # MAGIC is "large" (>$1M). Logs to MLflow if available. Safe to skip if MLflow is off.

@@ -109,9 +109,11 @@ def _create_fresh_connection():
     if not host:
         raise ValueError("Unable to determine Databricks host")
 
-    wname = os.getenv("DATABRICKS_WAREHOUSE_NAME")
+    from utils.workspace_names import SQL_WAREHOUSE_NAME
+
+    wname = os.getenv("DATABRICKS_WAREHOUSE_NAME") or SQL_WAREHOUSE_NAME
     if not wname:
-        raise ValueError("DATABRICKS_WAREHOUSE_NAME environment variable not set")
+        raise ValueError("DATABRICKS_WAREHOUSE_NAME is not set and no default warehouse name is configured")
 
     http_path = _resolve_http_path_by_name(w, wname)
 
@@ -150,7 +152,7 @@ def _close_connection_safely(conn):
             pass
 
 
-def get_connection(max_retries: int = 3, retry_delay_seconds: int = 2):
+def get_connection(max_retries: int = 2, retry_delay_seconds: int = 2):
     """
     Get Databricks SQL Warehouse connection with auto-reconnect.
     Returns: (connection, cursor) tuple

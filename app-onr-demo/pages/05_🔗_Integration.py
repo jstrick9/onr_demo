@@ -37,6 +37,11 @@ st.markdown(
     while preventing vendor lock-in.
     """
 )
+render_eval_prompt(
+    "Element 7",
+    "How do you export and move data to Advana / Cloud One without lock-in?",
+    "Download CSV, JSON, and Parquet. Same schema as Unity Catalog — open formats, JDBC/REST.",
+)
 
 # -------------------------------
 # SESSION STATE

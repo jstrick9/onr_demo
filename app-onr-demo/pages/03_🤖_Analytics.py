@@ -9,6 +9,7 @@ from utils.page_config_helpers import setup_sidebar, set_page_config
 from utils.runtime_env import get_runtime_env
 from utils.db_helpers import get_connection, read_yaml
 from utils.user_helpers import init_user_session_state
+from utils.eval_prompt import render_eval_prompt
 from utils.analytics_helpers import (
     render_model_execution,
     render_forecast_visualization,
@@ -33,6 +34,11 @@ st.markdown(
     This element demonstrates **analytical routines and ML models** against the ingested dataset, 
     showing how model outputs serve as **strategic decision-making aids for leadership**.
     """
+)
+render_eval_prompt(
+    "Element 5",
+    "How do analytics and models help leadership decide where to put the next dollar?",
+    "Program-area mix from gold, then optional 04_mlflow_grant_model.py on **onr demo cluster**.",
 )
 
 # -------------------------------

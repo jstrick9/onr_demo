@@ -1,5 +1,7 @@
 # Databricks notebook source
 # MAGIC %md
+# MAGIC **Compute:** all-purpose cluster **`onr demo cluster`**  
+# MAGIC **SQL / App:** serverless warehouse **`onr demo warehouse`**  
 # MAGIC # Silver Layer Quality Transforms
 # MAGIC **Purpose:** Cleanse, deduplicate, and validate bronze data → Silver Delta tables  
 # MAGIC **Catalog:** onr_demo.bronze / silver / gold / app | **Compute:** Serverless  

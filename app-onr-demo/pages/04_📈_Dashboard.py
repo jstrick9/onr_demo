@@ -9,6 +9,7 @@ from utils.page_config_helpers import setup_sidebar, set_page_config
 from utils.runtime_env import get_runtime_env
 from utils.db_helpers import get_connection, read_yaml
 from utils.user_helpers import init_user_session_state
+from utils.eval_prompt import render_eval_prompt
 from utils.dashboard_helpers import (
     render_executive_kpis,
     render_dashboard_filters,
@@ -34,6 +35,11 @@ st.markdown(
     This element demonstrates how a **non-technical leader** can search, filter, and extract 
     insights, and how the platform **automates repetitive workflows** to drive efficiency.
     """
+)
+render_eval_prompt(
+    "Element 6",
+    "Can a non-technical leader search, filter, and extract without writing SQL?",
+    "Use the filters and search `quantum` or `ONRD-2025`. Export the result as CSV.",
 )
 
 # -------------------------------
@@ -105,7 +111,7 @@ tab1, tab2, tab3, tab4 = st.tabs([
 ])
 
 with tab1:
-    render_budget_execution()
+    render_budget_execution(cursor, onr_catalog)
 
 with tab2:
     render_process_automation()

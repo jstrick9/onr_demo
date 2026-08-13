@@ -1,5 +1,7 @@
 # Databricks notebook source
 # MAGIC %md
+# MAGIC **Compute:** all-purpose cluster **`onr demo cluster`**  
+# MAGIC **SQL / App:** serverless warehouse **`onr demo warehouse`**  
 # MAGIC # Bronze Layer Ingestion
 # MAGIC **Purpose:** Auto Loader ingest raw files → Bronze Delta tables  
 # MAGIC **Catalog:** onr_demo | **Inputs:** /Volumes/onr_demo/bronze/landing/grants/ and .../financial/  

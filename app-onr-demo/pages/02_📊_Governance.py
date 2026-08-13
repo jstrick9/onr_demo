@@ -9,6 +9,7 @@ from utils.page_config_helpers import setup_sidebar, set_page_config
 from utils.runtime_env import get_runtime_env
 from utils.db_helpers import get_connection, read_yaml
 from utils.user_helpers import init_user_session_state
+from utils.eval_prompt import render_eval_prompt
 from utils.governance_helpers import (
     render_catalog_registry,
     render_quality_scores,
@@ -33,6 +34,11 @@ st.markdown(
     calculates data quality/health scores, and visualizes **end-to-end data lineage** 
     from raw ingestion to the visualization tier.
     """
+)
+render_eval_prompt(
+    "Element 4",
+    "How are datasets cataloged, scored, and lined from raw files to the dashboard?",
+    "Four schemas in Unity Catalog, quality scores, landing → bronze → silver → gold lineage.",
 )
 
 # -------------------------------

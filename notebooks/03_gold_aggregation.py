@@ -1,5 +1,7 @@
 # Databricks notebook source
 # MAGIC %md
+# MAGIC **Compute:** all-purpose cluster **`onr demo cluster`**  
+# MAGIC **SQL / App:** serverless warehouse **`onr demo warehouse`**  
 # MAGIC # Gold Layer Aggregation
 # MAGIC **Purpose:** Create business-ready aggregates from silver data  
 # MAGIC **Catalog:** onr_demo.bronze / silver / gold / app | **Compute:** Serverless  
@@ -250,5 +252,5 @@ print("\n✅ All gold layer validations passed!")
 # MAGIC - ✅ Lineage tracking recorded
 # MAGIC 
 # MAGIC **Next Steps:**
-# MAGIC 1. Deploy Streamlit app: `databricks bundle deploy -t dev`
+# MAGIC 1. Refresh the Streamlit app — gold KPIs update automatically
 # MAGIC 2. Run validation queries: `sql/validation_queries.sql`

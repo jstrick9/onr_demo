@@ -1,5 +1,7 @@
 # Databricks notebook source
 # MAGIC %md
+# MAGIC **Compute:** all-purpose cluster **`onr demo cluster`**  
+# MAGIC **SQL / App:** serverless warehouse **`onr demo warehouse`**  
 # MAGIC # 00 — Bootstrap (run this first on a new workspace)
 # MAGIC
 # MAGIC **What it does (one pass):**

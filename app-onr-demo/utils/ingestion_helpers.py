@@ -129,37 +129,71 @@ def render_schema_evolution(cursor, catalog: str, schema: str):
 # -------------------------------
 # STREAMING METRICS
 # -------------------------------
-def render_streaming_metrics():
-    """Display streaming architecture metrics (simulated for demo)."""
-    st.markdown("### 📡 Streaming Architecture")
-    
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        st.metric(
-            label="Throughput",
-            value="1,250 events/sec",
-            delta="+5.2%"
+def render_streaming_metrics(cursor=None, catalog: str = "onr_demo"):
+    """File-based ingest health from bronze (Auto Loader availableNow)."""
+    st.markdown("### 📡 Ingest health")
+    files, last, n = "—", "—", "—"
+    if cursor:
+        try:
+            cursor.execute(
+                f"""
+                SELECT COUNT(DISTINCT _source_file), MAX(_ingest_time), COUNT(*)
+                FROM `{catalog}`.`bronze`.grants
+                """
+            )
+            files, last, n = cursor.fetchone()
+        except Exception:
+            pass
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Bronze grants", f"{n}")
+    c2.metric("Source files", f"{files}")
+    c3.metric("Last ingest", str(last)[:19] if last and last != "—" else "—")
+    c4.metric("Trigger", "availableNow")
+    st.caption("Notebooks 01–03 run on **onr demo cluster**. SQL in this app uses **onr demo warehouse**.")
+
+
+def render_live_file_drop(cursor, catalog: str):
+    """Primary live moment: 8 new grants through medallion."""
+    from utils.demo_actions import (
+        grant_count,
+        ingest_live_batch_sql,
+        refresh_silver_gold_sql,
+        try_start_cluster_notebooks,
+        load_live_rows,
+        LIVE_BATCH_ID,
+    )
+
+    st.markdown("### Drop live file (Element 3)")
+    before = grant_count(cursor, catalog)
+    left, right = st.columns([2, 1])
+    with left:
+        st.write(
+            f"Appends **{len(load_live_rows())}** grants (`{LIVE_BATCH_ID}`) to bronze, "
+            "rebuilds silver + gold. Safe to click twice (skips existing `grant_no`)."
         )
-    with col2:
-        st.metric(
-            label="Latency (p99)",
-            value="45ms",
-            delta="-3ms",
-            delta_color="inverse"
-        )
-    with col3:
-        st.metric(
-            label="Uptime",
-            value="99.97%",
-            delta="Last 30 days"
-        )
-    with col4:
-        st.metric(
-            label="Backlog",
-            value="< 100",
-            delta="Healthy"
-        )
+        if before is not None:
+            st.metric("silver.grants now", f"{before:,}")
+    with right:
+        st.caption("Compute")
+        st.write("SQL: `onr demo warehouse`")
+        st.write("Notebooks: `onr demo cluster`")
+
+    go = st.button("Drop live file (8 grants)", type="primary", key="drop_live")
+    if go:
+        if not cursor:
+            st.error("Connect **onr demo warehouse** to write UC tables. Fixture mode cannot append.")
+        else:
+            with st.spinner("Landing file → bronze → silver → gold…"):
+                try:
+                    n, batch = ingest_live_batch_sql(cursor, catalog)
+                    refresh_silver_gold_sql(cursor, catalog)
+                    after = grant_count(cursor, catalog)
+                    st.success(f"Ingested {n} new rows (batch `{batch}`). silver.grants: {before} → {after}")
+                    st.info(try_start_cluster_notebooks())
+                    st.caption("Optional: open 01_bronze_ingestion.py on **onr demo cluster** to show Auto Loader code.")
+                except Exception as e:
+                    st.error(f"Live drop failed: {e}")
+                    st.exception(e)
 
 
 # -------------------------------

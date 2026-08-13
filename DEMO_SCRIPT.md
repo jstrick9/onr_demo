@@ -11,7 +11,8 @@
 1. Clone this repo into the Databricks workspace (Repos / Git folder).
 2. Open `notebooks/00_bootstrap.py`, set `repo_root` to that folder, **Run all**.
 3. Confirm: `onr_demo.silver.grants` = **400**, `onr_demo.silver.financial` = **1,200**.
-4. Create / open the Databricks App `onr-demo-poc` (`app-onr-demo/`, warehouse `onr-demo-warehouse`).
+4. Start **`onr demo warehouse`** (SQL) and **`onr demo cluster`** (notebooks).
+5. Create / open the Databricks App `onr-demo-poc` (`app-onr-demo/`).
 
 ---
 
@@ -23,25 +24,14 @@
 
 ## Minute 5–15 — Element 3 Ingestion
 
-**Talk:** Auto Loader watches `/Volumes/onr_demo/bronze/landing/grants/`.
+**Talk:** New file, no recode. SQL path uses **onr demo warehouse**. Auto Loader notebooks run on **onr demo cluster**.
 
-**Do (live file drop):**
+**Do:** On the Ingestion page click **Drop live file (8 grants)**.  
+Say the count out loud: **400 → 408**.
 
-```
-# In a notebook or the catalog UI, copy the staged file:
-# /Volumes/onr_demo/bronze/landing/_staged/batch_live_grants.csv
-#   → /Volumes/onr_demo/bronze/landing/grants/batch_live_grants.csv
-```
+Then open `01_bronze_ingestion.py` **attached to `onr demo cluster`** and scroll the Auto Loader `cloudFiles` cell (do not need to re-run if the button already landed the rows).
 
-Then **Run all** on:
-
-1. `01_bronze_ingestion.py` — Auto Loader `availableNow` (streaming API, finite trigger)
-2. `02_silver_quality.py` — dedupe + amount/awardee checks
-3. `03_gold_aggregation.py` — refresh summaries
-
-Optional: drop `batch_quality_fail.csv` to show 3 rows rejected (null id, negative amount, duplicate).
-
-Refresh the Ingestion page — grants **400 → 408**, batch_id `live-demo-2026`.
+Optional: drop `batch_quality_fail.csv` via the cluster notebooks to show 3 rows rejected.
 
 ## Minute 15–22 — Element 4 Governance
 

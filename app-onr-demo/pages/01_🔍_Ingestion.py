@@ -17,7 +17,9 @@ from utils.ingestion_helpers import (
     render_ingestion_demo,
     generate_mock_grants_data,
     generate_mock_financial_data,
+    render_live_file_drop,
 )
+from utils.eval_prompt import render_eval_prompt
 
 # -------------------------------
 # PAGE CONFIGURATION
@@ -29,11 +31,11 @@ setup_sidebar()
 # HEADER
 # -------------------------------
 st.title("🔍 Element 3: Automated Ingestion, Data Operations, and Streaming")
-st.markdown(
-    """
-    Auto Loader watches `/Volumes/onr_demo/bronze/landing/`.  
-    **Live demo:** copy `_staged/batch_live_grants.csv` into `landing/grants/`, then re-run notebooks 01 → 03.
-    """
+st.markdown("Auto Loader + quality gates on `onr_demo.bronze` → `silver` → `gold`.")
+render_eval_prompt(
+    "Element 3",
+    "How do you detect and quality-check new files without recoding the pipeline?",
+    "Click **Drop live file** below. Count moves 400 → 408. Then show Auto Loader code (runs on **onr demo cluster**).",
 )
 
 # -------------------------------
@@ -98,7 +100,7 @@ with tab3:
         render_schema_evolution(cursor, onr_catalog, onr_schema)
     
     with col2:
-        render_streaming_metrics()
+        render_streaming_metrics(cursor, onr_catalog)
 
 with tab4:
     render_ingestion_demo(onr_catalog, onr_schema)
