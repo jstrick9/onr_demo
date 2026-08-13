@@ -484,7 +484,7 @@ def render_activity_log(cursor=None, catalog: str = "onr_demo"):
                 LIMIT 20
                 """
             )
-            cols = [d[0] for d in cursor.description]
+            cols = [str(d[0]).lower() for d in cursor.description]
             uc = pd.DataFrame(cursor.fetchall(), columns=cols)
         except Exception:
             uc = pd.DataFrame()

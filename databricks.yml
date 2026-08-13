@@ -15,9 +15,6 @@ targets:
 variables:
   catalog:
     default: onr_demo
-  cluster_id:
-    description: Cluster id for "onr demo cluster" (set after first lookup)
-    default: ""
 
 resources:
   volumes:

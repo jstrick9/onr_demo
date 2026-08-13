@@ -28,9 +28,6 @@ def _normalize_host(host: str | None) -> str | None:
 
 
 # -------------------------------
-# SQL VALUE ESCAPING
-# -------------------------------
-# -------------------------------
 # DB CONNECTION WITH AUTO-RECONNECT
 # -------------------------------
 def _resolve_http_path_by_name(w: WorkspaceClient, name: str) -> str:
@@ -211,6 +208,6 @@ def validate_source_tables(cursor, configs):
             all_valid = False
     
     if not all_valid:
-        st.info("💡 Run the mock data generator or pipeline to populate source tables.")
+        st.info("Run notebooks/00_bootstrap.py on **onr demo cluster** if tables are empty.")
     
     return all_valid

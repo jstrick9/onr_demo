@@ -80,9 +80,12 @@ You do **not** need `sql/setup_uc_objects.sql` if bootstrap succeeded.
 
 ---
 
-## 5. Grant the app service principal
+## 5. Grant the app service principal (not yourself)
 
-The app identity is **not** you. Without grants, Home falls back to fixture mode and Process/Reset fail.
+You can be workspace **Admin** and still skip this — **do not GRANT to your own user**.  
+Notebooks and SQL you run are already yours.
+
+The Streamlit app authenticates as a **different** service principal. Without grants to **that** identity, Home stays in fixture mode and Process/Reset fail.
 
 1. Open the app → **Authorization** / service principal. Copy the name or application ID.
 2. In a SQL editor attached to **`onr demo warehouse`**, open `sql/grant_app_principal.sql`.
