@@ -136,17 +136,8 @@ st.markdown("""
 │                          │ + Registry  │          │  Dashboard  │  │
 │                          └─────────────┘          └─────────────┘  │
 │                                                                     │
-│   Models Available:                                                  │
-│   • Grant Success Predictor (Random Forest, 92% accuracy)           │
-│   • Budget Forecaster (Time Series, 95% accuracy)                   │
-│   • Anomaly Detector (Isolation Forest, 97% accuracy)               │
-│   • Trend Analyzer (ARIMA + ML, 89% accuracy)                       │
-│                                                                     │
-│   MLflow Integration:                                               │
-│   • Experiment tracking with parameters, metrics, artifacts         │
-│   • Model registry (UC-governed)                                    │
-│   • Batch inference via ai_query() SQL functions                    │
-│   • Model serving endpoints (REST API)                              │
+│   UC: gold.grant_predictions, gold.model_metrics                    │
+│   Train: 04_mlflow_grant_model.py on onr demo cluster               │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 """)

@@ -55,7 +55,7 @@ Optional: drop `batch_quality_fail.csv` via the cluster notebooks to show 3 rows
 
 - KPIs, filter FY + program area.
 - Search `quantum` or `ONRD-2025`.
-- Budget execution + “automation” (scheduled refresh / anomaly).
+- Budget execution from `gold.budget_execution`. Pipeline health from `app.ingestion_quality_log`.
 
 ## Minute 42–48 — Element 7 Integration
 

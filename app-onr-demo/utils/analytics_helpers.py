@@ -271,6 +271,6 @@ def render_model_metrics(cursor=None, catalog: str = "onr_demo"):
         """,
     )
     if df.empty:
-        st.info("Run `04_mlflow_grant_model.py` on **onr demo cluster** to populate `gold.model_metrics`.")
+        st.info("No `gold.model_metrics` yet. Process files / bootstrap writes heuristic rows; run notebook 04 for RF accuracy/f1.")
         return
     st.dataframe(df, use_container_width=True)

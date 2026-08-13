@@ -196,6 +196,13 @@ SELECT grant_no, title, program_area, amount_usd, awardee,
 FROM `{catalog}`.`silver`.grants WHERE _is_active = true
 """)
 print("grant_predictions", spark.table(f"`{catalog}`.`gold`.grant_predictions").count())
+spark.sql(f"""
+CREATE OR REPLACE TABLE `{catalog}`.`gold`.model_metrics AS
+SELECT 'heuristic_v1' AS model_name, 'rows_scored' AS metric_name,
+       CAST(COUNT(*) AS DOUBLE) AS metric_value, CAST(COUNT(*) AS INT) AS n_rows,
+       current_timestamp() AS trained_at
+FROM `{catalog}`.`gold`.grant_predictions
+""")
 
 # COMMAND ----------
 
@@ -209,19 +216,19 @@ lineage_records = spark.createDataFrame([
     (f"lin_{_uuid.uuid4()}",
      "bronze.grants", "silver.grants", "quality_transform",
      spark.table(f"`{catalog}`.`bronze`.grants").count(),
-     1500, "system"),
+     0, "system"),
     (f"lin_{_uuid.uuid4()}",
      "bronze.financial", "silver.financial", "quality_transform",
      spark.table(f"`{catalog}`.`bronze`.financial").count(),
-     1200, "system"),
+     0, "system"),
     (f"lin_{_uuid.uuid4()}",
      "silver.grants", "gold.grants_summary", "aggregation",
      spark.table(f"`{catalog}`.`silver`.grants").count(),
-     800, "system"),
+     0, "system"),
     (f"lin_{_uuid.uuid4()}",
      "silver.financial", "gold.financial_summary", "aggregation",
      spark.table(f"`{catalog}`.`silver`.financial").count(),
-     600, "system"),
+     0, "system"),
 ], ["lineage_id", "source_table", "target_table", "transformation_type",
     "records_processed", "processing_time_ms", "executed_by"])
 
