@@ -1,0 +1,14 @@
+streamlit>=1.46,<2
+pandas>=2.2,<3
+numpy>=1.26,<2
+databricks-sql-connector>=3.1,<4
+databricks-sdk>=0.34.0
+PyYAML>=6.0,<7
+pillow>=10.0,<11
+plotly>=5.18,<6
+scikit-learn>=1.4,<2
+scipy>=1.12,<2
+pyarrow>=14.0,<16
+pytz>=2023.3
+xlsxwriter>=3.0,<4
+openpyxl>=3.1,<4

@@ -1,0 +1,141 @@
+# Databricks Asset Bundle — ONR ITSS POC Demo
+# Target: Databricks on AWS (Serverless-first, Unity Catalog-governed)
+
+bundle:
+  name: onr_demo
+
+include:
+  - resources/*.yml
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      host: https://adb-XXXX.XX.azuredatabricks.net  # Update with your AWS workspace URL
+      root_path: /Workspace/Users/${workspace.current_user.userName}/.bundle/${bundle.name}/${bundle.target}
+    variables:
+      catalog: onr_demo
+      schema: dev
+    permissions:
+      - level: CAN_MANAGE
+        group_name: data-engineers
+
+  prod:
+    mode: production
+    workspace:
+      host: https://adb-XXXX.XX.azuredatabricks.net  # Update with prod workspace URL
+      root_path: /Workspace/Users/svc-onr-demo@company.com/.bundle/${bundle.name}/${bundle.target}
+    variables:
+      catalog: onr_demo
+      schema: prod
+    permissions:
+      - level: CAN_VIEW
+        group_name: analysts
+
+variables:
+  catalog:
+    description: Unity Catalog catalog for ONR Demo
+    default: onr_demo
+  schema:
+    description: Default schema
+    default: dev
+
+resources:
+  # UC Volume for landing zone
+  volumes:
+    landing_volume:
+      name: landing
+      catalog_name: ${var.catalog}
+      schema_name: ${var.schema}
+      volume_type: MANAGED
+
+  # SQL Warehouse (serverless)
+  sql_warehouses:
+    serverless:
+      name: onr-demo-warehouse
+      cluster_size: 2X-Small
+      auto_stop_mins: 10
+      warehouse_type: PRO
+      channel:
+        name: CHANNEL_NAME_CURRENT
+
+  # Medallion Pipeline (DLT/SDP)
+  pipelines:
+    onr_demo_pipeline:
+      name: ${var.catalog}.${var.schema}.onr_demo_pipeline
+      serverless: true
+      photon: true
+      catalog: ${var.catalog}
+      target: ${var.schema}
+      libraries:
+        - notebook:
+            path: ../notebooks/01_bronze_ingestion.py
+        - notebook:
+            path: ../notebooks/02_silver_quality.py
+        - notebook:
+            path: ../notebooks/03_gold_aggregation.py
+      continuous: false
+      configuration:
+        pipeline.mode: "TRIGGERED"
+
+  # Orchestration Job
+  jobs:
+    onr_demo_workflow:
+      name: onr_demo_workflow-${bundle.target}
+      serverless: true
+      schedule:
+        quartz_cron_expression: "0 0 6 * * ?"  # Daily at 6 AM UTC
+        timezone_id: "UTC"
+      tasks:
+        - task_key: run_pipeline
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.onr_demo_pipeline.id}
+        - task_key: validate_gold
+          depends_on:
+            - task_key: run_pipeline
+          notebook_task:
+            notebook_path: ../notebooks/validation_queries
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+          environment_key: serverless
+
+  # Streamlit App
+  apps:
+    onr_demo_app:
+      name: onr-demo-${bundle.target}
+      description: "ONR ITSS POC — Technical Demonstration Elements 3–7"
+      source_code_path: ../app-onr-demo
+      permissions:
+        - level: CAN_USE
+          group_name: users
+      resources:
+        - name: onr-sql-warehouse
+          sql_warehouse:
+            id: ${resources.sql_warehouses.serverless.id}
+            permission: CAN_USE
+
+  # Quality Monitoring
+  quality_monitors:
+    grants_monitor:
+      table_name: ${var.catalog}.${var.schema}.gold_grants_summary
+      output_schema_name: ${var.catalog}.${var.schema}
+      assets_dir: /Workspace/Users/${workspace.current_user.userName}/.bundle/monitoring/grants
+      time_series:
+        granularities: [1 day]
+        timestamp_col: grant_date
+      schedule:
+        quartz_cron_expression: "0 0 8 * * ?"
+        timezone_id: UTC
+
+    financial_monitor:
+      table_name: ${var.catalog}.${var.schema}.gold_financial_summary
+      output_schema_name: ${var.catalog}.${var.schema}
+      assets_dir: /Workspace/Users/${workspace.current_user.userName}/.bundle/monitoring/financial
+      time_series:
+        granularities: [1 day]
+        timestamp_col: fiscal_date
+      schedule:
+        quartz_cron_expression: "0 0 8 * * ?"
+        timezone_id: UTC
