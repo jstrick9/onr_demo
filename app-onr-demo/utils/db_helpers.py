@@ -93,7 +93,18 @@ def _resolve_http_path_by_name(w: WorkspaceClient, name: str) -> str:
         ids = ", ".join(getattr(m, "id", "unknown") for m in matches)
         raise ValueError(f"Multiple SQL Warehouses match name '{name}'. Matches: {ids}")
     wh = matches[0]
-    http_path = getattr(wh.odbc_params, "http_path", None) or getattr(wh.odbc_params, "path", None)
+    state = str(getattr(wh, "state", "") or "")
+    if state and "RUNNING" not in state.upper() and "START" not in state.upper():
+        try:
+            w.warehouses.start(id=wh.id)
+        except Exception:
+            pass
+    odbc = getattr(wh, "odbc_params", None)
+    http_path = None
+    if odbc is not None:
+        http_path = getattr(odbc, "http_path", None) or getattr(odbc, "path", None)
+    if not http_path and getattr(wh, "id", None):
+        http_path = f"/sql/1.0/warehouses/{wh.id}"
     if not http_path:
         raise ValueError(f"Warehouse '{name}' has no http_path")
     return http_path

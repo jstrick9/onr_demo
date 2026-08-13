@@ -67,7 +67,16 @@ def grant_count(cursor, catalog: str) -> Optional[int]:
 def _sql_str(v) -> str:
     if v is None:
         return "NULL"
-    return "'" + str(v).replace("'", "''") + "'"
+    try:
+        import math
+        if isinstance(v, float) and math.isnan(v):
+            return "NULL"
+    except Exception:
+        pass
+    s = str(v)
+    if s.lower() in {"nat", "nan", "none", "null", "n/a"}:
+        return "NULL"
+    return "'" + s.replace("'", "''") + "'"
 
 
 def bronze_count(cursor, catalog: str) -> int:
@@ -143,7 +152,10 @@ def process_selected_files(cursor, catalog: str, pack_keys: list[str], extra_row
     summaries = []
     before = grant_count(cursor, catalog)
     for key in pack_keys:
-        path = next(p for p in FILE_PACKS[key]["files"] if p.exists())
+        matches = [p for p in FILE_PACKS[key]["files"] if p.exists()]
+        if not matches:
+            raise FileNotFoundError(f"Pack '{key}' CSV is not packaged with the app")
+        path = matches[0]
         rows = list(csv.DictReader(path.open(encoding="utf-8")))
         summaries.append({"file": path.name, **ingest_grant_rows(cursor, catalog, rows, path.name, skip_existing=True)})
     if extra_rows:
@@ -160,8 +172,7 @@ def reset_to_seed_sql(cursor, catalog: str) -> dict:
     )
     cursor.execute(
         f"""DELETE FROM `{catalog}`.`bronze`.financial
-            WHERE coalesce(batch_id, '{SEED_BATCH_ID}') <> '{SEED_BATCH_ID}'
-               OR coalesce(_batch_id, '{SEED_BATCH_ID}') <> '{SEED_BATCH_ID}'"""
+            WHERE coalesce(batch_id, _batch_id, '{SEED_BATCH_ID}') <> '{SEED_BATCH_ID}'"""
     )
     bronze_n = bronze_count(cursor, catalog)
     reloaded = False

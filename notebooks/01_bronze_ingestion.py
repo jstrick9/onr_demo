@@ -182,14 +182,20 @@ print(f"⚠️ Null transaction_ids: {null_financial}")
 # COMMAND ----------
 
 # Log quality check result
+from datetime import datetime as _dt
 quality_log = spark.createDataFrame([
-    ("bronze_ingestion", "PASS", grants_cnt + financial_cnt, 
-     grants_cnt + financial_cnt - null_grants - null_financial, 
-     null_grants + null_financial, "bronze_pipeline")
-], ["check_name", "check_status", "records_checked", "records_passed", "records_failed", "pipeline_name"])
-
-quality_log = quality_log.withColumn("check_id", lit(None).cast("string"))
-quality_log = quality_log.withColumn("check_timestamp", current_timestamp())
+    (
+        f"bronze-{_dt.utcnow().strftime('%Y%m%d%H%M%S')}",
+        "bronze_ingestion",
+        "PASS",
+        grants_cnt + financial_cnt,
+        grants_cnt + financial_cnt - null_grants - null_financial,
+        null_grants + null_financial,
+        _dt.utcnow(),
+        "bronze_pipeline",
+    )
+], ["check_id", "check_name", "check_status", "records_checked",
+    "records_passed", "records_failed", "check_timestamp", "pipeline_name"])
 
 quality_log.write.mode("append").saveAsTable(f"`{catalog}`.`app`.ingestion_quality_log")
 

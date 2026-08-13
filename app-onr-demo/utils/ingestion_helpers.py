@@ -88,10 +88,12 @@ def render_quality_checks(cursor, catalog: str, schema: str):
                     return "background-color: #f8d7da"
                 return ""
             
-            st.dataframe(
-                df.style.applymap(color_status, subset=["Status"]),
-                use_container_width=True
-            )
+            sty = df.style
+            try:
+                sty = sty.map(color_status, subset=["Status"])
+            except Exception:
+                sty = df.style.applymap(color_status, subset=["Status"])
+            st.dataframe(sty, use_container_width=True)
         else:
             st.info("No quality check results available yet.")
     except Exception as e:

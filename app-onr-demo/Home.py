@@ -52,7 +52,7 @@ st.markdown(
     """
 | Order | Page | Element | Click this |
 |-------|------|---------|------------|
-| 1 | **Ingestion** | 3 | **Drop live file (8 grants)** — watch 400 → 408 |
+| 1 | **Ingestion** | 3 | **Process selected files** (Live 8) — watch 400 → 408 |
 | 2 | **Governance** | 4 | Catalog, quality, lineage |
 | 3 | **Analytics** | 5 | Decision aids + optional MLflow on the cluster |
 | 4 | **Dashboard** | 6 | Filter / search `quantum` |
