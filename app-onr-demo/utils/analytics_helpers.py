@@ -14,7 +14,7 @@ def _query_df(cursor, sql: str) -> pd.DataFrame:
         return pd.DataFrame()
     try:
         cursor.execute(sql)
-        cols = [d[0] for d in cursor.description]
+        cols = [str(d[0]).lower() for d in cursor.description]
         return pd.DataFrame(cursor.fetchall(), columns=cols)
     except Exception:
         return pd.DataFrame()

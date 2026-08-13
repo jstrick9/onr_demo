@@ -254,7 +254,7 @@ print("=" * 50)
 # Count checks
 tables = [
     "grants_summary", "financial_summary",
-    "grants_by_awardee", "budget_execution", "grant_predictions"
+    "grants_by_awardee", "budget_execution", "grant_predictions", "model_metrics"
 ]
 
 all_passed = True

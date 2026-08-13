@@ -350,7 +350,7 @@ def render_process_automation(cursor=None, catalog: str = "onr_demo"):
                 LIMIT 15
                 """
             )
-            cols = [d[0] for d in cursor.description]
+            cols = [str(d[0]).lower() for d in cursor.description]
             q = pd.DataFrame(cursor.fetchall(), columns=cols)
         except Exception:
             q = pd.DataFrame()
@@ -371,7 +371,7 @@ def render_process_automation(cursor=None, catalog: str = "onr_demo"):
                 LIMIT 12
                 """
             )
-            cols = [d[0] for d in cursor.description]
+            cols = [str(d[0]).lower() for d in cursor.description]
             risk = pd.DataFrame(cursor.fetchall(), columns=cols)
         except Exception:
             risk = pd.DataFrame()
