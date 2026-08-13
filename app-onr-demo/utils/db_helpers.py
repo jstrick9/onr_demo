@@ -164,7 +164,7 @@ def _close_connection_safely(conn):
             pass
 
 
-def get_connection(max_retries: int = 2, retry_delay_seconds: int = 2):
+def get_connection(max_retries: int = 4, retry_delay_seconds: int = 4):
     """
     Get Databricks SQL Warehouse connection with auto-reconnect.
     Returns: (connection, cursor) tuple

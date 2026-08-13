@@ -174,25 +174,25 @@ print(f"✅ Gold Budget Execution: {budget_count:,} records")
 
 # COMMAND ----------
 
-# Record lineage
+import uuid as _uuid
 lineage_records = spark.createDataFrame([
-    (f"lin_{spark.sql('SELECT uuid()').collect()[0][0]}", 
-     "bronze.grants", "silver.grants", "quality_transform", 
-     spark.table(f"`{catalog}`.`bronze`.grants").count(), 
+    (f"lin_{_uuid.uuid4()}",
+     "bronze.grants", "silver.grants", "quality_transform",
+     spark.table(f"`{catalog}`.`bronze`.grants").count(),
      1500, "system"),
-    (f"lin_{spark.sql('SELECT uuid()').collect()[0][0]}", 
-     "bronze.financial", "silver.financial", "quality_transform", 
-     spark.table(f"`{catalog}`.`bronze`.financial").count(), 
+    (f"lin_{_uuid.uuid4()}",
+     "bronze.financial", "silver.financial", "quality_transform",
+     spark.table(f"`{catalog}`.`bronze`.financial").count(),
      1200, "system"),
-    (f"lin_{spark.sql('SELECT uuid()').collect()[0][0]}", 
-     "silver.grants", "gold.grants_summary", "aggregation", 
-     spark.table(f"`{catalog}`.`silver`.grants").count(), 
+    (f"lin_{_uuid.uuid4()}",
+     "silver.grants", "gold.grants_summary", "aggregation",
+     spark.table(f"`{catalog}`.`silver`.grants").count(),
      800, "system"),
-    (f"lin_{spark.sql('SELECT uuid()').collect()[0][0]}", 
-     "silver.financial", "gold.financial_summary", "aggregation", 
-     spark.table(f"`{catalog}`.`silver`.financial").count(), 
+    (f"lin_{_uuid.uuid4()}",
+     "silver.financial", "gold.financial_summary", "aggregation",
+     spark.table(f"`{catalog}`.`silver`.financial").count(),
      600, "system"),
-], ["lineage_id", "source_table", "target_table", "transformation_type", 
+], ["lineage_id", "source_table", "target_table", "transformation_type",
     "records_processed", "processing_time_ms", "executed_by"])
 
 lineage_records = lineage_records.withColumn("executed_at", current_timestamp())

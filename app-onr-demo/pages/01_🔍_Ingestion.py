@@ -17,7 +17,6 @@ from utils.ingestion_helpers import (
     render_ingestion_demo,
     generate_mock_grants_data,
     generate_mock_financial_data,
-    render_live_file_drop,
     render_file_picker_and_reset,
 )
 from utils.eval_prompt import render_eval_prompt

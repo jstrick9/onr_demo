@@ -16,10 +16,35 @@
 # COMMAND ----------
 
 dbutils.widgets.text("catalog", "onr_demo")
-dbutils.widgets.text("repo_root", "/Workspace/Users/REPLACE_ME/onr_demo")
+dbutils.widgets.text("repo_root", "")
 
 catalog = dbutils.widgets.get("catalog")
-repo_root = dbutils.widgets.get("repo_root").rstrip("/")
+repo_root = dbutils.widgets.get("repo_root").strip().rstrip("/")
+
+def _infer_repo_root():
+    try:
+        p = dbutils.notebook.entry_point.getDbutils().notebook().getContext().notebookPath().get()
+        if not p:
+            return None
+        if not p.startswith("/Workspace"):
+            p = "/Workspace" + p
+        if "/notebooks/" in p:
+            return p.rsplit("/notebooks/", 1)[0]
+    except Exception:
+        return None
+    return None
+
+if (not repo_root) or ("REPLACE_ME" in repo_root):
+    inferred = _infer_repo_root()
+    if inferred:
+        repo_root = inferred
+        print("Inferred repo_root:", repo_root)
+    else:
+        raise ValueError(
+            "Set the repo_root widget to the cloned onr_demo folder "
+            "(example /Workspace/Users/you@org/onr_demo)."
+        )
+
 landing = f"/Volumes/{catalog}/bronze/landing"
 staged = f"{landing}/_staged"
 
@@ -84,7 +109,30 @@ if payload is None:
 grants = payload["grants"]
 print(f"Fixture grants: {len(grants)}  contract={payload.get('fixture_contract')}")
 
-grants_df = spark.createDataFrame(grants).withColumn("_ingest_time", F.current_timestamp()) \
+grants_schema = StructType([
+    StructField("grant_no", StringType(), False),
+    StructField("title", StringType(), True),
+    StructField("abstract", StringType(), True),
+    StructField("program_area", StringType(), True),
+    StructField("fiscal_year", IntegerType(), True),
+    StructField("amount_usd", DoubleType(), True),
+    StructField("awardee", StringType(), True),
+    StructField("org_unit", StringType(), True),
+    StructField("classification_band", StringType(), True),
+    StructField("batch_id", StringType(), True),
+    StructField("created_at", StringType(), True),
+])
+# Normalize types so Spark does not fail schema inference
+norm_grants = []
+for rec in grants:
+    row = dict(rec)
+    row["fiscal_year"] = int(row["fiscal_year"]) if row.get("fiscal_year") is not None else None
+    row["amount_usd"] = float(row["amount_usd"]) if row.get("amount_usd") is not None else None
+    row["created_at"] = str(row["created_at"]) if row.get("created_at") is not None else None
+    norm_grants.append(row)
+
+grants_df = spark.createDataFrame(norm_grants, schema=grants_schema) \
+    .withColumn("_ingest_time", F.current_timestamp()) \
     .withColumn("_source_file", F.lit("grants_portfolio.json")) \
     .withColumn("_batch_id", F.lit(payload.get("batch_id", "seed-initial-2026")))
 

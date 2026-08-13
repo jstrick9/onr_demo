@@ -19,7 +19,7 @@ catalog = dbutils.widgets.get("catalog")
 landing_path = dbutils.widgets.get("landing_path")
 if not landing_path.endswith("/"):
     landing_path = landing_path + "/"
-for sub in ("grants", "financial", "_schemas"):
+for sub in ("grants", "financial", "_schemas/grants", "_schemas/financial"):
     try:
         dbutils.fs.mkdirs(f"{landing_path}{sub}")
     except Exception:
@@ -77,7 +77,7 @@ grants_bronze_df = (
 grants_q = (
     grants_bronze_df.writeStream
     .format("delta")
-    .option("checkpointLocation", f"/Volumes/onr_demo/bronze/checkpoints/grants")
+    .option("checkpointLocation", f"/Volumes/{catalog}/bronze/checkpoints/grants")
     .option("mergeSchema", "true")
     .trigger(availableNow=True)
     .toTable(f"`{catalog}`.`bronze`.grants")
@@ -129,7 +129,7 @@ financial_bronze_df = (
 fin_q = (
     financial_bronze_df.writeStream
     .format("delta")
-    .option("checkpointLocation", f"/Volumes/onr_demo/bronze/checkpoints/financial")
+    .option("checkpointLocation", f"/Volumes/{catalog}/bronze/checkpoints/financial")
     .option("mergeSchema", "true")
     .trigger(availableNow=True)
     .toTable(f"`{catalog}`.`bronze`.financial")
