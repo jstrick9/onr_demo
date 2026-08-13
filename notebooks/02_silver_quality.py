@@ -76,6 +76,7 @@ silver_grants = (
     
     # Apply quality filters
     .filter(col("grant_no").isNotNull())
+    .filter(trim(col("grant_no")) != "")
     .filter(col("amount_usd") > 0)
     .filter(col("awardee").isNotNull())
 )
@@ -170,11 +171,12 @@ grants_completeness = spark.sql(f"""
     FROM `{catalog}`.`silver`.grants
 """).collect()[0]
 
+_gt = grants_completeness[0] or 1
 grants_score = (
-    (grants_completeness[1] / grants_completeness[0]) * 0.3 +
-    (grants_completeness[2] / grants_completeness[0]) * 0.3 +
-    (grants_completeness[3] / grants_completeness[0]) * 0.2 +
-    (grants_completeness[4] / grants_completeness[0]) * 0.2
+    (grants_completeness[1] / _gt) * 0.3 +
+    (grants_completeness[2] / _gt) * 0.3 +
+    (grants_completeness[3] / _gt) * 0.2 +
+    (grants_completeness[4] / _gt) * 0.2
 )
 
 financial_completeness = spark.sql(f"""
@@ -186,20 +188,21 @@ financial_completeness = spark.sql(f"""
     FROM `{catalog}`.`silver`.financial
 """).collect()[0]
 
+_ft = financial_completeness[0] or 1
 financial_score = (
-    (financial_completeness[1] / financial_completeness[0]) * 0.4 +
-    (financial_completeness[2] / financial_completeness[0]) * 0.3 +
-    (financial_completeness[3] / financial_completeness[0]) * 0.3
+    (financial_completeness[1] / _ft) * 0.4 +
+    (financial_completeness[2] / _ft) * 0.3 +
+    (financial_completeness[3] / _ft) * 0.3
 )
 
 # Save quality scores
 from pyspark.sql.functions import current_timestamp
 
 quality_scores = spark.createDataFrame([
-    ("silver.grants", grants_score, grants_completeness[1]/grants_completeness[0],
-     grants_completeness[3]/grants_completeness[0], grants_completeness[2]/grants_completeness[0], 1.0),
-    ("silver.financial", financial_score, financial_completeness[1]/financial_completeness[0],
-     financial_completeness[2]/financial_completeness[0], financial_completeness[3]/financial_completeness[0], 1.0),
+    ("silver.grants", grants_score, grants_completeness[1]/_gt,
+     grants_completeness[3]/_gt, grants_completeness[2]/_gt, 1.0),
+    ("silver.financial", financial_score, financial_completeness[1]/_ft,
+     financial_completeness[2]/_ft, financial_completeness[3]/_ft, 1.0),
 ], ["table_name", "quality_score", "completeness", "accuracy", "consistency", "timeliness"])
 
 quality_scores = quality_scores.withColumn("last_assessed", current_timestamp())

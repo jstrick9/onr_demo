@@ -199,9 +199,11 @@ quality_log = spark.createDataFrame([
 ], ["check_id", "check_name", "check_status", "records_checked",
     "records_passed", "records_failed", "check_timestamp", "pipeline_name"])
 
-quality_log.write.mode("append").saveAsTable(f"`{catalog}`.`app`.ingestion_quality_log")
-
-print("✅ Quality check logged")
+try:
+    quality_log.write.mode("append").saveAsTable(f"`{catalog}`.`app`.ingestion_quality_log")
+    print("✅ Quality check logged")
+except Exception as e:
+    print("Quality log skipped:", e)
 
 # COMMAND ----------
 

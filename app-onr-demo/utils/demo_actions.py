@@ -214,7 +214,12 @@ def _reload_seed_tables(cursor, catalog: str) -> None:
     for rec in financial_dataframe().to_dict(orient="records"):
         cursor.execute(
             f"""
-            INSERT INTO `{catalog}`.`bronze`.financial VALUES (
+            INSERT INTO `{catalog}`.`bronze`.financial (
+                transaction_id, grant_no, cost_center, program_area, category,
+                fiscal_year, quarter, budget_allocated, actual_expenditure,
+                execution_rate, variance, status, batch_id,
+                _ingest_time, _source_file, _batch_id
+            ) VALUES (
                 {_sql_str(rec.get("transaction_id"))},
                 {_sql_str(rec.get("grant_no"))},
                 {_sql_str(rec.get("cost_center"))},
@@ -278,7 +283,8 @@ def refresh_silver_gold_sql(cursor, catalog: str) -> None:
             SELECT *, ROW_NUMBER() OVER (PARTITION BY grant_no ORDER BY _ingest_time DESC) rn
             FROM `{catalog}`.`bronze`.grants
         )
-        WHERE rn = 1 AND grant_no IS NOT NULL AND amount_usd > 0 AND awardee IS NOT NULL
+        WHERE rn = 1 AND grant_no IS NOT NULL AND trim(grant_no) <> ''
+          AND amount_usd > 0 AND awardee IS NOT NULL
         """
     )
     cursor.execute(

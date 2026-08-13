@@ -122,9 +122,14 @@ def render_export_filters():
             key="export_max_records"
         )
     
+    if isinstance(date_range, (list, tuple)):
+        date_start = date_range[0] if len(date_range) > 0 else None
+        date_end = date_range[1] if len(date_range) > 1 else date_start
+    else:
+        date_start = date_end = date_range
     return {
-        "date_start": date_range[0] if len(date_range) > 0 else None,
-        "date_end": date_range[1] if len(date_range) > 1 else None,
+        "date_start": date_start,
+        "date_end": date_end,
         "max_records": max_records
     }
 

@@ -30,12 +30,10 @@ CREATE SCHEMA IF NOT EXISTS `onr_demo`.`app`
 -- =====================================================
 
 CREATE VOLUME IF NOT EXISTS `onr_demo`.`bronze`.landing
-    COMMENT 'Landing zone for raw file ingestion'
-    VOLUME_TYPE MANAGED;
+    COMMENT 'Landing zone for raw file ingestion';
 
 CREATE VOLUME IF NOT EXISTS `onr_demo`.`bronze`.checkpoints
-    COMMENT 'Auto Loader / streaming checkpoints'
-    VOLUME_TYPE MANAGED;
+    COMMENT 'Auto Loader / streaming checkpoints';
 
 -- =====================================================
 -- 3. BRONZE

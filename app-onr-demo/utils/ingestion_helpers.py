@@ -116,12 +116,17 @@ def render_schema_evolution(cursor, catalog: str, schema: str):
         
         if history:
             # Show last 5 schema changes
+            # DESCRIBE HISTORY: version, timestamp, userId, userName, operation, operationParameters, ...
             for entry in history[:5]:
-                with st.expander(f"Version {entry[0]} — {entry[1]}"):
-                    st.write(f"**Operation:** {entry[3]}")
-                    st.write(f"**Timestamp:** {entry[1]}")
-                    if entry[7]:  # operationParameters
-                        st.json(entry[7])
+                version = entry[0] if len(entry) > 0 else "?"
+                ts = entry[1] if len(entry) > 1 else ""
+                op = entry[4] if len(entry) > 4 else ""
+                params = entry[5] if len(entry) > 5 else None
+                with st.expander(f"Version {version} — {ts}"):
+                    st.write(f"**Operation:** {op}")
+                    st.write(f"**Timestamp:** {ts}")
+                    if params:
+                        st.json(params)
         else:
             st.info("No schema evolution history available.")
     except Exception as e:

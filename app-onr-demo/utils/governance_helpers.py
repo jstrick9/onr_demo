@@ -29,6 +29,8 @@ def render_catalog_registry(cursor, catalog: str, schema: str):
           AND table_schema IN ('bronze', 'silver', 'gold', 'app')
         ORDER BY table_schema, table_name
         """
+        if not cursor:
+            raise RuntimeError("no warehouse")
         cursor.execute(query)
         tables = cursor.fetchall()
         

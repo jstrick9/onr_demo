@@ -219,7 +219,7 @@ sg = (
       .withColumn("_quality_score", F.when(F.col("amount_usd") > 0, 1.0).otherwise(0.5))
       .withColumn("_rn", F.row_number().over(Window.partitionBy("grant_no").orderBy(F.col("_ingest_time").desc())))
       .filter("_rn = 1").drop("_rn")
-      .filter(F.col("grant_no").isNotNull() & (F.col("amount_usd") > 0) & F.col("awardee").isNotNull())
+      .filter(F.col("grant_no").isNotNull() & (F.trim(F.col("grant_no")) != "") & (F.col("amount_usd") > 0) & F.col("awardee").isNotNull())
 )
 sg.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(f"`{catalog}`.`silver`.grants")
 

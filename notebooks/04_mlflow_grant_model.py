@@ -34,7 +34,7 @@ clf = RandomForestClassifier(n_estimators=80, max_depth=8, random_state=42)
 clf.fit(X_train, y_train)
 pred = clf.predict(X_test)
 acc = accuracy_score(y_test, pred)
-f1 = f1_score(y_test, pred)
+f1 = f1_score(y_test, pred, zero_division=0)
 print(f"accuracy={acc:.3f}  f1={f1:.3f}  n={len(pdf)}")
 
 try:

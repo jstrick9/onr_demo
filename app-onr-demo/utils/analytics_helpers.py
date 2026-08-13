@@ -55,7 +55,7 @@ def render_forecast_visualization():
     st.markdown("### 📈 Budget Forecast")
     
     # Generate sample forecast data
-    dates = pd.date_range(start="2024-01-01", periods=36, freq="M")
+    dates = pd.date_range(start="2024-01-01", periods=36, freq="ME")
     actual = np.cumsum(np.random.normal(50000, 10000, 36))
     forecast = np.concatenate([
         actual[:24],
