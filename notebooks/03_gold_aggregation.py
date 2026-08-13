@@ -196,10 +196,11 @@ lineage_records = spark.createDataFrame([
     "records_processed", "processing_time_ms", "executed_by"])
 
 lineage_records = lineage_records.withColumn("executed_at", current_timestamp())
-
-lineage_records.write.mode("append").saveAsTable(f"`{catalog}`.`app`.lineage_tracking")
-
-print("✅ Lineage tracking recorded")
+try:
+    lineage_records.write.mode("append").saveAsTable(f"`{catalog}`.`app`.lineage_tracking")
+    print("✅ Lineage tracking recorded")
+except Exception as e:
+    print("Lineage log skipped:", e)
 
 # COMMAND ----------
 

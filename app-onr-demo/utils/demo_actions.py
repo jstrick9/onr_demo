@@ -118,7 +118,11 @@ def ingest_grant_rows(cursor, catalog: str, rows: list[dict], source_file: str, 
             awardee = rec.get("awardee")
             cursor.execute(
                 f"""
-                INSERT INTO `{catalog}`.`bronze`.grants VALUES (
+                INSERT INTO `{catalog}`.`bronze`.grants (
+                    grant_no, title, abstract, program_area, fiscal_year, amount_usd,
+                    awardee, org_unit, classification_band, batch_id, created_at,
+                    _ingest_time, _source_file, _batch_id
+                ) VALUES (
                     {_sql_str(gn)},
                     {_sql_str(rec.get("title"))},
                     {_sql_str(rec.get("abstract"))},

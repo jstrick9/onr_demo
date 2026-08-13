@@ -175,7 +175,23 @@ for rec in grants:
             "batch_id": rec.get("batch_id") or "seed-initial-2026",
         })
 
-fin_df = spark.createDataFrame(fin_rows).withColumn("_ingest_time", F.current_timestamp()) \
+fin_schema = StructType([
+    StructField("transaction_id", StringType(), False),
+    StructField("grant_no", StringType(), True),
+    StructField("cost_center", StringType(), True),
+    StructField("program_area", StringType(), True),
+    StructField("category", StringType(), True),
+    StructField("fiscal_year", IntegerType(), True),
+    StructField("quarter", StringType(), True),
+    StructField("budget_allocated", DoubleType(), True),
+    StructField("actual_expenditure", DoubleType(), True),
+    StructField("execution_rate", DoubleType(), True),
+    StructField("variance", DoubleType(), True),
+    StructField("status", StringType(), True),
+    StructField("batch_id", StringType(), True),
+])
+fin_df = spark.createDataFrame(fin_rows, schema=fin_schema) \
+    .withColumn("_ingest_time", F.current_timestamp()) \
     .withColumn("_source_file", F.lit("derived_erp")) \
     .withColumn("_batch_id", F.lit("seed-initial-2026"))
 fin_df.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(f"`{catalog}`.`bronze`.financial")

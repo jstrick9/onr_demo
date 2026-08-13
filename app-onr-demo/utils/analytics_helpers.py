@@ -151,10 +151,12 @@ def render_grant_predictions(cursor, catalog: str, schema: str):
                         return "background-color: #f8d7da"
                 return ""
             
-            st.dataframe(
-                df.style.applymap(color_probability, subset=["Success %"]),
-                use_container_width=True
-            )
+            sty = df.style
+            try:
+                sty = sty.map(color_probability, subset=["Success %"])
+            except Exception:
+                sty = df.style.applymap(color_probability, subset=["Success %"])
+            st.dataframe(sty, use_container_width=True)
         else:
             render_simulated_predictions()
     except Exception:

@@ -20,10 +20,15 @@ from sklearn.metrics import accuracy_score, f1_score
 
 pdf = spark.table(f"`{catalog}`.`silver`.grants").toPandas()
 pdf = pdf.dropna(subset=["amount_usd", "program_area", "fiscal_year"])
+if len(pdf) < 8:
+    raise ValueError("silver.grants has too few rows — run 00_bootstrap.py first")
 pdf["large_award"] = (pdf["amount_usd"] >= 1_000_000).astype(int)
 X = pd.get_dummies(pdf[["fiscal_year", "program_area", "org_unit"]], dummy_na=True)
 y = pdf["large_award"]
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=42)
+split_kw = {"test_size": 0.25, "random_state": 42}
+if y.nunique() > 1 and y.value_counts().min() >= 2:
+    split_kw["stratify"] = y
+X_train, X_test, y_train, y_test = train_test_split(X, y, **split_kw)
 
 clf = RandomForestClassifier(n_estimators=80, max_depth=8, random_state=42)
 clf.fit(X_train, y_train)

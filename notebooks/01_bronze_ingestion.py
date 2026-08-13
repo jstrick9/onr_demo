@@ -13,10 +13,12 @@
 
 # Configuration widgets
 dbutils.widgets.text("catalog", "onr_demo")
-dbutils.widgets.text("landing_path", "/Volumes/onr_demo/bronze/landing/")
+dbutils.widgets.text("landing_path", "")
 
 catalog = dbutils.widgets.get("catalog")
-landing_path = dbutils.widgets.get("landing_path")
+landing_path = dbutils.widgets.get("landing_path").strip()
+if not landing_path:
+    landing_path = f"/Volumes/{catalog}/bronze/landing/"
 if not landing_path.endswith("/"):
     landing_path = landing_path + "/"
 for sub in ("grants", "financial", "_schemas/grants", "_schemas/financial"):
