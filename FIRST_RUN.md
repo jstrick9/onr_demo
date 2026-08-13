@@ -134,7 +134,7 @@ The Streamlit app authenticates as a **different** service principal. Without gr
 
 | Symptom | Fix |
 |---------|-----|
-| `CREATE CATALOG` denied | You need that privilege, or an admin creates `onr_demo` and you re-run bootstrap |
+| `CREATE CATALOG` hangs (>1 min) | Cancel the cell. In a **SQL warehouse** editor run `SHOW CATALOGS` then `CREATE CATALOG IF NOT EXISTS onr_demo`. If that also hangs, the **metastore has no default storage** — an account admin must set the metastore root (or create the catalog). Workspace Admin ≠ Metastore storage. Then re-run bootstrap (it skips CREATE if `onr_demo` exists). |
 | Bootstrap cannot open JSON | Set `repo_root` to the Git folder (must contain `resources/mock_data/grants_portfolio.json`) |
 | App: fixture mode + warehouse error | Warehouse name mismatch, warehouse stopped too long, or app SP cannot **CAN USE** the warehouse |
 | Process files fails with permission | Re-run `sql/grant_app_principal.sql` (needs **MANAGE** on silver/gold so the app can `CREATE OR REPLACE` tables you own) |

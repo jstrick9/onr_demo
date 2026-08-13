@@ -58,7 +58,17 @@ print(f"repo_root={repo_root}")
 
 # COMMAND ----------
 
-spark.sql(f"CREATE CATALOG IF NOT EXISTS `{catalog}` COMMENT 'ONR ITSS POC'")
+print("Checking catalogs…")
+existing = {r[0] for r in spark.sql("SHOW CATALOGS").collect()}
+if catalog in existing:
+    print(f"Catalog `{catalog}` already exists — skip CREATE CATALOG")
+else:
+    print(f"Creating catalog `{catalog}` (uses metastore default location; no extra S3)…")
+    print("If this cell sits more than ~60s, cancel it and run CREATE CATALOG in a SQL warehouse.")
+    print("A hang usually means the metastore has no default managed storage (account admin).")
+    spark.sql(f"CREATE CATALOG IF NOT EXISTS `{catalog}` COMMENT 'ONR ITSS POC'")
+    print("CREATE CATALOG finished")
+
 for sch, cmt in [
     ("bronze", "Raw ingested files"),
     ("silver", "Cleansed validated"),
@@ -66,6 +76,7 @@ for sch, cmt in [
     ("app", "Quality, lineage, audit"),
 ]:
     spark.sql(f"CREATE SCHEMA IF NOT EXISTS `{catalog}`.`{sch}` COMMENT '{cmt}'")
+    print("schema", sch)
 
 spark.sql(f"CREATE VOLUME IF NOT EXISTS `{catalog}`.`bronze`.landing")
 spark.sql(f"CREATE VOLUME IF NOT EXISTS `{catalog}`.`bronze`.checkpoints")
