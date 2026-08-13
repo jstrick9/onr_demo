@@ -102,6 +102,8 @@ def render_quality_scores(cursor, catalog: str, schema: str):
         FROM `{catalog}`.`app`.data_quality_scores
         ORDER BY table_name
         """
+        if not cursor:
+            raise RuntimeError("no warehouse")
         cursor.execute(query)
         scores = cursor.fetchall()
         
@@ -279,6 +281,8 @@ def render_lineage_tracking(cursor, catalog: str, schema: str):
         ORDER BY executed_at DESC
         LIMIT 20
         """
+        if not cursor:
+            raise RuntimeError("no warehouse")
         cursor.execute(query)
         records = cursor.fetchall()
         

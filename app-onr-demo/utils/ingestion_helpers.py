@@ -62,6 +62,9 @@ def render_quality_checks(cursor, catalog: str, schema: str):
     """Display data quality check results from ingestion."""
     st.markdown("### ✅ Quality Checks")
     
+    if not cursor:
+        st.info("Quality check results will appear after pipeline execution.")
+        return
     try:
         query = f"""
         SELECT 
@@ -110,6 +113,9 @@ def render_schema_evolution(cursor, catalog: str, schema: str):
     """Display schema evolution history."""
     st.markdown("### 🔄 Schema Evolution")
     
+    if not cursor:
+        st.info("Schema evolution tracking requires Delta table history access.")
+        return
     try:
         query = f"""
         DESCRIBE HISTORY `{catalog}`.`bronze`.grants

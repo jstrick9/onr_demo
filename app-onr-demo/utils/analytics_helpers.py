@@ -131,6 +131,8 @@ def render_grant_predictions(cursor, catalog: str, schema: str):
         ORDER BY success_probability DESC
         LIMIT 20
         """
+        if not cursor:
+            raise RuntimeError("no warehouse")
         cursor.execute(query)
         predictions = cursor.fetchall()
         
@@ -272,17 +274,18 @@ def render_decision_support():
     </div>
     """, unsafe_allow_html=True)
     
-    # Key metrics
+    from utils.portfolio_data import portfolio_kpis
+
+    k = portfolio_kpis()
     col1, col2, col3, col4 = st.columns(4)
-    
     with col1:
-        st.metric("Portfolio Value", "$320M", "+14% YoY")
+        st.metric("Portfolio Value", f"${k['total_funding']/1e6:.1f}M")
     with col2:
-        st.metric("Active Grants", "220", "+13% from FY25")
+        st.metric("Active Grants", f"{k['grant_count']:,}")
     with col3:
-        st.metric("Avg Success Rate", "81%", "+3% improvement")
+        st.metric("Program Areas", f"{k['program_areas']}")
     with col4:
-        st.metric("Execution Rate", "94%", "On target")
+        st.metric("ERP Execution", f"{k['execution_rate']:.1f}%")
 
 
 # -------------------------------

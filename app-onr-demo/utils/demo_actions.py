@@ -256,7 +256,11 @@ def clear_autoloader_checkpoints() -> str:
                 if not path:
                     continue
                 try:
-                    w.files.delete_directory(path, recursive=True)
+                    deleter = getattr(w.files, "delete_directory", None)
+                    if deleter:
+                        deleter(path, recursive=True)
+                    else:
+                        w.files.delete(path)
                     deleted += 1
                 except Exception:
                     try:

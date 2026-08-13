@@ -159,6 +159,8 @@ def render_grants_overview(cursor, catalog: str, schema: str, filters: dict):
         GROUP BY program_area
         ORDER BY total_funding DESC
         """
+        if not cursor:
+            raise RuntimeError("no warehouse")
         cursor.execute(query)
         results = cursor.fetchall()
         
@@ -386,7 +388,10 @@ def render_search_extract(cursor, catalog: str, schema: str):
     st.markdown("### 🔍 Search, Filter & Extract")
     st.caption("Designed for non-technical leadership — no code required")
     
-    # Simple search interface
+    # Clear must happen *before* the widget is instantiated
+    if st.session_state.pop("clear_exec_search", False):
+        st.session_state["exec_search"] = ""
+
     search_term = st.text_input(
         "Search grants by title, awardee, grant number, or org unit:",
         placeholder="e.g., 'quantum' or 'ONRD-2024'",
@@ -451,7 +456,7 @@ def render_search_extract(cursor, catalog: str, schema: str):
     with col2:
         st.markdown("#### Quick Filters")
         if st.button("📋 All Active Grants"):
-            st.session_state["exec_search"] = ""
+            st.session_state["clear_exec_search"] = True
             st.rerun()
         if st.button("🎯 High Priority"):
             st.info("Filters by priority > 80%")

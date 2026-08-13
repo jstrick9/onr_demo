@@ -26,10 +26,10 @@ SELECT 'silver.financial', 'invalid_budget', COUNT(*) FROM `onr_demo`.`silver`.f
 SELECT
     'grants' as dataset,
     MAX(_ingest_time) as latest_update,
-    date_diff(HOUR, MAX(_ingest_time), CURRENT_TIMESTAMP()) as hours_stale,
+    CAST(timestampdiff(HOUR, MAX(_ingest_time), CURRENT_TIMESTAMP()) AS INT) as hours_stale,
     CASE
-        WHEN date_diff(HOUR, MAX(_ingest_time), CURRENT_TIMESTAMP()) <= 24 THEN '✅ Fresh'
-        WHEN date_diff(HOUR, MAX(_ingest_time), CURRENT_TIMESTAMP()) <= 48 THEN '⚠️ Aging'
+        WHEN timestampdiff(HOUR, MAX(_ingest_time), CURRENT_TIMESTAMP()) <= 24 THEN '✅ Fresh'
+        WHEN timestampdiff(HOUR, MAX(_ingest_time), CURRENT_TIMESTAMP()) <= 48 THEN '⚠️ Aging'
         ELSE '❌ Stale'
     END as freshness_status
 FROM `onr_demo`.`silver`.grants
@@ -37,10 +37,10 @@ UNION ALL
 SELECT
     'financial',
     MAX(_ingest_time),
-    date_diff(HOUR, MAX(_ingest_time), CURRENT_TIMESTAMP()),
+    CAST(timestampdiff(HOUR, MAX(_ingest_time), CURRENT_TIMESTAMP()) AS INT),
     CASE
-        WHEN date_diff(HOUR, MAX(_ingest_time), CURRENT_TIMESTAMP()) <= 24 THEN '✅ Fresh'
-        WHEN date_diff(HOUR, MAX(_ingest_time), CURRENT_TIMESTAMP()) <= 48 THEN '⚠️ Aging'
+        WHEN timestampdiff(HOUR, MAX(_ingest_time), CURRENT_TIMESTAMP()) <= 24 THEN '✅ Fresh'
+        WHEN timestampdiff(HOUR, MAX(_ingest_time), CURRENT_TIMESTAMP()) <= 48 THEN '⚠️ Aging'
         ELSE '❌ Stale'
     END
 FROM `onr_demo`.`silver`.financial;
