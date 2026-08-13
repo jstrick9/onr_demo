@@ -17,9 +17,22 @@ Mock data only. No CUI / PII.
 
 ## 0. You need
 
-- Permission to **CREATE CATALOG** (you confirmed this).
-- Permission to create a **serverless SQL warehouse** and an **all-purpose cluster**.
-- Databricks **Apps** enabled (Compute → Apps, or New → App).
+- Workspace access to create a SQL warehouse and an all-purpose cluster.
+- Databricks **Apps** enabled.
+- A Unity Catalog **catalog** you can write. **Workspace Admin is not enough** for `CREATE CATALOG` — that privilege lives on the **metastore** (Metastore Admin or `CREATE CATALOG` on the metastore).
+
+If you cannot create `onr_demo`, send this to a metastore / account admin (no extra S3 bucket):
+
+```sql
+CREATE CATALOG IF NOT EXISTS `onr_demo`
+  COMMENT 'ONR ITSS POC — Technical Demonstration Catalog';
+
+GRANT ALL PRIVILEGES ON CATALOG `onr_demo` TO `<YOUR_EMAIL>`;
+```
+
+Then you run `00_bootstrap.py` (it uses `CREATE CATALOG IF NOT EXISTS` and will skip create).
+
+If they put the catalog in a different name, set the bootstrap `catalog` widget and `app-onr-demo/config/onr-conf.yaml` `schema.catalog` to that name.
 
 ---
 
