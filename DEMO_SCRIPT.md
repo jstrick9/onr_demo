@@ -8,11 +8,12 @@
 
 ## Before the room (once)
 
-1. Clone this repo into the Databricks workspace (Repos / Git folder).
-2. Open `notebooks/00_bootstrap.py`, set `repo_root` to that folder, **Run all**.
-3. Confirm: `onr_demo.silver.grants` = **400**, `onr_demo.silver.financial` = **1,200**.
-4. Start **`onr demo warehouse`** (SQL) and **`onr demo cluster`** (notebooks).
-5. Create / open the Databricks App `onr-demo-poc` (`app-onr-demo/`).
+Follow **[FIRST_RUN.md](FIRST_RUN.md)** if this workspace is new.
+
+1. Warehouse **`onr demo warehouse`** and cluster **`onr demo cluster`** exist and are started.
+2. Git folder cloned; `notebooks/00_bootstrap.py` **Run all** → 400 / 1,200.
+3. App `onr-demo-poc` running; `sql/grant_app_principal.sql` applied; warehouse **CAN USE** for the app SP.
+4. Home shows live **400** grants (not fixture-only).
 
 ---
 

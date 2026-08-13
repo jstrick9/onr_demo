@@ -1,9 +1,9 @@
--- =====================================================
--- ONR ITSS POC — Unity Catalog Setup (medallion)
--- Catalog: onr_demo
--- Schemas: bronze | silver | gold | app
--- Single POC environment (no prod)
--- =====================================================
+-- Optional empty DDL. Prefer notebooks/00_bootstrap.py on a new workspace
+-- (see FIRST_RUN.md). Do not run this after bootstrap unless you need tags
+-- on tables that already exist.
+--
+-- CLUSTER BY requires Databricks SQL / DBR 13.3+ liquid clustering.
+-- If a CREATE TABLE fails on CLUSTER BY, skip this file and use bootstrap.
 
 -- =====================================================
 -- 1. CATALOG & SCHEMAS

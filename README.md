@@ -29,18 +29,20 @@ Landing path: `/Volumes/onr_demo/bronze/landing/`
 
 ---
 
-## New workspace — four steps
+## New workspace — first run
 
-1. **Add the Git repo** to the Databricks workspace (Repos / Git folder).
-2. Open **`notebooks/00_bootstrap.py`**, set `repo_root` to that folder, **Run all**.  
-   This creates UC objects and loads 400 grants + 1,200 ERP rows.
-3. Use existing compute only:
-   - SQL: **`onr demo warehouse`**
-   - Notebooks: **`onr demo cluster`**
-4. Create a **Databricks App** from `app-onr-demo/` (binds to `onr demo warehouse` in `app.yml`).
-5. Follow **[DEMO_SCRIPT.md](DEMO_SCRIPT.md)** (50 minutes). Live moment = Ingestion → **Process selected files** (Live 8).
+Follow **[FIRST_RUN.md](FIRST_RUN.md)** in order. Short version:
 
-Optional SQL-only create: `sql/setup_uc_objects.sql` (no extra S3 bucket).
+1. Create compute with **exact** names: SQL warehouse `onr demo warehouse`, cluster `onr demo cluster`.
+2. Add this Git repo to the workspace.
+3. Run **`notebooks/00_bootstrap.py`** on that cluster (creates `onr_demo` + 400/1,200 rows).
+4. Create Databricks App from `app-onr-demo/` (`onr-demo-poc`).
+5. Run **`sql/grant_app_principal.sql`** (replace the app SP) and grant **CAN USE** on the warehouse.
+6. Smoke test: Home shows 400 → Ingestion Process Live 8 → 408.
+
+Do **not** `databricks bundle deploy` before bootstrap (volumes need schema `bronze`). The bundle does **not** create compute.
+
+Optional empty DDL only: `sql/setup_uc_objects.sql` (skip if bootstrap already ran).
 
 ---
 
@@ -71,6 +73,7 @@ App count: **400 → 408** (live file) → **400** (reset).
 
 ```
 onr_demo/
+├── FIRST_RUN.md                   # Greenfield workspace checklist
 ├── DEMO_SCRIPT.md                 # 50-minute talk track
 ├── databricks.yml                 # Slim DAB: volumes + app (does not create compute)
 ├── app-onr-demo/                  # Streamlit app

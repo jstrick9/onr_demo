@@ -6,13 +6,24 @@
 # MAGIC Trains a Random Forest on `silver.grants` to score whether an award is large (≥ $1M).
 # MAGIC Writes **`gold.grant_predictions`** and **`gold.model_metrics`** so the Streamlit app
 # MAGIC shows the same scores. Logs to MLflow when the experiment is available.
+# MAGIC
+# MAGIC First cells install scikit-learn (standard DBR does not ship it).
 
 # COMMAND ----------
 
 dbutils.widgets.text("catalog", "onr_demo")
-catalog = dbutils.widgets.get("catalog")
 
 # COMMAND ----------
+
+# MAGIC %pip install scikit-learn pandas --quiet
+
+# COMMAND ----------
+
+dbutils.library.restartPython()
+
+# COMMAND ----------
+
+catalog = dbutils.widgets.get("catalog")
 
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
@@ -40,7 +51,6 @@ acc = float(accuracy_score(y_test, pred))
 f1 = float(f1_score(y_test, pred, zero_division=0))
 print(f"accuracy={acc:.3f}  f1={f1:.3f}  n={len(pdf)}")
 
-# Score every silver row so the app can display UC-backed predictions
 X_all = pd.get_dummies(pdf[feat_cols], dummy_na=True).reindex(columns=X.columns, fill_value=0)
 if hasattr(clf, "predict_proba"):
     proba = clf.predict_proba(X_all)
