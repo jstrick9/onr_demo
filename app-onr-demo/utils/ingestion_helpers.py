@@ -5,8 +5,6 @@ Automated Ingestion, Data Operations, and Streaming
 
 import streamlit as st
 import pandas as pd
-from datetime import datetime, timedelta
-import json
 
 
 # -------------------------------
@@ -255,126 +253,21 @@ def render_file_picker_and_reset(cursor, catalog: str):
         )
 
 
-def render_live_file_drop(cursor, catalog: str):
-    """Primary live moment: 8 new grants through medallion."""
-    from utils.demo_actions import (
-        grant_count,
-        ingest_live_batch_sql,
-        refresh_silver_gold_sql,
-        try_start_cluster_notebooks,
-        load_live_rows,
-        LIVE_BATCH_ID,
-    )
-
-    st.markdown("### Drop live file (Element 3)")
-    before = grant_count(cursor, catalog)
-    left, right = st.columns([2, 1])
-    with left:
-        st.write(
-            f"Appends **{len(load_live_rows())}** grants (`{LIVE_BATCH_ID}`) to bronze, "
-            "rebuilds silver + gold. Safe to click twice (skips existing `grant_no`)."
-        )
-        if before is not None:
-            st.metric("silver.grants now", f"{before:,}")
-    with right:
-        st.caption("Compute")
-        st.write("SQL: `onr demo warehouse`")
-        st.write("Notebooks: `onr demo cluster`")
-
-    go = st.button("Drop live file (8 grants)", type="primary", key="drop_live")
-    if go:
-        if not cursor:
-            st.error("Connect **onr demo warehouse** to write UC tables. Fixture mode cannot append.")
-        else:
-            with st.spinner("Landing file → bronze → silver → gold…"):
-                try:
-                    n, batch = ingest_live_batch_sql(cursor, catalog)
-                    refresh_silver_gold_sql(cursor, catalog)
-                    after = grant_count(cursor, catalog)
-                    st.success(f"Ingested {n} new rows (batch `{batch}`). silver.grants: {before} → {after}")
-                    st.info(try_start_cluster_notebooks())
-                    st.caption("Optional: open 01_bronze_ingestion.py on **onr demo cluster** to show Auto Loader code.")
-                except Exception as e:
-                    st.error(f"Live drop failed: {e}")
-                    st.exception(e)
-
-
-# -------------------------------
-# INGESTION DEMO CONTROLS
-# -------------------------------
 def render_ingestion_demo(catalog: str, schema: str):
-    """Render interactive ingestion demo controls."""
-    st.markdown("### 🎮 Live Ingestion Demo")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.markdown("#### Upload Sample File")
-        uploaded_file = st.file_uploader(
-            "Upload a CSV or JSON file to simulate ingestion",
-            type=["csv", "json"],
-            key="ingestion_uploader"
-        )
-        
-        if uploaded_file:
-            try:
-                if uploaded_file.name.endswith(".csv"):
-                    df = pd.read_csv(uploaded_file)
-                else:
-                    df = pd.read_json(uploaded_file)
-                
-                st.success(f"✅ File loaded: {len(df)} records")
-                st.dataframe(df.head(10))
-                
-                if st.button("🚀 Trigger Ingestion", type="primary"):
-                    with st.spinner("Processing..."):
-                        # Simulate ingestion steps
-                        progress = st.progress(0)
-                        status = st.empty()
-                        
-                        status.text("1️⃣ Detecting file schema...")
-                        progress.progress(20)
-                        
-                        status.text("2️⃣ Running quality checks...")
-                        progress.progress(40)
-                        
-                        status.text("3️⃣ Writing to Bronze layer...")
-                        progress.progress(60)
-                        
-                        status.text("4️⃣ Updating catalog metadata...")
-                        progress.progress(80)
-                        
-                        status.text("5️⃣ Ingestion complete!")
-                        progress.progress(100)
-                        
-                        st.success("🎉 Ingestion completed successfully!")
-                        
-            except Exception as e:
-                st.error(f"Error reading file: {str(e)}")
-    
-    with col2:
-        st.markdown("#### Auto Loader Configuration")
-        st.code("""
-# cloudFiles configuration for Auto Loader
-spark.readStream \\
-    .format("cloudFiles") \\
-    .option("cloudFiles.format", "csv") \\
-    .option("cloudFiles.inferColumnTypes", "true") \\
-    .option("cloudFiles.schemaLocation", 
-            f"/Volumes/{catalog}/bronze/landing/_schemas") \\
-    .option("cloudFiles.schemaEvolutionMode", 
-            "addNewColumns") \\
-    .load(f"/Volumes/{catalog}/bronze/landing/")
-        """, language="python")
-        
-        st.markdown("#### Key Features")
-        st.markdown("""
-        - ✅ **Incremental processing** — only new files
-        - ✅ **Schema evolution** — handles new columns
-        - ✅ **Quality gates** — validates on ingestion
-        - ✅ **Error handling** — quarantines bad records
-        - ✅ **Idempotent** — safe to re-run
-        """)
+    """Auto Loader snippet — writes happen via Process selected files or notebook 01."""
+    st.markdown("### Auto Loader (cluster notebook 01)")
+    st.caption("Use **Process selected files** above to land CSVs through the warehouse. This cell is the cluster equivalent.")
+    st.code(
+        f'''
+spark.readStream.format("cloudFiles")
+    .option("cloudFiles.format", "csv")
+    .option("cloudFiles.schemaLocation", "/Volumes/{catalog}/bronze/landing/_schemas/grants")
+    .option("cloudFiles.schemaEvolutionMode", "addNewColumns")
+    .option("header", "true")
+    .load("/Volumes/{catalog}/bronze/landing/grants/")
+        '''.strip(),
+        language="python",
+    )
 
 
 # -------------------------------

@@ -114,7 +114,7 @@ with tab1:
     render_budget_execution(cursor, onr_catalog)
 
 with tab2:
-    render_process_automation()
+    render_process_automation(cursor, onr_catalog)
 
 with tab3:
     render_search_extract(cursor, onr_catalog, onr_schema)

@@ -17,6 +17,8 @@ schema:
     financial_summary: "financial_summary"
     grants_by_awardee: "grants_by_awardee"
     budget_execution: "budget_execution"
+    grant_predictions: "grant_predictions"
+    model_metrics: "model_metrics"
     search_history: "search_history"
     export_history: "export_history"
     data_quality_scores: "data_quality_scores"

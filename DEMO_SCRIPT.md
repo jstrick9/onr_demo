@@ -47,8 +47,8 @@ Optional: drop `batch_quality_fail.csv` via the cluster notebooks to show 3 rows
 ## Minute 22–32 — Element 5 Analytics
 
 - Decision cards + program-area mix (real fixture numbers).
-- Run `04_mlflow_grant_model.py` if you want a live MLflow run (large-award classifier).
-- Show MLflow experiment `/Shared/onr-demo/grant-size`.
+- Predictions tab reads `gold.grant_predictions` (heuristic after ingest).
+- Run `04_mlflow_grant_model.py` on **onr demo cluster** — refresh the app; scores and `gold.model_metrics` update. MLflow `/Shared/onr-demo/grant-size` if enabled.
 
 ## Minute 32–42 — Element 6 Dashboard
 

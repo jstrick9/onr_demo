@@ -72,6 +72,7 @@ def render_dataset_selection(cursor, catalog: str, schema: str):
         "Financial Summary": f"`{catalog}`.`gold`.financial_summary",
         "Grants by Awardee": f"`{catalog}`.`gold`.grants_by_awardee",
         "Budget Execution": f"`{catalog}`.`gold`.budget_execution",
+        "Grant Predictions": f"`{catalog}`.`gold`.grant_predictions",
         "Raw Grants": f"`{catalog}`.`silver`.grants",
         "Raw Financial": f"`{catalog}`.`silver`.financial",
     }
@@ -387,18 +388,9 @@ def render_export_history():
     
     if history:
         df = pd.DataFrame(history)
-        st.dataframe(
-            df.style.format({"timestamp": lambda x: x[:19]}),
-            use_container_width=True
-        )
+        st.dataframe(df, use_container_width=True)
     else:
-        # Show sample history
-        sample_history = [
-            {"timestamp": "2026-08-12 14:30:00", "dataset": "gold.grants_summary", "records": 400, "formats": "CSV, JSON", "user": "analyst@navy.mil"},
-            {"timestamp": "2026-08-12 10:15:00", "dataset": "gold.financial_summary", "records": 1200, "formats": "Parquet", "user": "admin@navy.mil"},
-            {"timestamp": "2026-08-11 16:45:00", "dataset": "silver.grants", "records": 400, "formats": "CSV", "user": "jsmith@navy.mil"},
-        ]
-        st.dataframe(pd.DataFrame(sample_history), use_container_width=True)
+        st.caption("No exports in this session yet.")
 
 
 # -------------------------------

@@ -5,8 +5,6 @@ Handles SQL Warehouse connections, queries, and data operations.
 
 import os
 import time
-from pathlib import Path
-from datetime import datetime, timedelta
 import yaml
 import streamlit as st
 from databricks import sql
@@ -22,36 +20,6 @@ def read_yaml(file_path: str):
         return yaml.safe_load(f)
 
 
-def _app_root() -> Path:
-    """Get the application root directory."""
-    return Path(__file__).resolve().parent.parent
-
-
-def _get_env(default: str = "dev") -> str:
-    """Get current environment from env var."""
-    return os.getenv("ENVIRONMENT", default)
-
-
-def _get_configs(dbx_env: str):
-    """Load environment-specific configuration."""
-    cfg_path = _app_root() / "config" / "onr-conf.yaml"
-
-    if not cfg_path.exists():
-        raise FileNotFoundError(f"Configuration file not found for environment: {dbx_env}")
-
-    try:
-        cfg = read_yaml(str(cfg_path))
-    except yaml.YAMLError as e:
-        raise ValueError(f"Invalid YAML in configuration file: {e}")
-
-    if "schema" not in cfg:
-        raise KeyError("Missing required config section: schema")
-    if "catalog" not in cfg["schema"]:
-        raise KeyError("Missing required key: schema.catalog")
-
-    return cfg
-
-
 def _normalize_host(host: str | None) -> str | None:
     """Normalize Databricks host URL."""
     if not host:
@@ -62,24 +30,6 @@ def _normalize_host(host: str | None) -> str | None:
 # -------------------------------
 # SQL VALUE ESCAPING
 # -------------------------------
-def sql_escape(value) -> str:
-    """Escape a value for safe SQL string interpolation."""
-    if value is None:
-        return ""
-    return str(value).replace("\\", "\\\\").replace("'", "''")
-
-
-# -------------------------------
-# TEMP MESSAGES
-# -------------------------------
-def show_temp_message(message_type, message, seconds=3):
-    """Show a temporary message that disappears after specified seconds."""
-    placeholder = st.empty()
-    getattr(placeholder, message_type, placeholder.info)(message)
-    time.sleep(seconds)
-    placeholder.empty()
-
-
 # -------------------------------
 # DB CONNECTION WITH AUTO-RECONNECT
 # -------------------------------
@@ -218,36 +168,6 @@ def clear_connection_cache():
     if cached_conn is not None:
         _close_connection_safely(cached_conn)
         st.session_state.pop("_db_connection", None)
-
-
-# -------------------------------
-# QUERY HELPERS
-# -------------------------------
-def execute_query(cursor, query: str, params: dict = None):
-    """Execute a SQL query and return results."""
-    try:
-        if params:
-            query = query.format(**params)
-        cursor.execute(query)
-        return cursor.fetchall()
-    except Exception as e:
-        st.error(f"Query execution failed: {str(e)}")
-        return None
-
-
-def execute_query_to_df(cursor, query: str, params: dict = None):
-    """Execute a SQL query and return results as a pandas DataFrame."""
-    import pandas as pd
-    try:
-        if params:
-            query = query.format(**params)
-        cursor.execute(query)
-        columns = [desc[0] for desc in cursor.description]
-        rows = cursor.fetchall()
-        return pd.DataFrame(rows, columns=columns)
-    except Exception as e:
-        st.error(f"Query execution failed: {str(e)}")
-        return pd.DataFrame()
 
 
 # -------------------------------

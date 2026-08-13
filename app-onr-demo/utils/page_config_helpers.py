@@ -3,9 +3,7 @@ Page Configuration Helpers for ONR ITSS POC
 Handles UI layout, sidebar configuration, and page settings.
 """
 
-import os
 from pathlib import Path
-import numpy as np
 import streamlit as st
 from PIL import Image
 from utils.user_helpers import get_current_user
@@ -16,16 +14,6 @@ APP_ROOT = Path(__file__).resolve().parent.parent
 
 # -------------------------------
 # UI HELPERS
-# -------------------------------
-def vertical_divider(height=260, color=(200, 200, 200), width=2):
-    """Render a thin vertical bar as an image."""
-    arr = np.zeros((height, width, 3), dtype=np.uint8)
-    arr[:, :] = color  # RGB
-    st.image(arr, width=width)
-
-
-# -------------------------------
-# RESOURCE CACHING
 # -------------------------------
 @st.cache_data
 def load_sidebar_logo():
@@ -39,21 +27,6 @@ def load_sidebar_logo():
     return None
 
 
-@st.cache_data
-def load_page_icon():
-    """Load page icon with caching."""
-    icon_path = APP_ROOT / "resources" / "images" / "onr_icon.png"
-    if icon_path.exists():
-        try:
-            return Image.open(icon_path)
-        except Exception:
-            return None
-    return None
-
-
-# -------------------------------
-# SIDEBAR CONFIGURATION
-# -------------------------------
 def setup_sidebar():
     """Configure sidebar with navigation, logo, and user info."""
     with st.sidebar:

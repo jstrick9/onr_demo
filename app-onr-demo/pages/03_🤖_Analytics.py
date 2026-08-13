@@ -38,7 +38,7 @@ st.markdown(
 render_eval_prompt(
     "Element 5",
     "How do analytics and models help leadership decide where to put the next dollar?",
-    "Program-area mix from gold, then optional 04_mlflow_grant_model.py on **onr demo cluster**.",
+    "Scores in gold.grant_predictions. Run 04_mlflow_grant_model.py on **onr demo cluster** to replace the heuristic with RF + MLflow.",
 )
 
 # -------------------------------
@@ -83,7 +83,7 @@ st.markdown(
 # -------------------------------
 # EXECUTIVE DECISION SUPPORT
 # -------------------------------
-render_decision_support()
+render_decision_support(cursor, onr_catalog)
 
 # -------------------------------
 # TABS
@@ -99,18 +99,17 @@ tab1, tab2, tab3, tab4 = st.tabs([
 
 with tab1:
     render_grant_predictions(cursor, onr_catalog, onr_schema)
-    
     st.markdown("---")
-    render_model_execution()
+    render_model_execution(cursor, onr_catalog)
 
 with tab2:
-    render_forecast_visualization()
+    render_forecast_visualization(cursor, onr_catalog)
 
 with tab3:
-    render_trend_analysis()
+    render_trend_analysis(cursor, onr_catalog)
 
 with tab4:
-    render_model_metrics()
+    render_model_metrics(cursor, onr_catalog)
 
 # -------------------------------
 # ANALYTICS ARCHITECTURE
@@ -156,42 +155,12 @@ st.markdown("""
 # MLFLOW EXAMPLE
 # -------------------------------
 st.markdown("---")
-st.markdown("### 🔬 MLflow Integration Example")
-
-with st.expander("View MLflow Tracking Code"):
-    st.code(f"""
-import mlflow
-from sklearn.ensemble import RandomForestClassifier
-
-mlflow.set_registry_uri("databricks-uc")
-mlflow.set_experiment("/Workspace/experiments/onr-demo/grant-predictor")
-
-with mlflow.start_run(run_name="rf-grant-success") as run:
-    # Log parameters
-    mlflow.log_params({{"n_estimators": 100, "max_depth": 10, "random_state": 42}})
-    
-    # Train model
-    model = RandomForestClassifier(n_estimators=100, max_depth=10)
-    model.fit(X_train, y_train)
-    
-    # Evaluate
-    accuracy = model.score(X_test, y_test)
-    mlflow.log_metric("accuracy", accuracy)
-    
-    # Register model in Unity Catalog
-    mlflow.sklearn.log_model(
-        model, 
-        "model", 
-        registered_model_name="{onr_catalog}.{onr_schema}.grant_success_predictor"
-    )
-
-# SQL AI Functions (Zero-Cluster)
-SELECT 
-    grant_no,
-    ai_query('grant_success_predictor', 
-             struct(program_area, amount_usd, awardee)) as prediction
-FROM `{onr_catalog}`.`silver`.grants;
-    """, language="python")
+st.markdown("### MLflow")
+st.markdown(
+    "Training lives in `notebooks/04_mlflow_grant_model.py` on **onr demo cluster**. "
+    "Scores land in `{catalog}.gold.grant_predictions` and `{catalog}.gold.model_metrics` "
+    "so this page is reading Unity Catalog, not a canned screenshot.".format(catalog=onr_catalog)
+)
 
 # -------------------------------
 # EVALUATION ALIGNMENT

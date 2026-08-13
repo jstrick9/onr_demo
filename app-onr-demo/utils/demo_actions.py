@@ -37,21 +37,6 @@ FILE_PACKS = {
     },
 }
 
-_CANDIDATES = FILE_PACKS["live"]["files"]
-
-
-def _live_csv() -> Path:
-    for p in _CANDIDATES:
-        if p.exists():
-            return p
-    raise FileNotFoundError("batch_live_grants.csv not packaged with the app")
-
-
-def load_live_rows() -> list[dict]:
-    with _live_csv().open(encoding="utf-8") as f:
-        return list(csv.DictReader(f))
-
-
 def grant_count(cursor, catalog: str) -> Optional[int]:
     if not cursor:
         return None
@@ -149,11 +134,6 @@ def ingest_grant_rows(cursor, catalog: str, rows: list[dict], source_file: str, 
     return {"landed": landed, "skipped": skipped, "rejected": rejected, "reasons": reasons[:20], "input_rows": len(rows)}
 
 
-def ingest_live_batch_sql(cursor, catalog: str) -> Tuple[int, str]:
-    result = ingest_grant_rows(cursor, catalog, load_live_rows(), "batch_live_grants.csv", True)
-    return result["landed"], LIVE_BATCH_ID
-
-
 def process_selected_files(cursor, catalog: str, pack_keys: list[str], extra_rows=None, extra_name="upload.csv") -> dict:
     summaries = []
     before = grant_count(cursor, catalog)
@@ -205,42 +185,6 @@ def reset_to_seed_sql(cursor, catalog: str) -> dict:
         "reloaded_fixture": reloaded,
         "checkpoints": clear_autoloader_checkpoints(),
     }
-
-
-def _reload_seed_tables(cursor, catalog: str) -> None:
-    from utils.portfolio_data import grants_dataframe, financial_dataframe
-
-    cursor.execute(f"TRUNCATE TABLE `{catalog}`.`bronze`.grants")
-    cursor.execute(f"TRUNCATE TABLE `{catalog}`.`bronze`.financial")
-    ingest_grant_rows(cursor, catalog, grants_dataframe().to_dict(orient="records"), "grants_portfolio.json", False)
-    for rec in financial_dataframe().to_dict(orient="records"):
-        cursor.execute(
-            f"""
-            INSERT INTO `{catalog}`.`bronze`.financial (
-                transaction_id, grant_no, cost_center, program_area, category,
-                fiscal_year, quarter, budget_allocated, actual_expenditure,
-                execution_rate, variance, status, batch_id,
-                _ingest_time, _source_file, _batch_id
-            ) VALUES (
-                {_sql_str(rec.get("transaction_id"))},
-                {_sql_str(rec.get("grant_no"))},
-                {_sql_str(rec.get("cost_center"))},
-                {_sql_str(rec.get("program_area"))},
-                {_sql_str(rec.get("category"))},
-                {int(rec.get("fiscal_year") or 2026)},
-                {_sql_str(rec.get("quarter"))},
-                {float(rec.get("budget_allocated") or 0)},
-                {float(rec.get("actual_expenditure") or 0)},
-                {float(rec.get("execution_rate") or 0)},
-                {float(rec.get("variance") or 0)},
-                {_sql_str(rec.get("status"))},
-                {_sql_str(rec.get("batch_id") or SEED_BATCH_ID)},
-                CURRENT_TIMESTAMP(),
-                'derived_erp',
-                {_sql_str(rec.get("batch_id") or SEED_BATCH_ID)}
-            )
-            """
-        )
 
 
 def clear_autoloader_checkpoints() -> str:

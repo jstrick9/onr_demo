@@ -5,10 +5,9 @@ Unified Dashboard, Visualizations, and Process Automation
 
 import streamlit as st
 import pandas as pd
-import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
-from datetime import datetime, timedelta
+from datetime import datetime
 
 
 # -------------------------------
@@ -315,69 +314,72 @@ def render_budget_execution(cursor=None, catalog: str = "onr_demo"):
             st.progress(min(rate / 100, 1.0), text=f"{cat}: {rate:.1f}%")
     
     with col3:
-        st.markdown("#### ⚠️ Alerts")
-        st.warning("⚠️ Contractors category 6.7% over budget")
-        st.success("✅ Personnel on track")
-        st.info("ℹ️ Equipment 7.6% under budget")
+        st.markdown("#### Category vs plan")
+        shown = 0
+        for cat, b, a in zip(categories, budget, actual):
+            if not b:
+                continue
+            rate = (a / b) * 100
+            label = f"{cat}: {rate:.1f}%"
+            if rate >= 100:
+                st.warning(label + " over plan")
+            elif rate >= 90:
+                st.success(label)
+            else:
+                st.info(label + " under plan")
+            shown += 1
+            if shown >= 4:
+                break
 
 
 # -------------------------------
 # PROCESS AUTOMATION
 # -------------------------------
-def render_process_automation():
-    """Display process automation features."""
-    st.markdown("### 🤖 Process Automation")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.markdown("#### Automated Workflows")
-        
-        automations = [
-            {"name": "📊 Daily Summary Report", "status": "Active", "last_run": "2 hours ago", "next_run": "Tomorrow 6 AM"},
-            {"name": "🚨 Anomaly Alerts", "status": "Active", "last_run": "15 min ago", "next_run": "Continuous"},
-            {"name": "📋 Approval Routing", "status": "Active", "last_run": "1 hour ago", "next_run": "On trigger"},
-            {"name": "📈 Weekly Dashboard Refresh", "status": "Active", "last_run": "Yesterday", "next_run": "Monday 7 AM"},
-            {"name": "🔔 Data Quality Alerts", "status": "Active", "last_run": "30 min ago", "next_run": "Hourly"},
-        ]
-        
-        for auto in automations:
-            with st.expander(auto["name"]):
-                st.write(f"**Status:** {auto['status']}")
-                st.write(f"**Last Run:** {auto['last_run']}")
-                st.write(f"**Next Run:** {auto['next_run']}")
-    
-    with col2:
-        st.markdown("#### Anomaly Detection")
-        
-        # Simulated anomaly data
-        dates = pd.date_range(start="2026-07-01", end="2026-08-12", freq="D")
-        values = np.random.normal(100, 10, len(dates))
-        values[-3] = 150  # Anomaly
-        
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=dates, y=values,
-            mode="lines+markers",
-            name="Daily Metric"
-        ))
-        
-        # Mark anomalies
-        fig.add_trace(go.Scatter(
-            x=[dates[-3]], y=[150],
-            mode="markers",
-            marker=dict(size=15, color="red", symbol="x"),
-            name="Anomaly Detected"
-        ))
-        
-        fig.update_layout(
-            title="Anomaly Detection - Daily Spending",
-            xaxis_title="Date",
-            yaxis_title="Amount ($K)",
-            height=300
-        )
-        
-        st.plotly_chart(fig, use_container_width=True)
+def render_process_automation(cursor=None, catalog: str = "onr_demo"):
+    """Pipeline health from app.ingestion_quality_log and gold.budget_execution."""
+    st.markdown("### Pipeline health (Unity Catalog)")
+    q = pd.DataFrame()
+    if cursor:
+        try:
+            cursor.execute(
+                f"""
+                SELECT check_name, check_status, records_checked, records_passed,
+                       records_failed, check_timestamp, pipeline_name
+                FROM `{catalog}`.`app`.ingestion_quality_log
+                ORDER BY check_timestamp DESC
+                LIMIT 15
+                """
+            )
+            cols = [d[0] for d in cursor.description]
+            q = pd.DataFrame(cursor.fetchall(), columns=cols)
+        except Exception:
+            q = pd.DataFrame()
+    if q.empty:
+        st.info("No `app.ingestion_quality_log` rows yet. Process a file or run 00_bootstrap.")
+    else:
+        st.dataframe(q, use_container_width=True)
+
+    risk = pd.DataFrame()
+    if cursor:
+        try:
+            cursor.execute(
+                f"""
+                SELECT fiscal_year, quarter, category, execution_rate, status
+                FROM `{catalog}`.`gold`.budget_execution
+                WHERE status IN ('WARNING', 'AT_RISK')
+                ORDER BY execution_rate
+                LIMIT 12
+                """
+            )
+            cols = [d[0] for d in cursor.description]
+            risk = pd.DataFrame(cursor.fetchall(), columns=cols)
+        except Exception:
+            risk = pd.DataFrame()
+    st.markdown("#### Budget rows not ON_TARGET")
+    if risk.empty:
+        st.caption("No WARNING / AT_RISK rows (or gold.budget_execution not built).")
+    else:
+        st.dataframe(risk, use_container_width=True)
 
 
 # -------------------------------
@@ -455,37 +457,39 @@ def render_search_extract(cursor, catalog: str, schema: str):
     
     with col2:
         st.markdown("#### Quick Filters")
-        if st.button("📋 All Active Grants"):
+        if st.button("📋 Clear search"):
             st.session_state["clear_exec_search"] = True
             st.rerun()
-        if st.button("🎯 High Priority"):
-            st.info("Filters by priority > 80%")
-        if st.button("⚠️ Needs Review"):
-            st.info("Filters by status = 'Pending Review'")
 
 
 # -------------------------------
 # RECENT ACTIVITY LOG
 # -------------------------------
-def render_activity_log():
-    """Display recent activity log."""
-    st.markdown("### 📜 Recent Activity")
-    
-    activities = [
-        {"time": "10 min ago", "user": "jsmith@navy.mil", "action": "Exported 250 grant records (CSV)"},
-        {"time": "25 min ago", "user": "analyst@navy.mil", "action": "Generated Q3 budget report"},
-        {"time": "1 hour ago", "user": "system", "action": "Anomaly detected in spending category 'Contractors'"},
-        {"time": "2 hours ago", "user": "admin@navy.mil", "action": "Updated data quality thresholds"},
-        {"time": "3 hours ago", "user": "system", "action": "Daily summary report generated and distributed"},
-    ]
-    
-    for activity in activities:
-        with st.container():
-            col1, col2, col3 = st.columns([1, 2, 4])
-            with col1:
-                st.caption(activity["time"])
-            with col2:
-                st.caption(activity["user"])
-            with col3:
-                st.write(activity["action"])
-            st.divider()
+def render_activity_log(cursor=None, catalog: str = "onr_demo"):
+    """Export + quality log from UC / this session — no invented users."""
+    st.markdown("### Recent activity")
+    session_hist = st.session_state.get("export_history") or []
+    if session_hist:
+        st.markdown("#### This app session")
+        st.dataframe(pd.DataFrame(session_hist), use_container_width=True)
+    uc = pd.DataFrame()
+    if cursor:
+        try:
+            cursor.execute(
+                f"""
+                SELECT check_timestamp, pipeline_name, check_name, check_status,
+                       records_checked, records_failed
+                FROM `{catalog}`.`app`.ingestion_quality_log
+                ORDER BY check_timestamp DESC
+                LIMIT 20
+                """
+            )
+            cols = [d[0] for d in cursor.description]
+            uc = pd.DataFrame(cursor.fetchall(), columns=cols)
+        except Exception:
+            uc = pd.DataFrame()
+    st.markdown("#### Ingestion quality log")
+    if uc.empty:
+        st.caption("No UC activity yet.")
+    else:
+        st.dataframe(uc, use_container_width=True)

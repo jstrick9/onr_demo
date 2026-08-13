@@ -26,9 +26,8 @@ print(f"✅ Context set: {catalog}.{{bronze,silver,gold,app}}")
 
 from pyspark.sql.functions import (
     col, current_timestamp, count, sum as spark_sum, avg, min, max,
-    when, collect_set, array, lit, datediff, round as spark_round
+    when, collect_set, round as spark_round
 )
-from pyspark.sql.window import Window
 
 # COMMAND ----------
 
@@ -170,6 +169,37 @@ print(f"✅ Gold Budget Execution: {budget_count:,} records")
 # COMMAND ----------
 
 # MAGIC %md
+# MAGIC ## Gold: grant predictions (heuristic; notebook 04 overwrites with RF)
+
+# COMMAND ----------
+
+spark.sql(f"""
+CREATE OR REPLACE TABLE `{catalog}`.`gold`.grant_predictions AS
+SELECT grant_no, title, program_area, amount_usd, awardee,
+       ROUND(LEAST(0.95, GREATEST(0.35,
+           0.42
+           + CASE WHEN amount_usd >= 2000000 THEN 0.22
+                  WHEN amount_usd >= 1000000 THEN 0.15
+                  WHEN amount_usd >= 500000 THEN 0.08 ELSE 0.0 END
+           + CASE WHEN program_area IN ('AI/ML','Quantum','Autonomy') THEN 0.12
+                  WHEN program_area IN ('Cyber','Undersea') THEN 0.08 ELSE 0.04 END
+           + CASE WHEN fiscal_year >= 2025 THEN 0.06 ELSE 0.0 END
+       )), 4) AS success_probability,
+       CASE WHEN amount_usd >= 2000000 THEN 'Large award concentration'
+            WHEN classification_band = 'CUI-Mock' THEN 'CUI-Mock handling'
+            ELSE 'Standard portfolio risk' END AS risk_factors,
+       CASE WHEN amount_usd >= 1000000 THEN 'Fund'
+            WHEN amount_usd >= 400000 THEN 'Review'
+            ELSE 'Defer' END AS recommendation,
+       'heuristic_v1' AS model_name,
+       current_timestamp() AS scored_at
+FROM `{catalog}`.`silver`.grants WHERE _is_active = true
+""")
+print("grant_predictions", spark.table(f"`{catalog}`.`gold`.grant_predictions").count())
+
+# COMMAND ----------
+
+# MAGIC %md
 # MAGIC ## Lineage Tracking
 
 # COMMAND ----------
@@ -217,7 +247,7 @@ print("=" * 50)
 # Count checks
 tables = [
     "grants_summary", "financial_summary",
-    "grants_by_awardee", "budget_execution"
+    "grants_by_awardee", "budget_execution", "grant_predictions"
 ]
 
 all_passed = True

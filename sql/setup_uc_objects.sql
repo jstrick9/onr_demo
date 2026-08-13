@@ -188,6 +188,29 @@ CREATE TABLE IF NOT EXISTS `onr_demo`.`gold`.grants_by_awardee (
 CLUSTER BY (awardee)
 COMMENT 'Gold: grants by awardee';
 
+CREATE TABLE IF NOT EXISTS `onr_demo`.`gold`.grant_predictions (
+    grant_no STRING NOT NULL,
+    title STRING,
+    program_area STRING,
+    amount_usd DOUBLE,
+    awardee STRING,
+    success_probability DOUBLE,
+    risk_factors STRING,
+    recommendation STRING,
+    model_name STRING,
+    scored_at TIMESTAMP
+) USING DELTA
+COMMENT 'Gold: per-grant scores (heuristic from silver, or RF from notebook 04)';
+
+CREATE TABLE IF NOT EXISTS `onr_demo`.`gold`.model_metrics (
+    model_name STRING,
+    metric_name STRING,
+    metric_value DOUBLE,
+    n_rows INT,
+    trained_at TIMESTAMP
+) USING DELTA
+COMMENT 'Gold: last model run metrics for the Streamlit app';
+
 CREATE TABLE IF NOT EXISTS `onr_demo`.`gold`.budget_execution (
     fiscal_year INT,
     quarter STRING,

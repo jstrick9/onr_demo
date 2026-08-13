@@ -80,6 +80,29 @@ g.groupBy("awardee", "org_unit").agg(
     F.collect_set("program_area").alias("program_areas"), F.max("created_at").alias("latest_grant_date"),
 ).withColumn("_updated_at", F.current_timestamp()).write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(f"`{catalog}`.`gold`.grants_by_awardee")
 
+spark.sql(f"""
+CREATE OR REPLACE TABLE `{catalog}`.`gold`.grant_predictions AS
+SELECT grant_no, title, program_area, amount_usd, awardee,
+       ROUND(LEAST(0.95, GREATEST(0.35,
+           0.42
+           + CASE WHEN amount_usd >= 2000000 THEN 0.22
+                  WHEN amount_usd >= 1000000 THEN 0.15
+                  WHEN amount_usd >= 500000 THEN 0.08 ELSE 0.0 END
+           + CASE WHEN program_area IN ('AI/ML','Quantum','Autonomy') THEN 0.12
+                  WHEN program_area IN ('Cyber','Undersea') THEN 0.08 ELSE 0.04 END
+           + CASE WHEN fiscal_year >= 2025 THEN 0.06 ELSE 0.0 END
+       )), 4) AS success_probability,
+       CASE WHEN amount_usd >= 2000000 THEN 'Large award concentration'
+            WHEN classification_band = 'CUI-Mock' THEN 'CUI-Mock handling'
+            ELSE 'Standard portfolio risk' END AS risk_factors,
+       CASE WHEN amount_usd >= 1000000 THEN 'Fund'
+            WHEN amount_usd >= 400000 THEN 'Review'
+            ELSE 'Defer' END AS recommendation,
+       'heuristic_v1' AS model_name,
+       current_timestamp() AS scored_at
+FROM `{catalog}`.`silver`.grants WHERE _is_active = true
+""")
+
 f.groupBy("fiscal_year", "quarter", "category").agg(
     F.sum("budget_allocated").alias("budget_plan"), F.sum("actual_expenditure").alias("actual_spend"),
 ).withColumn("execution_rate", F.round(F.col("actual_spend") / F.col("budget_plan") * 100, 2)).withColumn("variance", F.col("budget_plan") - F.col("actual_spend")).withColumn("variance_pct", F.round(F.col("variance") / F.col("budget_plan") * 100, 2)).withColumn("status", F.when(F.col("execution_rate") >= 90, "ON_TARGET").when(F.col("execution_rate") >= 80, "WARNING").otherwise("AT_RISK")).withColumn("_updated_at", F.current_timestamp()).write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(f"`{catalog}`.`gold`.budget_execution")

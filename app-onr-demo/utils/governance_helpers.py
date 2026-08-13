@@ -5,7 +5,6 @@ Data Governance, Quality, and Cataloging
 
 import streamlit as st
 import pandas as pd
-from datetime import datetime
 
 
 # -------------------------------
@@ -43,43 +42,6 @@ def render_catalog_registry(cursor, catalog: str, schema: str):
             st.info("No tables found in catalog.")
     except Exception as e:
         st.info("Catalog information will appear once tables are registered.")
-
-
-# -------------------------------
-# METADATA DISPLAY
-# -------------------------------
-def render_metadata_details(cursor, catalog: str, schema: str, table_name: str):
-    """Display detailed metadata for a specific table."""
-    st.markdown(f"### 📋 Metadata: `{table_name}`")
-    
-    try:
-        # Column metadata
-        query = f"""
-        DESCRIBE TABLE EXTENDED `{catalog}`.`{schema}`.{table_name}
-        """
-        cursor.execute(query)
-        columns = cursor.fetchall()
-        
-        if columns:
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                st.markdown("#### Column Definitions")
-                col_df = pd.DataFrame(columns, columns=["Column", "Type", "Comment"])
-                st.dataframe(col_df, use_container_width=True)
-            
-            with col2:
-                st.markdown("#### Table Properties")
-                # Extract properties from DESCRIBE output
-                for row in columns:
-                    if row[0] and "Owner" in str(row[0]):
-                        st.write(f"**Owner:** {row[1]}")
-                    elif row[0] and "Created" in str(row[0]):
-                        st.write(f"**Created:** {row[1]}")
-                    elif row[0] and "Statistics" in str(row[0]):
-                        st.write(f"**Statistics:** {row[1]}")
-    except Exception as e:
-        st.info("Metadata will appear once table is registered in Unity Catalog.")
 
 
 # -------------------------------
@@ -123,33 +85,9 @@ def render_quality_scores(cursor, catalog: str, schema: str):
                     
                     st.caption(f"Last assessed: {assessed}")
         else:
-            # Show simulated scores for demo
-            render_simulated_quality_scores()
+            st.info("No `app.data_quality_scores` yet. Run `02_silver_quality.py` on **onr demo cluster**.")
     except Exception:
-        render_simulated_quality_scores()
-
-
-def render_simulated_quality_scores():
-    """Display simulated quality scores for demo purposes."""
-    tables = [
-        ("silver.grants", 0.94, 0.98, 0.92, 0.95, 0.91),
-        ("silver.financial", 0.97, 0.99, 0.96, 0.98, 0.95),
-        ("gold.grants_summary", 0.98, 0.99, 0.97, 0.99, 0.98),
-        ("gold.financial_summary", 0.99, 1.00, 0.98, 0.99, 0.99),
-    ]
-    
-    for table, score, completeness, accuracy, consistency, timeliness in tables:
-        with st.expander(f"📊 {table} — Score: {score:.1%}", expanded=True):
-            col1, col2, col3, col4 = st.columns(4)
-            
-            with col1:
-                st.metric("Completeness", f"{completeness:.1%}")
-            with col2:
-                st.metric("Accuracy", f"{accuracy:.1%}")
-            with col3:
-                st.metric("Consistency", f"{consistency:.1%}")
-            with col4:
-                st.metric("Timeliness", f"{timeliness:.1%}")
+        st.info("Quality scores appear after notebook 02 writes `app.data_quality_scores`.")
 
 
 # -------------------------------

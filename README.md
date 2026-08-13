@@ -22,7 +22,7 @@ Catalog **`onr_demo`** — one POC, no prod.
 |--------|------------------|
 | `bronze` | `grants`, `financial` · volumes `landing`, `checkpoints` |
 | `silver` | `grants`, `financial` |
-| `gold` | `grants_summary`, `financial_summary`, `grants_by_awardee`, `budget_execution` |
+| `gold` | `grants_summary`, `financial_summary`, `grants_by_awardee`, `budget_execution`, `grant_predictions`, `model_metrics` |
 | `app` | `ingestion_quality_log`, `data_quality_scores`, `lineage_tracking`, search/export history |
 
 Landing path: `/Volumes/onr_demo/bronze/landing/`
