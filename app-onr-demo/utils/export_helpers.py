@@ -200,7 +200,13 @@ def render_secure_export(cursor, catalog: str, schema: str, dataset_table: str, 
                 
                 if "parquet" in formats:
                     parquet_buffer = io.BytesIO()
-                    df.to_parquet(parquet_buffer, index=False)
+                    pq = df.copy()
+                    for col in pq.columns:
+                        if pq[col].dtype == object:
+                            pq[col] = pq[col].apply(
+                                lambda x: json.dumps(x) if isinstance(x, (list, dict, tuple)) else x
+                            )
+                    pq.to_parquet(parquet_buffer, index=False)
                     exports["parquet"] = parquet_buffer.getvalue()
                 
                 status.text("5️⃣ Logging export to audit trail...")

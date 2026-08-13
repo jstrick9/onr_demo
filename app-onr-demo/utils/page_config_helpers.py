@@ -114,11 +114,13 @@ def setup_sidebar():
 # WEBPAGE & MENU CONFIGURATION
 # -------------------------------
 def set_page_config(page_title=None, page_icon=None):
-    """Configure page settings."""
+    """Configure page settings.
+
+    Must be the first Streamlit command. Do not call @st.cache_data helpers
+    here — that counts as a command and raises StreamlitAPIException.
+    """
     if page_icon is None:
-        page_icon = load_page_icon()
-        if page_icon is None:
-            page_icon = "🚢"
+        page_icon = "🚢"
 
     st.set_page_config(
         page_title=page_title,

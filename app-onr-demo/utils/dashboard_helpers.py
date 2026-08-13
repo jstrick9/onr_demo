@@ -14,11 +14,39 @@ from datetime import datetime, timedelta
 # -------------------------------
 # EXECUTIVE KPI CARDS
 # -------------------------------
-def render_executive_kpis():
-    """Display executive-level KPI cards from the Compass fixture."""
+def render_executive_kpis(cursor=None, catalog: str = "onr_demo"):
+    """Executive KPIs from silver when the warehouse is up (tracks 400 → 408)."""
     from utils.portfolio_data import portfolio_kpis
 
-    k = portfolio_kpis()
+    k = None
+    if cursor:
+        try:
+            cursor.execute(
+                f"""
+                SELECT COUNT(*), SUM(amount_usd), AVG(amount_usd), COUNT(DISTINCT awardee)
+                FROM `{catalog}`.`silver`.grants WHERE _is_active = true
+                """
+            )
+            n, total, avg, awardees = cursor.fetchone()
+            cursor.execute(
+                f"""
+                SELECT SUM(actual_expenditure) / NULLIF(SUM(budget_allocated), 0) * 100
+                FROM `{catalog}`.`silver`.financial WHERE _is_active = true
+                """
+            )
+            exe = cursor.fetchone()[0]
+            if n:
+                k = {
+                    "grant_count": int(n),
+                    "total_funding": float(total or 0),
+                    "avg_award": float(avg or 0),
+                    "execution_rate": float(exe or 0),
+                    "awardee_count": int(awardees or 0),
+                }
+        except Exception:
+            k = None
+    if not k:
+        k = portfolio_kpis()
     st.markdown("### 📊 Executive Key Performance Indicators")
     
     col1, col2, col3, col4, col5 = st.columns(5)
@@ -51,7 +79,7 @@ def render_dashboard_filters():
         fiscal_year = st.multiselect(
             "Fiscal Year",
             options=fys,
-            default=fys[-2:] if len(fys) >= 2 else fys,
+            default=fys,
             key="dash_fiscal_year"
         )
     
@@ -60,7 +88,7 @@ def render_dashboard_filters():
         research_area = st.multiselect(
             "Program Area",
             options=areas,
-            default=areas[:2],
+            default=areas,
             key="dash_research_area"
         )
     
@@ -76,8 +104,8 @@ def render_dashboard_filters():
         amount_range = st.slider(
             "Award Amount Range",
             min_value=0,
-            max_value=5000000,
-            value=(0, 2000000),
+            max_value=8000000,
+            value=(0, 8000000),
             step=100000,
             format="$%d",
             key="dash_amount"
@@ -110,6 +138,13 @@ def render_grants_overview(cursor, catalog: str, schema: str, filters: dict):
         if filters.get("research_area"):
             areas = ",".join(f"'{a}'" for a in filters["research_area"])
             where_clauses.append(f"program_area IN ({areas})")
+        if filters.get("status"):
+            bands = ",".join(f"'{s}'" for s in filters["status"])
+            where_clauses.append(f"classification_band IN ({bands})")
+        if filters.get("amount_min") is not None:
+            where_clauses.append(f"amount_usd >= {float(filters['amount_min'])}")
+        if filters.get("amount_max") is not None:
+            where_clauses.append(f"amount_usd <= {float(filters['amount_max'])}")
         
         where_clause = " AND ".join(where_clauses)
         
@@ -379,6 +414,8 @@ def render_search_extract(cursor, catalog: str, schema: str):
                     OR LOWER(org_unit) LIKE '%{search_term.lower()}%'
                 LIMIT 50
                 """
+                if not cursor:
+                    raise RuntimeError("no warehouse")
                 cursor.execute(query)
                 results = cursor.fetchall()
                 

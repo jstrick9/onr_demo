@@ -84,7 +84,7 @@ st.markdown(
 # -------------------------------
 # EXECUTIVE KPIs
 # -------------------------------
-render_executive_kpis()
+render_executive_kpis(cursor, onr_catalog)
 
 # -------------------------------
 # FILTERS

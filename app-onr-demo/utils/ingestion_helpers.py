@@ -16,6 +16,9 @@ def render_ingestion_status(cursor, catalog: str, schema: str):
     """Display current ingestion pipeline status."""
     st.markdown("### 📊 Pipeline Status")
     
+    if not cursor:
+        st.info("📊 Pipeline metrics will appear once the warehouse is connected.")
+        return
     try:
         # Get ingestion metrics
         query = f"""

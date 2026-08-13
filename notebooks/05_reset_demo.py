@@ -59,8 +59,8 @@ print("silver.grants", sg.count(), "silver.financial", sf.count())
 
 # COMMAND ----------
 
-g = spark.table(f"`{catalog}`.`silver`.grants")
-f = spark.table(f"`{catalog}`.`silver`.financial")
+g = spark.table(f"`{catalog}`.`silver`.grants").filter("_is_active")
+f = spark.table(f"`{catalog}`.`silver`.financial").filter("_is_active")
 g.groupBy("program_area", "fiscal_year").agg(
     F.count("*").alias("grant_count"), F.sum("amount_usd").alias("total_funding"),
     F.avg("amount_usd").alias("avg_award"), F.min("amount_usd").alias("min_award"),

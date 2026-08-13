@@ -106,6 +106,8 @@ def ingest_grant_rows(cursor, catalog: str, rows: list[dict], source_file: str, 
             rejected += 1
             reasons.append(f"{gn}: amount not numeric")
             continue
+        if amount <= 0:
+            reasons.append(f"{gn}: amount {amount} will fail silver (amount_usd > 0)")
         if skip_existing:
             cursor.execute(
                 f"SELECT COUNT(*) FROM `{catalog}`.`bronze`.grants WHERE grant_no = {_sql_str(gn)}"

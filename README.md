@@ -38,7 +38,7 @@ Landing path: `/Volumes/onr_demo/bronze/landing/`
    - SQL: **`onr demo warehouse`**
    - Notebooks: **`onr demo cluster`**
 4. Create a **Databricks App** from `app-onr-demo/` (binds to `onr demo warehouse` in `app.yml`).
-5. Follow **[DEMO_SCRIPT.md](DEMO_SCRIPT.md)** (50 minutes). Live moment = Ingestion → **Drop live file**.
+5. Follow **[DEMO_SCRIPT.md](DEMO_SCRIPT.md)** (50 minutes). Live moment = Ingestion → **Process selected files** (Live 8).
 
 Optional SQL-only create: `sql/setup_uc_objects.sql` (no extra S3 bucket).
 
@@ -72,7 +72,7 @@ App count: **400 → 408** (live file) → **400** (reset).
 ```
 onr_demo/
 ├── DEMO_SCRIPT.md                 # 50-minute talk track
-├── databricks.yml                 # Slim DAB: warehouse + volumes + app
+├── databricks.yml                 # Slim DAB: volumes + app (does not create compute)
 ├── app-onr-demo/                  # Streamlit app
 │   ├── Home.py
 │   ├── app.yml
@@ -85,7 +85,8 @@ onr_demo/
 │   ├── 01_bronze_ingestion.py     # Auto Loader
 │   ├── 02_silver_quality.py
 │   ├── 03_gold_aggregation.py
-│   └── 04_mlflow_grant_model.py
+│   ├── 04_mlflow_grant_model.py
+│   └── 05_reset_demo.py           # Cluster reset to 400-grant seed
 ├── sql/
 │   ├── setup_uc_objects.sql
 │   └── validation_queries.sql
