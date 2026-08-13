@@ -169,3 +169,14 @@ For questions about this POC:
 ---
 
 *Built with Databricks on AWS — Serverless-first, Unity Catalog-governed*
+
+## Mock data (Compass fixture)
+
+Primary grants source: `resources/mock_data/grants_portfolio.json`  
+- Contract: `compass.synthetic.v1` (400 synthetic S&T grants, no CUI/PII)
+- Exact fields: `grant_no`, `title`, `abstract`, `program_area`, `fiscal_year`, `amount_usd`, `awardee`, `org_unit`, `classification_band`, `batch_id`, `created_at`
+- Financial ERP is **derived** from those grants (3 transactions per grant, keyed by `grant_no`) via `resources/mock_data/generate_mock_data.py`
+
+```bash
+python resources/mock_data/generate_mock_data.py --format csv
+```

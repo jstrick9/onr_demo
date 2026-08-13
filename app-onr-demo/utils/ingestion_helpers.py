@@ -244,67 +244,16 @@ spark.readStream \\
 # MOCK DATA GENERATION
 # -------------------------------
 def generate_mock_grants_data(num_records: int = 100) -> pd.DataFrame:
-    """Generate mock S&T grants data for demo."""
-    import random
-    
-    research_areas = [
-        "Artificial Intelligence", "Cybersecurity", "Autonomous Systems",
-        "Directed Energy", "Quantum Computing", "Hypersonics",
-        "Undersea Warfare", "Space Systems"
-    ]
-    
-    statuses = ["Active", "Completed", "Pending Review", "On Hold"]
-    
-    data = []
-    for i in range(num_records):
-        data.append({
-            "grant_id": f"ONR-{random.randint(10000, 99999)}",
-            "title": f"Research in {random.choice(research_areas)} - Phase {random.randint(1, 3)}",
-            "principal_investigator": f"Dr. {random.choice(['Smith', 'Johnson', 'Williams', 'Brown', 'Jones'])}",
-            "institution": f"{random.choice(['MIT', 'Stanford', 'Naval Postgraduate School', 'NRL', 'JHU APL'])}",
-            "research_area": random.choice(research_areas),
-            "award_amount": round(random.uniform(50000, 2000000), 2),
-            "status": random.choice(statuses),
-            "start_date": (datetime.now() - timedelta(days=random.randint(0, 730))).strftime("%Y-%m-%d"),
-            "end_date": (datetime.now() + timedelta(days=random.randint(30, 730))).strftime("%Y-%m-%d"),
-            "fiscal_year": random.choice([2024, 2025, 2026]),
-        })
-    
-    return pd.DataFrame(data)
+    """Return Compass fixture grants (exact schema)."""
+    from utils.portfolio_data import grants_dataframe
+
+    df = grants_dataframe()
+    return df.head(num_records) if num_records else df
 
 
 def generate_mock_financial_data(num_records: int = 200) -> pd.DataFrame:
-    """Generate mock financial ERP data for demo."""
-    import random
-    
-    categories = [
-        "Personnel", "Equipment", "Travel", "Contractors",
-        "Supplies", "Training", "Facilities", "Other"
-    ]
-    
-    cost_centers = [
-        "R&D-001", "R&D-002", "ADMIN-001", "OPS-001",
-        "LAB-001", "IT-001", "HQ-001"
-    ]
-    
-    data = []
-    for i in range(num_records):
-        quarter = random.choice(["Q1", "Q2", "Q3", "Q4"])
-        year = random.choice([2024, 2025, 2026])
-        budget = round(random.uniform(10000, 500000), 2)
-        execution_rate = random.uniform(0.6, 1.1)
-        
-        data.append({
-            "transaction_id": f"FIN-{random.randint(100000, 999999)}",
-            "cost_center": random.choice(cost_centers),
-            "category": random.choice(categories),
-            "fiscal_year": year,
-            "quarter": quarter,
-            "budget_allocated": budget,
-            "actual_expenditure": round(budget * execution_rate, 2),
-            "execution_rate": round(execution_rate * 100, 1),
-            "variance": round(budget * (1 - execution_rate), 2),
-            "status": "Closed" if year < 2026 else "Open",
-        })
-    
-    return pd.DataFrame(data)
+    """Return ERP rows derived from the Compass grants fixture."""
+    from utils.portfolio_data import financial_dataframe
+
+    df = financial_dataframe()
+    return df.head(num_records) if num_records else df

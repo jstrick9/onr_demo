@@ -53,10 +53,7 @@ except Exception as e:
     st.error(f"Configuration error: {str(e)}")
     st.stop()
 
-# Database connection
 conn, cursor = get_connection()
-if not cursor:
-    st.stop()
 
 # -------------------------------
 # ELEMENT OVERVIEW
@@ -170,23 +167,23 @@ with st.expander("View Table DDL with Quality Constraints"):
     st.code(f"""
 -- Silver Table with Quality Constraints
 CREATE TABLE IF NOT EXISTS `{onr_catalog}`.`{onr_schema}`.silver_grants (
-    grant_id STRING NOT NULL,
+    grant_no STRING NOT NULL,
     title STRING,
-    principal_investigator STRING NOT NULL,
-    institution STRING,
-    research_area STRING,
-    award_amount DOUBLE,
-    status STRING,
-    start_date DATE,
-    end_date DATE,
+    abstract STRING,
+    program_area STRING,
     fiscal_year INT,
+    amount_usd DOUBLE,
+    awardee STRING NOT NULL,
+    org_unit STRING,
+    classification_band STRING,
+    batch_id STRING,
+    created_at TIMESTAMP,
     _ingest_time TIMESTAMP,
     _source_file STRING,
     _is_active BOOLEAN DEFAULT true,
-    CONSTRAINT valid_amount CHECK (award_amount > 0),
-    CONSTRAINT valid_dates CHECK (end_date > start_date)
+    CONSTRAINT valid_amount CHECK (amount_usd > 0)
 ) USING DELTA
-CLUSTER BY (research_area, fiscal_year)
+CLUSTER BY (program_area, fiscal_year)
 TBLPROPERTIES (
     'delta.feature.allowColumnDefaults' = 'supported',
     'quality' = 'gold'

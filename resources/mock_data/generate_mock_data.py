@@ -1,296 +1,141 @@
 """
-ONR ITSS POC — Mock Data Generator
-Generates sanitized mock data for S&T Research Grants and Financial ERP data.
-No CUI, PII, or classified information — for demonstration purposes only.
+ONR ITSS POC — Mock data packager
+
+Loads the Compass synthetic grants fixture (grants_portfolio.json) and
+derives Financial ERP transactions keyed to grant_no.
+
+No CUI / PII / classified data.
 
 Usage:
-    python generate_mock_data.py [--records 500] [--output-dir ./]
+    python generate_mock_data.py [--output-dir ./] [--format all]
 """
+
+from __future__ import annotations
 
 import argparse
 import csv
 import json
 import os
 import random
-from datetime import datetime, timedelta
-from typing import List, Dict
-
-
-# -------------------------------
-# CONSTANTS
-# -------------------------------
-
-RESEARCH_AREAS = [
-    "Artificial Intelligence",
-    "Cybersecurity",
-    "Autonomous Systems",
-    "Directed Energy",
-    "Quantum Computing",
-    "Hypersonics",
-    "Undersea Warfare",
-    "Space Systems",
-    "Advanced Materials",
-    "Biotechnology",
-]
-
-INSTITUTIONS = [
-    "Massachusetts Institute of Technology",
-    "Stanford University",
-    "Naval Postgraduate School",
-    "Naval Research Laboratory",
-    "Johns Hopkins Applied Physics Laboratory",
-    "Georgia Institute of Technology",
-    "California Institute of Technology",
-    "University of Michigan",
-    "Carnegie Mellon University",
-    "University of Texas at Austin",
-    "Purdue University",
-    "Virginia Tech",
-    "University of Maryland",
-    "Penn State University",
-    "Duke University",
-]
-
-PI_LAST_NAMES = [
-    "Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller",
-    "Davis", "Rodriguez", "Martinez", "Anderson", "Thomas", "Taylor",
-    "Moore", "Jackson", "Martin", "Lee", "Thompson", "White", "Harris",
-    "Clark", "Lewis", "Robinson", "Walker", "Young", "Allen", "King",
-    "Wright", "Scott", "Green", "Baker", "Adams", "Nelson", "Hill",
-    "Campbell", "Mitchell", "Roberts", "Carter", "Phillips", "Evans",
-]
-
-GRANT_STATUSES = ["Active", "Completed", "Pending Review", "On Hold"]
-
-COST_CENTERS = [
-    "R&D-001", "R&D-002", "R&D-003", "ADMIN-001", "OPS-001",
-    "LAB-001", "LAB-002", "IT-001", "IT-002", "HQ-001",
-    "FLEET-001", "FLEET-002", "TRAINING-001",
-]
+import sys
+from pathlib import Path
+from typing import Dict, List
 
 FINANCIAL_CATEGORIES = [
-    "Personnel", "Equipment", "Travel", "Contractors",
-    "Supplies", "Training", "Facilities", "Other Direct Costs",
-    "Subcontracts", "Materials",
+    "Personnel",
+    "Equipment",
+    "Travel",
+    "Contractors",
+    "Supplies",
+    "Training",
+    "Facilities",
+    "Other Direct Costs",
 ]
 
-FISCAL_YEARS = [2022, 2023, 2024, 2025, 2026]
-QUARTERS = ["Q1", "Q2", "Q3", "Q4"]
+HERE = Path(__file__).resolve().parent
+DEFAULT_FIXTURE = HERE / "grants_portfolio.json"
 
 
-# -------------------------------
-# GENERATORS
-# -------------------------------
-
-def generate_grant_id(index: int) -> str:
-    """Generate a unique grant ID."""
-    return f"ONR-{10000 + index}"
-
-
-def generate_pi_name() -> str:
-    """Generate a fake Principal Investigator name."""
-    first_names = ["James", "Mary", "Robert", "Patricia", "John", "Jennifer",
-                   "Michael", "Linda", "David", "Elizabeth", "William", "Barbara",
-                   "Richard", "Susan", "Joseph", "Jessica", "Thomas", "Sarah",
-                   "Christopher", "Karen", "Charles", "Lisa", "Daniel", "Nancy"]
-    return f"Dr. {random.choice(first_names)} {random.choice(PI_LAST_NAMES)}"
+def load_grants(fixture_path: Path) -> List[Dict]:
+    with fixture_path.open("r", encoding="utf-8") as f:
+        payload = json.load(f)
+    grants = payload.get("grants", [])
+    print(f"Loaded {len(grants)} grants from {fixture_path.name}")
+    print(f"  fixture_contract={payload.get('fixture_contract')} seed={payload.get('generator_seed')}")
+    return grants
 
 
-def generate_grant_title(research_area: str) -> str:
-    """Generate a realistic grant title."""
-    adjectives = ["Advanced", "Next-Generation", "Innovative", "Novel", "Integrated"]
-    nouns = ["Techniques", "Methods", "Systems", "Approaches", "Frameworks"]
-    applications = [
-        "for Naval Operations", "for Defense Applications",
-        "for Maritime Security", "for Force Protection",
-        "for Undersea Dominance", "for Information Warfare",
-    ]
-    return f"{random.choice(adjectives)} {research_area} {random.choice(nouns)} {random.choice(applications)}"
+def derive_financial(grants: List[Dict], txns_per_grant: int = 3, seed: int = 20260810) -> List[Dict]:
+    rng = random.Random(seed)
+    rows: List[Dict] = []
+    txn = 0
+    for rec in grants:
+        amount = float(rec.get("amount_usd") or 0)
+        if amount <= 0:
+            continue
+        weights = [rng.random() for _ in range(txns_per_grant)]
+        total_w = sum(weights) or 1.0
+        remaining = amount
+        for i, w in enumerate(weights):
+            share = amount * (w / total_w) if i < txns_per_grant - 1 else remaining
+            remaining -= share if i < txns_per_grant - 1 else 0
+            exec_rate = rng.uniform(0.72, 1.08)
+            budget = round(share, 2)
+            actual = round(budget * exec_rate, 2)
+            fy = int(rec.get("fiscal_year") or 2025)
+            txn += 1
+            rows.append(
+                {
+                    "transaction_id": f"FIN-{100000 + txn}",
+                    "grant_no": rec["grant_no"],
+                    "cost_center": rec.get("org_unit"),
+                    "program_area": rec.get("program_area"),
+                    "category": rng.choice(FINANCIAL_CATEGORIES),
+                    "fiscal_year": fy,
+                    "quarter": rng.choice(["Q1", "Q2", "Q3", "Q4"]),
+                    "budget_allocated": budget,
+                    "actual_expenditure": actual,
+                    "execution_rate": round(exec_rate * 100, 1),
+                    "variance": round(budget - actual, 2),
+                    "status": "Closed" if fy < 2026 else "Open",
+                    "batch_id": rec.get("batch_id") or "seed-initial-2026",
+                }
+            )
+    return rows
 
 
-def generate_grants_data(num_records: int) -> List[Dict]:
-    """Generate mock grants data."""
-    data = []
-    
-    for i in range(num_records):
-        research_area = random.choice(RESEARCH_AREAS)
-        start_date = datetime.now() - timedelta(days=random.randint(0, 1095))
-        duration = timedelta(days=random.randint(365, 1095))
-        end_date = start_date + duration
-        
-        grant = {
-            "grant_id": generate_grant_id(i),
-            "title": generate_grant_title(research_area),
-            "principal_investigator": generate_pi_name(),
-            "institution": random.choice(INSTITUTIONS),
-            "research_area": research_area,
-            "award_amount": round(random.uniform(50000, 5000000), 2),
-            "status": random.choice(GRANT_STATUSES),
-            "start_date": start_date.strftime("%Y-%m-%d"),
-            "end_date": end_date.strftime("%Y-%m-%d"),
-            "fiscal_year": random.choice(FISCAL_YEARS),
-        }
-        data.append(grant)
-    
-    return data
-
-
-def generate_financial_data(num_records: int) -> List[Dict]:
-    """Generate mock financial ERP data."""
-    data = []
-    
-    for i in range(num_records):
-        fiscal_year = random.choice(FISCAL_YEARS)
-        quarter = random.choice(QUARTERS)
-        budget = round(random.uniform(10000, 1000000), 2)
-        execution_rate = random.uniform(0.65, 1.15)
-        actual = round(budget * execution_rate, 2)
-        
-        transaction = {
-            "transaction_id": f"FIN-{100000 + i}",
-            "cost_center": random.choice(COST_CENTERS),
-            "category": random.choice(FINANCIAL_CATEGORIES),
-            "fiscal_year": fiscal_year,
-            "quarter": quarter,
-            "budget_allocated": budget,
-            "actual_expenditure": actual,
-            "execution_rate": round(execution_rate * 100, 1),
-            "variance": round(budget - actual, 2),
-            "status": "Closed" if fiscal_year < 2026 else "Open",
-        }
-        data.append(transaction)
-    
-    return data
-
-
-# -------------------------------
-# EXPORT FUNCTIONS
-# -------------------------------
-
-def save_to_csv(data: List[Dict], filename: str):
-    """Save data to CSV file."""
+def save_csv(data: List[Dict], filename: str) -> None:
     if not data:
         return
-    
     with open(filename, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=data[0].keys())
+        writer = csv.DictWriter(f, fieldnames=list(data[0].keys()))
         writer.writeheader()
         writer.writerows(data)
-    
-    print(f"✅ Saved {len(data)} records to {filename}")
+    print(f"Saved {len(data)} records to {filename}")
 
 
-def save_to_json(data: List[Dict], filename: str):
-    """Save data to JSON file."""
+def save_json(data, filename: str) -> None:
     with open(filename, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, default=str)
-    
-    print(f"✅ Saved {len(data)} records to {filename}")
+    print(f"Saved {filename}")
 
 
-def save_to_parquet(data: List[Dict], filename: str):
-    """Save data to Parquet file (requires pyarrow)."""
+def save_parquet(data: List[Dict], filename: str) -> None:
     try:
         import pandas as pd
-        df = pd.DataFrame(data)
-        df.to_parquet(filename, index=False)
-        print(f"✅ Saved {len(data)} records to {filename}")
+
+        pd.DataFrame(data).to_parquet(filename, index=False)
+        print(f"Saved {len(data)} records to {filename}")
     except ImportError:
-        print("⚠️ pyarrow not installed — skipping Parquet export")
-        print("   Install with: pip install pyarrow")
+        print("pyarrow/pandas not installed — skipping Parquet")
 
 
-# -------------------------------
-# DATABRICKS DIRECT UPLOAD
-# -------------------------------
-
-def upload_to_databricks(data: List[Dict], table_name: str, catalog: str, schema: str):
-    """Upload data directly to Databricks table."""
-    try:
-        from databricks.sdk import WorkspaceClient
-        from pyspark.sql import SparkSession
-        
-        spark = SparkSession.builder.getOrCreate()
-        df = spark.createDataFrame(data)
-        
-        full_table = f"`{catalog}`.`{schema}`.{table_name}"
-        df.write.mode("append").saveAsTable(full_table)
-        
-        print(f"✅ Uploaded {len(data)} records to {full_table}")
-    except Exception as e:
-        print(f"⚠️ Direct upload failed: {str(e)}")
-        print("   Save to CSV/JSON and upload manually or use Auto Loader")
-
-
-# -------------------------------
-# MAIN
-# -------------------------------
-
-def main():
-    parser = argparse.ArgumentParser(description="Generate mock data for ONR ITSS POC")
-    parser.add_argument("--grants", type=int, default=500, help="Number of grants records")
-    parser.add_argument("--financial", type=int, default=2000, help="Number of financial records")
-    parser.add_argument("--output-dir", type=str, default=".", help="Output directory")
-    parser.add_argument("--format", type=str, default="all", choices=["csv", "json", "parquet", "all"],
-                        help="Output format")
-    parser.add_argument("--databricks", action="store_true", help="Upload directly to Databricks")
-    parser.add_argument("--catalog", type=str, default="onr_demo", help="Unity Catalog catalog")
-    parser.add_argument("--schema", type=str, default="dev", help="Unity Catalog schema")
-    
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Package ONR fixture + derived ERP")
+    parser.add_argument("--fixture", type=str, default=str(DEFAULT_FIXTURE))
+    parser.add_argument("--output-dir", type=str, default=str(HERE))
+    parser.add_argument("--format", type=str, default="all", choices=["csv", "json", "parquet", "all"])
+    parser.add_argument("--txns-per-grant", type=int, default=3)
     args = parser.parse_args()
-    
-    # Create output directory
+
     os.makedirs(args.output_dir, exist_ok=True)
-    
-    print("=" * 60)
-    print("ONR ITSS POC — Mock Data Generator")
-    print("=" * 60)
-    print(f"\nGenerating:")
-    print(f"  - {args.grants:,} grants records")
-    print(f"  - {args.financial:,} financial records")
-    print(f"\nOutput directory: {os.path.abspath(args.output_dir)}")
-    print()
-    
-    # Generate data
-    print("Generating grants data...")
-    grants_data = generate_grants_data(args.grants)
-    
-    print("Generating financial data...")
-    financial_data = generate_financial_data(args.financial)
-    
-    # Save files
+    grants = load_grants(Path(args.fixture))
+    financial = derive_financial(grants, txns_per_grant=args.txns_per_grant)
+
     formats = ["csv", "json", "parquet"] if args.format == "all" else [args.format]
-    
     for fmt in formats:
         if fmt == "csv":
-            save_to_csv(grants_data, os.path.join(args.output_dir, "sample_grants.csv"))
-            save_to_csv(financial_data, os.path.join(args.output_dir, "sample_financial.csv"))
+            save_csv(grants, os.path.join(args.output_dir, "sample_grants.csv"))
+            save_csv(financial, os.path.join(args.output_dir, "sample_financial.csv"))
         elif fmt == "json":
-            save_to_json(grants_data, os.path.join(args.output_dir, "sample_grants.json"))
-            save_to_json(financial_data, os.path.join(args.output_dir, "sample_financial.json"))
+            save_json(grants, os.path.join(args.output_dir, "sample_grants.json"))
+            save_json(financial, os.path.join(args.output_dir, "sample_financial.json"))
         elif fmt == "parquet":
-            save_to_parquet(grants_data, os.path.join(args.output_dir, "sample_grants.parquet"))
-            save_to_parquet(financial_data, os.path.join(args.output_dir, "sample_financial.parquet"))
-    
-    # Upload to Databricks if requested
-    if args.databricks:
-        print("\nUploading to Databricks...")
-        upload_to_databricks(grants_data, "bronze_grants", args.catalog, args.schema)
-        upload_to_databricks(financial_data, "bronze_financial", args.catalog, args.schema)
-    
-    # Summary
-    print("\n" + "=" * 60)
-    print("GENERATION COMPLETE")
-    print("=" * 60)
-    print(f"\nFiles generated:")
-    for f in os.listdir(args.output_dir):
-        if f.startswith("sample_"):
-            filepath = os.path.join(args.output_dir, f)
-            size = os.path.getsize(filepath)
-            print(f"  - {f} ({size:,} bytes)")
-    
-    print(f"\n✅ Total records generated: {args.grants + args.financial:,}")
-    print("\n⚠️ REMINDER: This is MOCK DATA only — no CUI/PII/classified information")
+            save_parquet(grants, os.path.join(args.output_dir, "sample_grants.parquet"))
+            save_parquet(financial, os.path.join(args.output_dir, "sample_financial.parquet"))
+
+    print(f"\nGrants: {len(grants):,}  Financial txns: {len(financial):,}")
+    print("MOCK / SYNTHETIC ONLY — no CUI/PII/classified information")
 
 
 if __name__ == "__main__":

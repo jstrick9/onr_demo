@@ -188,11 +188,14 @@ def get_connection(max_retries: int = 3, retry_delay_seconds: int = 2):
                 time.sleep(wait_time)
 
     status_placeholder.empty()
-    st.error("❌ Failed to connect to Databricks SQL Warehouse.")
+    st.warning(
+        "SQL Warehouse unavailable — running in **fixture mode** using "
+        "`grants_portfolio.json` (400 synthetic grants + derived ERP)."
+    )
     with st.expander("🔍 Technical Details"):
         st.code(str(last_error))
-    st.info("Please try refreshing the page. If the issue persists, contact support.")
-    st.stop()
+    st.session_state["fixture_mode"] = True
+    return None, None
 
 
 def clear_connection_cache():

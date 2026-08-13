@@ -38,18 +38,19 @@ CREATE VOLUME IF NOT EXISTS `onr_demo`.`dev`.checkpoints
 -- 3. BRONZE LAYER (Raw Ingestion)
 -- =====================================================
 
--- Bronze: Grants (Raw)
+-- Bronze: Grants (Raw) — Compass fixture schema
 CREATE TABLE IF NOT EXISTS `onr_demo`.`dev`.bronze_grants (
-    grant_id STRING NOT NULL,
+    grant_no STRING NOT NULL,
     title STRING,
-    principal_investigator STRING,
-    institution STRING,
-    research_area STRING,
-    award_amount DOUBLE,
-    status STRING,
-    start_date STRING,
-    end_date STRING,
+    abstract STRING,
+    program_area STRING,
     fiscal_year INT,
+    amount_usd DOUBLE,
+    awardee STRING,
+    org_unit STRING,
+    classification_band STRING,
+    batch_id STRING,
+    created_at STRING,
     _ingest_time TIMESTAMP,
     _source_file STRING,
     _batch_id STRING
@@ -63,7 +64,9 @@ COMMENT 'Bronze layer: Raw S&T grants data from ingestion pipeline';
 -- Bronze: Financial (Raw)
 CREATE TABLE IF NOT EXISTS `onr_demo`.`dev`.bronze_financial (
     transaction_id STRING NOT NULL,
+    grant_no STRING,
     cost_center STRING,
+    program_area STRING,
     category STRING,
     fiscal_year INT,
     quarter STRING,
@@ -72,6 +75,7 @@ CREATE TABLE IF NOT EXISTS `onr_demo`.`dev`.bronze_financial (
     execution_rate DOUBLE,
     variance DOUBLE,
     status STRING,
+    batch_id STRING,
     _ingest_time TIMESTAMP,
     _source_file STRING,
     _batch_id STRING
@@ -88,25 +92,25 @@ COMMENT 'Bronze layer: Raw financial ERP data from ingestion pipeline';
 
 -- Silver: Grants (Cleansed)
 CREATE TABLE IF NOT EXISTS `onr_demo`.`dev`.silver_grants (
-    grant_id STRING NOT NULL,
+    grant_no STRING NOT NULL,
     title STRING NOT NULL,
-    principal_investigator STRING NOT NULL,
-    institution STRING,
-    research_area STRING,
-    award_amount DOUBLE,
-    status STRING,
-    start_date DATE,
-    end_date DATE,
+    abstract STRING,
+    program_area STRING,
     fiscal_year INT,
+    amount_usd DOUBLE,
+    awardee STRING NOT NULL,
+    org_unit STRING,
+    classification_band STRING,
+    batch_id STRING,
+    created_at TIMESTAMP,
     _ingest_time TIMESTAMP,
     _source_file STRING,
     _is_active BOOLEAN DEFAULT true,
     _quality_score DOUBLE,
-    CONSTRAINT valid_amount CHECK (award_amount > 0),
-    CONSTRAINT valid_dates CHECK (end_date > start_date),
-    CONSTRAINT valid_pi CHECK (principal_investigator IS NOT NULL)
+    CONSTRAINT valid_amount CHECK (amount_usd > 0),
+    CONSTRAINT valid_awardee CHECK (awardee IS NOT NULL)
 ) USING DELTA
-CLUSTER BY (research_area, fiscal_year)
+CLUSTER BY (program_area, fiscal_year)
 TBLPROPERTIES (
     'delta.feature.allowColumnDefaults' = 'supported',
     'quality' = 'silver'
@@ -116,7 +120,9 @@ COMMENT 'Silver layer: Cleansed and validated grants data';
 -- Silver: Financial (Cleansed)
 CREATE TABLE IF NOT EXISTS `onr_demo`.`dev`.silver_financial (
     transaction_id STRING NOT NULL,
+    grant_no STRING,
     cost_center STRING NOT NULL,
+    program_area STRING,
     category STRING NOT NULL,
     fiscal_year INT,
     quarter STRING,
@@ -145,19 +151,18 @@ COMMENT 'Silver layer: Cleansed and validated financial data';
 
 -- Gold: Grants Summary
 CREATE TABLE IF NOT EXISTS `onr_demo`.`dev`.gold_grants_summary (
-    research_area STRING,
+    program_area STRING,
     fiscal_year INT,
     grant_count INT,
     total_funding DOUBLE,
     avg_award DOUBLE,
     min_award DOUBLE,
     max_award DOUBLE,
-    active_grants INT,
-    completed_grants INT,
-    success_rate DOUBLE,
+    cui_mock_count INT,
+    public_mock_count INT,
     _updated_at TIMESTAMP
 ) USING DELTA
-CLUSTER BY (research_area, fiscal_year)
+CLUSTER BY (program_area, fiscal_year)
 COMMENT 'Gold layer: Aggregated grants summary by research area and fiscal year';
 
 -- Gold: Financial Summary
@@ -177,18 +182,17 @@ CLUSTER BY (fiscal_year, quarter)
 COMMENT 'Gold layer: Aggregated financial summary by cost center';
 
 -- Gold: Grants by PI
-CREATE TABLE IF NOT EXISTS `onr_demo`.`dev`.gold_grants_by_pi (
-    principal_investigator STRING,
-    institution STRING,
+CREATE TABLE IF NOT EXISTS `onr_demo`.`dev`.gold_grants_by_awardee (
+    awardee STRING,
+    org_unit STRING,
     grant_count INT,
     total_funding DOUBLE,
-    avg_success_rate DOUBLE,
-    research_areas ARRAY<STRING>,
-    latest_grant_date DATE,
+    program_areas ARRAY<STRING>,
+    latest_grant_date TIMESTAMP,
     _updated_at TIMESTAMP
 ) USING DELTA
-CLUSTER BY (institution)
-COMMENT 'Gold layer: Grant performance aggregated by Principal Investigator';
+CLUSTER BY (awardee)
+COMMENT 'Gold layer: Grant performance aggregated by awardee organization';
 
 -- Gold: Budget Execution
 CREATE TABLE IF NOT EXISTS `onr_demo`.`dev`.gold_budget_execution (

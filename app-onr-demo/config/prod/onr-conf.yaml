@@ -17,7 +17,7 @@ schema:
     # Gold layer (business-ready aggregates)
     gold_grants_summary: "gold_grants_summary"
     gold_financial_summary: "gold_financial_summary"
-    gold_grants_by_pi: "gold_grants_by_pi"
+    gold_grants_by_awardee: "gold_grants_by_awardee"
     gold_budget_execution: "gold_budget_execution"
     
     # App tables

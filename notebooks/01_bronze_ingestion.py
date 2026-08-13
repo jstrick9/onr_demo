@@ -38,16 +38,17 @@ print(f"✅ Context set: {catalog}.{schema}")
 
 # Auto Loader — Incremental ingest for grants
 grants_schema = StructType([
-    StructField("grant_id", StringType(), False),
+    StructField("grant_no", StringType(), False),
     StructField("title", StringType(), True),
-    StructField("principal_investigator", StringType(), True),
-    StructField("institution", StringType(), True),
-    StructField("research_area", StringType(), True),
-    StructField("award_amount", DoubleType(), True),
-    StructField("status", StringType(), True),
-    StructField("start_date", StringType(), True),
-    StructField("end_date", StringType(), True),
+    StructField("abstract", StringType(), True),
+    StructField("program_area", StringType(), True),
     StructField("fiscal_year", IntegerType(), True),
+    StructField("amount_usd", DoubleType(), True),
+    StructField("awardee", StringType(), True),
+    StructField("org_unit", StringType(), True),
+    StructField("classification_band", StringType(), True),
+    StructField("batch_id", StringType(), True),
+    StructField("created_at", StringType(), True),
 ])
 
 grants_bronze_df = (
@@ -87,7 +88,9 @@ print("✅ Grants ingestion complete")
 # Auto Loader — Incremental ingest for financial data
 financial_schema = StructType([
     StructField("transaction_id", StringType(), False),
+    StructField("grant_no", StringType(), True),
     StructField("cost_center", StringType(), True),
+    StructField("program_area", StringType(), True),
     StructField("category", StringType(), True),
     StructField("fiscal_year", IntegerType(), True),
     StructField("quarter", StringType(), True),
@@ -154,7 +157,7 @@ spark.table(f"`{catalog}`.`{schema}`.bronze_financial").printSchema()
 null_grants = spark.sql(f"""
     SELECT COUNT(*) as null_ids 
     FROM `{catalog}`.`{schema}`.bronze_grants 
-    WHERE grant_id IS NULL
+    WHERE grant_no IS NULL
 """).collect()[0][0]
 
 null_financial = spark.sql(f"""
@@ -163,7 +166,7 @@ null_financial = spark.sql(f"""
     WHERE transaction_id IS NULL
 """).collect()[0][0]
 
-print(f"\n⚠️ Null grant_ids: {null_grants}")
+print(f"\n⚠️ Null grant_no: {null_grants}")
 print(f"⚠️ Null transaction_ids: {null_financial}")
 
 # COMMAND ----------

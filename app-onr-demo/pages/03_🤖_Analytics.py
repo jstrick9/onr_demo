@@ -53,10 +53,7 @@ except Exception as e:
     st.error(f"Configuration error: {str(e)}")
     st.stop()
 
-# Database connection
 conn, cursor = get_connection()
-if not cursor:
-    st.stop()
 
 # -------------------------------
 # ELEMENT OVERVIEW
@@ -184,11 +181,10 @@ with mlflow.start_run(run_name="rf-grant-success") as run:
 
 # SQL AI Functions (Zero-Cluster)
 SELECT 
-    grant_id,
+    grant_no,
     ai_query('grant_success_predictor', 
-             struct(research_area, award_amount, institution)) as prediction
-FROM `{onr_catalog}`.`{onr_schema}`.silver_grants
-WHERE status = 'Active';
+             struct(program_area, amount_usd, awardee)) as prediction
+FROM `{onr_catalog}`.`{onr_schema}`.silver_grants;
     """, language="python")
 
 # -------------------------------

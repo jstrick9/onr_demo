@@ -17,7 +17,7 @@ schema:
     # Gold layer (business-ready aggregates)
     gold_grants_summary: "gold_grants_summary"
     gold_financial_summary: "gold_financial_summary"
-    gold_grants_by_pi: "gold_grants_by_pi"
+    gold_grants_by_awardee: "gold_grants_by_awardee"
     gold_budget_execution: "gold_budget_execution"
     
     # App tables
@@ -84,18 +84,20 @@ app:
 
 # Mock Data Settings
 mock_data:
-  grants_count: 500
-  financial_records_count: 2000
-  fiscal_years: [2022, 2023, 2024, 2025, 2026]
-  research_areas:
-    - "Artificial Intelligence"
-    - "Cybersecurity"
-    - "Autonomous Systems"
+  fixture: "resources/mock_data/grants_portfolio.json"
+  fixture_contract: "compass.synthetic.v1"
+  grants_count: 400
+  financial_records_count: 1200
+  fiscal_years: [2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026]
+  program_areas:
+    - "AI/ML"
+    - "Autonomy"
+    - "Biotech"
+    - "Cyber"
     - "Directed Energy"
-    - "Quantum Computing"
-    - "Hypersonics"
-    - "Undersea Warfare"
-    - "Space Systems"
+    - "Materials"
+    - "Quantum"
+    - "Undersea"
 
 # ETL Integration
 etl:

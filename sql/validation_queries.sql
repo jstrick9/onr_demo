@@ -11,7 +11,7 @@
 -- Bronze layer validation
 SELECT 'bronze_grants' as layer, 'count' as check_type, COUNT(*) as value FROM `onr_demo`.`dev`.bronze_grants
 UNION ALL
-SELECT 'bronze_grants', 'null_grant_id', COUNT(*) FROM `onr_demo`.`dev`.bronze_grants WHERE grant_id IS NULL
+SELECT 'bronze_grants', 'null_grant_no', COUNT(*) FROM `onr_demo`.`dev`.bronze_grants WHERE grant_no IS NULL
 UNION ALL
 SELECT 'bronze_financial', 'count', COUNT(*) FROM `onr_demo`.`dev`.bronze_financial
 UNION ALL
@@ -20,9 +20,9 @@ SELECT 'bronze_financial', 'null_transaction_id', COUNT(*) FROM `onr_demo`.`dev`
 -- Silver layer validation
 SELECT 'silver_grants' as layer, 'count' as check_type, COUNT(*) as value FROM `onr_demo`.`dev`.silver_grants WHERE _is_active = true
 UNION ALL
-SELECT 'silver_grants', 'null_pi', COUNT(*) FROM `onr_demo`.`dev`.silver_grants WHERE principal_investigator IS NULL AND _is_active = true
+SELECT 'silver_grants', 'null_awardee', COUNT(*) FROM `onr_demo`.`dev`.silver_grants WHERE awardee IS NULL AND _is_active = true
 UNION ALL
-SELECT 'silver_grants', 'invalid_amount', COUNT(*) FROM `onr_demo`.`dev`.silver_grants WHERE award_amount <= 0 AND _is_active = true
+SELECT 'silver_grants', 'invalid_amount', COUNT(*) FROM `onr_demo`.`dev`.silver_grants WHERE amount_usd <= 0 AND _is_active = true
 UNION ALL
 SELECT 'silver_financial', 'count', COUNT(*) FROM `onr_demo`.`dev`.silver_financial WHERE _is_active = true
 UNION ALL
@@ -61,11 +61,11 @@ FROM `onr_demo`.`dev`.silver_financial;
 
 -- Check for duplicate grant IDs
 SELECT 
-    grant_id, 
+    grant_no, 
     COUNT(*) as duplicate_count
 FROM `onr_demo`.`dev`.silver_grants
 WHERE _is_active = true
-GROUP BY grant_id
+GROUP BY grant_no
 HAVING COUNT(*) > 1;
 
 -- Check for duplicate transaction IDs

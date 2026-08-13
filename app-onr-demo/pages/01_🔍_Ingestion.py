@@ -54,10 +54,7 @@ except Exception as e:
     st.error(f"Configuration error: {str(e)}")
     st.stop()
 
-# Database connection
 conn, cursor = get_connection()
-if not cursor:
-    st.stop()
 
 # -------------------------------
 # ELEMENT OVERVIEW

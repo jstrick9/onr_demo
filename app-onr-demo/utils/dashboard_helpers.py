@@ -15,50 +15,24 @@ from datetime import datetime, timedelta
 # EXECUTIVE KPI CARDS
 # -------------------------------
 def render_executive_kpis():
-    """Display executive-level KPI cards."""
+    """Display executive-level KPI cards from the Compass fixture."""
+    from utils.portfolio_data import portfolio_kpis
+
+    k = portfolio_kpis()
     st.markdown("### 📊 Executive Key Performance Indicators")
     
     col1, col2, col3, col4, col5 = st.columns(5)
     
     with col1:
-        st.metric(
-            label="Total Portfolio",
-            value="$320M",
-            delta="+$40M YoY",
-            delta_color="normal"
-        )
-    
+        st.metric(label="Total Portfolio", value=f"${k['total_funding']/1e6:.1f}M")
     with col2:
-        st.metric(
-            label="Active Grants",
-            value="220",
-            delta="+25 new",
-            delta_color="normal"
-        )
-    
+        st.metric(label="Grants", value=f"{k['grant_count']:,}")
     with col3:
-        st.metric(
-            label="Execution Rate",
-            value="94.2%",
-            delta="+2.1%",
-            delta_color="normal"
-        )
-    
+        st.metric(label="ERP Execution", value=f"{k['execution_rate']:.1f}%")
     with col4:
-        st.metric(
-            label="Avg Award Size",
-            value="$1.45M",
-            delta="+8%",
-            delta_color="normal"
-        )
-    
+        st.metric(label="Avg Award Size", value=f"${k['avg_award']/1e6:.2f}M")
     with col5:
-        st.metric(
-            label="Success Rate",
-            value="81%",
-            delta="+3%",
-            delta_color="normal"
-        )
+        st.metric(label="Awardees", value=f"{k['awardee_count']:,}")
 
 
 # -------------------------------
@@ -71,26 +45,30 @@ def render_dashboard_filters():
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
+        from utils.portfolio_data import fiscal_years, program_areas
+
+        fys = fiscal_years()
         fiscal_year = st.multiselect(
             "Fiscal Year",
-            options=[2022, 2023, 2024, 2025, 2026],
-            default=[2025, 2026],
+            options=fys,
+            default=fys[-2:] if len(fys) >= 2 else fys,
             key="dash_fiscal_year"
         )
     
     with col2:
+        areas = program_areas()
         research_area = st.multiselect(
-            "Research Area",
-            options=["AI/ML", "Cybersecurity", "Autonomous Systems", "Quantum", "Hypersonics", "Directed Energy"],
-            default=["AI/ML", "Cybersecurity"],
+            "Program Area",
+            options=areas,
+            default=areas[:2],
             key="dash_research_area"
         )
     
     with col3:
         status = st.multiselect(
-            "Grant Status",
-            options=["Active", "Completed", "Pending Review", "On Hold"],
-            default=["Active"],
+            "Classification Band",
+            options=["CUI-Mock", "Public-Mock"],
+            default=["CUI-Mock", "Public-Mock"],
             key="dash_status"
         )
     
@@ -131,19 +109,19 @@ def render_grants_overview(cursor, catalog: str, schema: str, filters: dict):
         
         if filters.get("research_area"):
             areas = ",".join(f"'{a}'" for a in filters["research_area"])
-            where_clauses.append(f"research_area IN ({areas})")
+            where_clauses.append(f"program_area IN ({areas})")
         
         where_clause = " AND ".join(where_clauses)
         
         query = f"""
         SELECT 
-            research_area,
+            program_area,
             COUNT(*) as grant_count,
-            SUM(award_amount) as total_funding,
-            AVG(award_amount) as avg_award
+            SUM(amount_usd) as total_funding,
+            AVG(amount_usd) as avg_award
         FROM `{catalog}`.`{schema}`.silver_grants
         WHERE {where_clause}
-        GROUP BY research_area
+        GROUP BY program_area
         ORDER BY total_funding DESC
         """
         cursor.execute(query)
@@ -181,22 +159,23 @@ def render_grants_overview(cursor, catalog: str, schema: str, filters: dict):
 
 
 def render_simulated_overview():
-    """Display simulated overview data for demo."""
-    data = {
-        "Research Area": ["AI/ML", "Cybersecurity", "Autonomous", "Quantum", "Hypersonics", "Directed Energy"],
-        "Grant Count": [45, 38, 32, 28, 25, 22],
-        "Total Funding": [65000000, 48000000, 52000000, 28000000, 35000000, 22000000],
-        "Avg Award": [1444444, 1263158, 1625000, 1000000, 1400000, 1000000]
-    }
-    
-    df = pd.DataFrame(data)
+    """Display fixture-backed overview when warehouse is unavailable."""
+    from utils.portfolio_data import grants_dataframe
+
+    g = grants_dataframe()
+    df = (
+        g.groupby("program_area", as_index=False)
+        .agg(grant_count=("grant_no", "count"), total_funding=("amount_usd", "sum"), avg_award=("amount_usd", "mean"))
+        .rename(columns={"program_area": "Research Area", "grant_count": "Grant Count",
+                         "total_funding": "Total Funding", "avg_award": "Avg Award"})
+    )
     
     fig = px.bar(
         df,
         x="Research Area",
         y="Total Funding",
         color="Grant Count",
-        title="Funding by Research Area (Simulated)",
+        title="Funding by Program Area (Compass fixture)",
         color_continuous_scale="Viridis"
     )
     st.plotly_chart(fig, use_container_width=True)
@@ -348,8 +327,8 @@ def render_search_extract(cursor, catalog: str, schema: str):
     
     # Simple search interface
     search_term = st.text_input(
-        "Search grants by title, PI, or institution:",
-        placeholder="e.g., 'Machine Learning' or 'MIT'",
+        "Search grants by title, awardee, grant number, or org unit:",
+        placeholder="e.g., 'quantum' or 'ONRD-2024'",
         key="exec_search"
     )
     
@@ -397,7 +376,13 @@ def render_search_extract(cursor, catalog: str, schema: str):
                 else:
                     st.info("No results found. Try a different search term.")
             except Exception:
-                st.info("Search functionality will be available once data is loaded.")
+                from utils.portfolio_data import filter_grants
+                df = filter_grants(search=search_term).head(50)
+                if df.empty:
+                    st.info("No results found. Try a different search term.")
+                else:
+                    show = df[["grant_no", "title", "awardee", "org_unit", "program_area", "amount_usd", "classification_band"]]
+                    st.dataframe(show, use_container_width=True)
     
     with col2:
         st.markdown("#### Quick Filters")

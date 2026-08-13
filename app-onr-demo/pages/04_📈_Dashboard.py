@@ -54,10 +54,7 @@ except Exception as e:
     st.error(f"Configuration error: {str(e)}")
     st.stop()
 
-# Database connection
 conn, cursor = get_connection()
-if not cursor:
-    st.stop()
 
 # -------------------------------
 # ELEMENT OVERVIEW
@@ -156,7 +153,7 @@ st.markdown("""
 │   ┌─────────────────────────────────────────────────────────────┐   │
 │   │              Gold Layer (Business-Ready Data)                 │   │
 │   │  • gold_grants_summary       • gold_financial_summary        │   │
-│   │  • gold_grants_by_pi         • gold_budget_execution         │   │
+│   │  • gold_grants_by_awardee    • gold_budget_execution         │   │
 │   └─────────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────────┘
 ```

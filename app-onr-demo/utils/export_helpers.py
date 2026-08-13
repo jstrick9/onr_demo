@@ -70,7 +70,7 @@ def render_dataset_selection(cursor, catalog: str, schema: str):
     datasets = {
         "Grants Summary": f"`{catalog}`.`{schema}`.gold_grants_summary",
         "Financial Summary": f"`{catalog}`.`{schema}`.gold_financial_summary",
-        "Grants by PI": f"`{catalog}`.`{schema}`.gold_grants_by_pi",
+        "Grants by Awardee": f"`{catalog}`.`{schema}`.gold_grants_by_awardee",
         "Budget Execution": f"`{catalog}`.`{schema}`.gold_budget_execution",
         "Raw Grants": f"`{catalog}`.`{schema}`.silver_grants",
         "Raw Financial": f"`{catalog}`.`{schema}`.silver_financial",
@@ -159,14 +159,22 @@ def render_secure_export(cursor, catalog: str, schema: str, dataset_table: str, 
             
             # Execute query
             try:
-                query = f"""
-                SELECT * FROM {dataset_table}
-                LIMIT {filters.get('max_records', 100000)}
-                """
-                cursor.execute(query)
-                columns = [desc[0] for desc in cursor.description]
-                rows = cursor.fetchall()
-                df = pd.DataFrame(rows, columns=columns)
+                if cursor:
+                    query = f"""
+                    SELECT * FROM {dataset_table}
+                    LIMIT {filters.get('max_records', 100000)}
+                    """
+                    cursor.execute(query)
+                    columns = [desc[0] for desc in cursor.description]
+                    rows = cursor.fetchall()
+                    df = pd.DataFrame(rows, columns=columns)
+                else:
+                    from utils.portfolio_data import grants_dataframe, financial_dataframe
+                    if "financial" in (dataset_table or "").lower():
+                        df = financial_dataframe()
+                    else:
+                        df = grants_dataframe()
+                    df = df.head(int(filters.get("max_records", 100000)))
                 
                 status.text("4️⃣ Generating export files...")
                 progress.progress(70)
@@ -263,8 +271,7 @@ curl -X GET "https://api.onr-demo.com/v1/grants" \\
   -H "Content-Type: application/json" \\
   -d '{
     "fiscal_year": 2026,
-    "research_area": "AI/ML",
-    "status": "Active",
+    "program_area": "AI/ML",
     "limit": 100
   }'
 
@@ -274,10 +281,10 @@ curl -X GET "https://api.onr-demo.com/v1/grants" \\
   "count": 45,
   "data": [
     {
-      "grant_id": "ONR-12345",
-      "title": "Advanced ML for Target Recognition",
-      "award_amount": 1200000,
-      "status": "Active"
+      "grant_no": "ONRD-2026-AIML-00336",
+      "title": "Advancing graph neural network reasoning...",
+      "amount_usd": 2551000,
+      "awardee": "Anchor Applied Research LLC"
     }
   ]
 }
@@ -396,16 +403,17 @@ def render_schema_documentation():
         st.code("""
 {
   "schema": {
-    "grant_id": "string — Unique grant identifier (ONR-XXXXX)",
+    "grant_no": "string — Unique grant identifier (ONRD-YYYY-AREA-#####)",
     "title": "string — Grant title",
-    "principal_investigator": "string — PI name",
-    "institution": "string — Research institution",
-    "research_area": "string — Research domain",
-    "award_amount": "decimal — Award amount in USD",
-    "status": "string — Grant status (Active/Completed/Pending/On Hold)",
-    "start_date": "date — Grant start date (YYYY-MM-DD)",
-    "end_date": "date — Grant end date (YYYY-MM-DD)",
-    "fiscal_year": "integer — Federal fiscal year"
+    "abstract": "string — Synthetic abstract",
+    "program_area": "string — ONR program area",
+    "fiscal_year": "integer — Federal fiscal year",
+    "amount_usd": "decimal — Award amount in USD",
+    "awardee": "string — Performing organization (synthetic)",
+    "org_unit": "string — ONR code / corporate unit",
+    "classification_band": "string — CUI-Mock or Public-Mock",
+    "batch_id": "string — Ingestion batch",
+    "created_at": "timestamp — Award create time"
   },
   "version": "1.0",
   "last_updated": "2026-08-12",
@@ -418,7 +426,8 @@ def render_schema_documentation():
 {
   "schema": {
     "transaction_id": "string — Unique transaction ID",
-    "cost_center": "string — Organizational cost center",
+    "grant_no": "string — FK to grants.grant_no",
+    "cost_center": "string — Organizational cost center (from org_unit)",
     "category": "string — Expenditure category",
     "fiscal_year": "integer — Federal fiscal year",
     "quarter": "string — Fiscal quarter (Q1-Q4)",

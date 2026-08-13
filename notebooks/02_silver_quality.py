@@ -45,39 +45,39 @@ bronze_grants = spark.table(f"`{catalog}`.`{schema}`.bronze_grants")
 silver_grants = (
     bronze_grants
     # Trim whitespace
-    .withColumn("grant_id", trim(col("grant_id")))
+    .withColumn("grant_no", trim(col("grant_no")))
     .withColumn("title", trim(col("title")))
-    .withColumn("principal_investigator", trim(col("principal_investigator")))
-    .withColumn("institution", trim(col("institution")))
-    .withColumn("research_area", trim(col("research_area")))
-    .withColumn("status", upper(trim(col("status"))))
+    .withColumn("abstract", trim(col("abstract")))
+    .withColumn("program_area", trim(col("program_area")))
+    .withColumn("awardee", trim(col("awardee")))
+    .withColumn("org_unit", trim(col("org_unit")))
+    .withColumn("classification_band", trim(col("classification_band")))
     
     # Type casting
-    .withColumn("award_amount", col("award_amount").cast("double"))
-    .withColumn("start_date", to_date(col("start_date"), "yyyy-MM-dd"))
-    .withColumn("end_date", to_date(col("end_date"), "yyyy-MM-dd"))
+    .withColumn("amount_usd", col("amount_usd").cast("double"))
     .withColumn("fiscal_year", col("fiscal_year").cast("int"))
+    .withColumn("created_at", F.to_timestamp(col("created_at")))
     
     # Add metadata
     .withColumn("_is_active", lit(True))
     .withColumn("_quality_score", 
-        when(col("award_amount").isNotNull() & (col("award_amount") > 0), 1.0)
+        when(col("amount_usd").isNotNull() & (col("amount_usd") > 0), 1.0)
         .otherwise(0.5)
     )
     
     # Remove duplicates (keep latest by ingest time)
     .withColumn("_row_num", 
         F.row_number().over(
-            Window.partitionBy("grant_id").orderBy(col("_ingest_time").desc())
+            Window.partitionBy("grant_no").orderBy(col("_ingest_time").desc())
         )
     )
     .filter(col("_row_num") == 1)
     .drop("_row_num")
     
     # Apply quality filters
-    .filter(col("grant_id").isNotNull())
-    .filter(col("award_amount") > 0)
-    .filter(col("end_date") > col("start_date"))
+    .filter(col("grant_no").isNotNull())
+    .filter(col("amount_usd") > 0)
+    .filter(col("awardee").isNotNull())
 )
 
 # Overwrite silver table
@@ -163,10 +163,10 @@ print(f"✅ Silver Financial: {financial_count:,} records")
 grants_completeness = spark.sql(f"""
     SELECT 
         COUNT(*) as total,
-        COUNT(CASE WHEN grant_id IS NOT NULL THEN 1 END) as valid_id,
-        COUNT(CASE WHEN principal_investigator IS NOT NULL THEN 1 END) as valid_pi,
-        COUNT(CASE WHEN award_amount > 0 THEN 1 END) as valid_amount,
-        COUNT(CASE WHEN start_date IS NOT NULL AND end_date IS NOT NULL THEN 1 END) as valid_dates
+        COUNT(CASE WHEN grant_no IS NOT NULL THEN 1 END) as valid_id,
+        COUNT(CASE WHEN awardee IS NOT NULL THEN 1 END) as valid_awardee,
+        COUNT(CASE WHEN amount_usd > 0 THEN 1 END) as valid_amount,
+        COUNT(CASE WHEN program_area IS NOT NULL THEN 1 END) as valid_area
     FROM `{catalog}`.`{schema}`.silver_grants
 """).collect()[0]
 

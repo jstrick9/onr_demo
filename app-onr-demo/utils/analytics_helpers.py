@@ -120,10 +120,10 @@ def render_grant_predictions(cursor, catalog: str, schema: str):
     try:
         query = f"""
         SELECT 
-            grant_id,
+            grant_no,
             title,
-            research_area,
-            award_amount,
+            program_area,
+            amount_usd,
             success_probability,
             risk_factors,
             recommendation
@@ -162,18 +162,26 @@ def render_grant_predictions(cursor, catalog: str, schema: str):
 
 
 def render_simulated_predictions():
-    """Display simulated predictions for demo."""
-    data = {
-        "Grant ID": ["ONR-12345", "ONR-23456", "ONR-34567", "ONR-45678", "ONR-56789"],
-        "Research Area": ["AI/ML", "Cybersecurity", "Autonomous Systems", "Quantum", "Hypersonics"],
-        "Award Amount": ["$1.2M", "$850K", "$2.1M", "$950K", "$1.5M"],
-        "Success Probability": [0.92, 0.87, 0.78, 0.65, 0.54],
-        "Risk Level": ["Low", "Low", "Medium", "Medium", "High"],
-        "Recommendation": ["Fund", "Fund", "Review", "Review", "Defer"]
-    }
-    
-    df = pd.DataFrame(data)
-    st.dataframe(df, use_container_width=True)
+    """Display fixture-backed predictions for demo."""
+    from utils.portfolio_data import grants_dataframe
+
+    g = grants_dataframe().nlargest(8, "amount_usd")
+    rows = []
+    for rec in g.to_dict(orient="records"):
+        amt = float(rec["amount_usd"])
+        prob = min(0.95, 0.55 + (amt / 8_000_000))
+        risk = "Low" if prob >= 0.8 else ("Medium" if prob >= 0.65 else "High")
+        rec_txt = "Fund" if risk == "Low" else ("Review" if risk == "Medium" else "Defer")
+        rows.append({
+            "Grant No": rec["grant_no"],
+            "Program Area": rec["program_area"],
+            "Awardee": rec["awardee"],
+            "Award Amount": f"${amt:,.0f}",
+            "Success Probability": round(prob, 2),
+            "Risk Level": risk,
+            "Recommendation": rec_txt,
+        })
+    st.dataframe(pd.DataFrame(rows), use_container_width=True)
 
 
 # -------------------------------

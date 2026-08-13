@@ -4,7 +4,7 @@
 # MAGIC **Purpose:** Create business-ready aggregates from silver data  
 # MAGIC **Catalog:** onr_demo.dev | **Compute:** Serverless  
 # MAGIC **Input:** onr_demo.dev.silver_grants, onr_demo.dev.silver_financial  
-# MAGIC **Output:** gold_grants_summary, gold_financial_summary, gold_grants_by_pi, gold_budget_execution  
+# MAGIC **Output:** gold_grants_summary, gold_financial_summary, gold_grants_by_awardee, gold_budget_execution  
 # MAGIC **QA:** Count validation + freshness check
 
 # COMMAND ----------
@@ -40,22 +40,19 @@ from pyspark.sql.window import Window
 # Read silver grants
 silver_grants = spark.table(f"`{catalog}`.`{schema}`.silver_grants")
 
-# Aggregate by research area and fiscal year
+# Aggregate by program area and fiscal year
 gold_grants_summary = (
     silver_grants
     .filter(col("_is_active") == True)
-    .groupBy("research_area", "fiscal_year")
+    .groupBy("program_area", "fiscal_year")
     .agg(
         count("*").alias("grant_count"),
-        spark_sum("award_amount").alias("total_funding"),
-        avg("award_amount").alias("avg_award"),
-        min("award_amount").alias("min_award"),
-        max("award_amount").alias("max_award"),
-        spark_sum(when(col("status") == "ACTIVE", 1).otherwise(0)).alias("active_grants"),
-        spark_sum(when(col("status") == "COMPLETED", 1).otherwise(0)).alias("completed_grants"),
-    )
-    .withColumn("success_rate", 
-        spark_round(col("completed_grants") / col("grant_count") * 100, 2)
+        spark_sum("amount_usd").alias("total_funding"),
+        avg("amount_usd").alias("avg_award"),
+        min("amount_usd").alias("min_award"),
+        max("amount_usd").alias("max_award"),
+        spark_sum(when(col("classification_band") == "CUI-Mock", 1).otherwise(0)).alias("cui_mock_count"),
+        spark_sum(when(col("classification_band") == "Public-Mock", 1).otherwise(0)).alias("public_mock_count"),
     )
     .withColumn("_updated_at", current_timestamp())
 )
@@ -106,33 +103,29 @@ print(f"✅ Gold Financial Summary: {fin_count:,} records")
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Gold: Grants by Principal Investigator
+# MAGIC ## Gold: Grants by Awardee
 
 # COMMAND ----------
 
-# Aggregate by PI
-gold_grants_by_pi = (
+gold_grants_by_awardee = (
     silver_grants
     .filter(col("_is_active") == True)
-    .groupBy("principal_investigator", "institution")
+    .groupBy("awardee", "org_unit")
     .agg(
         count("*").alias("grant_count"),
-        spark_sum("award_amount").alias("total_funding"),
-        avg(when(col("status") == "COMPLETED", 1.0).otherwise(0.0)).alias("avg_success_rate"),
-        collect_set("research_area").alias("research_areas"),
-        max("start_date").alias("latest_grant_date"),
+        spark_sum("amount_usd").alias("total_funding"),
+        collect_set("program_area").alias("program_areas"),
+        max("created_at").alias("latest_grant_date"),
     )
-    .withColumn("avg_success_rate", spark_round(col("avg_success_rate") * 100, 2))
     .withColumn("_updated_at", current_timestamp())
 )
 
-# Write to gold table
-gold_grants_by_pi.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(
-    f"`{catalog}`.`{schema}`.gold_grants_by_pi"
+gold_grants_by_awardee.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(
+    f"`{catalog}`.`{schema}`.gold_grants_by_awardee"
 )
 
-pi_count = gold_grants_by_pi.count()
-print(f"✅ Gold Grants by PI: {pi_count:,} records")
+pi_count = gold_grants_by_awardee.count()
+print(f"✅ Gold Grants by Awardee: {pi_count:,} records")
 
 # COMMAND ----------
 
@@ -252,9 +245,9 @@ print("\n✅ All gold layer validations passed!")
 # MAGIC ## Gold Layer Complete
 # MAGIC 
 # MAGIC **Summary:**
-# MAGIC - ✅ gold_grants_summary — Aggregated by research area and fiscal year
+# MAGIC - ✅ gold_grants_summary — Aggregated by program area and fiscal year
 # MAGIC - ✅ gold_financial_summary — Aggregated by cost center and category
-# MAGIC - ✅ gold_grants_by_pi — Performance metrics by Principal Investigator
+# MAGIC - ✅ gold_grants_by_awardee — Performance metrics by awardee
 # MAGIC - ✅ gold_budget_execution — Budget execution tracking
 # MAGIC - ✅ Lineage tracking recorded
 # MAGIC 
