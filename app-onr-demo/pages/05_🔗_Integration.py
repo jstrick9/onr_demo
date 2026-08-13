@@ -9,6 +9,7 @@ from utils.page_config_helpers import setup_sidebar, set_page_config
 from utils.runtime_env import get_runtime_env
 from utils.db_helpers import get_connection, read_yaml
 from utils.user_helpers import init_user_session_state
+from utils.eval_prompt import render_eval_prompt
 from utils.export_helpers import (
     render_export_options,
     render_dataset_selection,

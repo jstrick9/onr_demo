@@ -17,25 +17,24 @@ def render_catalog_registry(cursor, catalog: str, schema: str):
     
     try:
         query = f"""
-        SELECT 
+        SELECT
+            table_schema,
             table_name,
+            table_type,
             comment,
-            owner,
             created,
-            last_altered,
-            format,
-            size_bytes
+            last_altered
         FROM system.information_schema.tables
         WHERE table_catalog = '{catalog}'
           AND table_schema IN ('bronze', 'silver', 'gold', 'app')
-        ORDER BY table_name
+        ORDER BY table_schema, table_name
         """
         cursor.execute(query)
         tables = cursor.fetchall()
         
         if tables:
             df = pd.DataFrame(tables, columns=[
-                "Table Name", "Description", "Owner", "Created", "Last Modified", "Format", "Size"
+                "Schema", "Table", "Type", "Comment", "Created", "Last Altered"
             ])
             st.dataframe(df, use_container_width=True)
         else:
@@ -129,10 +128,10 @@ def render_quality_scores(cursor, catalog: str, schema: str):
 def render_simulated_quality_scores():
     """Display simulated quality scores for demo purposes."""
     tables = [
-        ("silver_grants", 0.94, 0.98, 0.92, 0.95, 0.91),
-        ("silver_financial", 0.97, 0.99, 0.96, 0.98, 0.95),
-        ("gold_grants_summary", 0.98, 0.99, 0.97, 0.99, 0.98),
-        ("gold_financial_summary", 0.99, 1.00, 0.98, 0.99, 0.99),
+        ("silver.grants", 0.94, 0.98, 0.92, 0.95, 0.91),
+        ("silver.financial", 0.97, 0.99, 0.96, 0.98, 0.95),
+        ("gold.grants_summary", 0.98, 0.99, 0.97, 0.99, 0.98),
+        ("gold.financial_summary", 0.99, 1.00, 0.98, 0.99, 0.99),
     ]
     
     for table, score, completeness, accuracy, consistency, timeliness in tables:
@@ -195,7 +194,7 @@ def render_lineage_visualization():
             "Quality Gates": "Count validation, freshness check"
         },
         {
-            "Source": "gold_grants_summary",
+            "Source": "onr_demo.gold.grants_summary",
             "Pipeline": "Analytics Model",
             "Target": "ML Predictions",
             "Transformations": "Feature engineering, model scoring",

@@ -161,6 +161,18 @@ def refresh_silver_gold_sql(cursor, catalog: str) -> None:
     )
     cursor.execute(
         f"""
+        CREATE OR REPLACE TABLE `{catalog}`.`gold`.grants_by_awardee AS
+        SELECT awardee, org_unit, COUNT(*) grant_count,
+               SUM(amount_usd) total_funding,
+               COLLECT_SET(program_area) program_areas,
+               MAX(created_at) latest_grant_date,
+               CURRENT_TIMESTAMP() _updated_at
+        FROM `{catalog}`.`silver`.grants WHERE _is_active
+        GROUP BY awardee, org_unit
+        """
+    )
+    cursor.execute(
+        f"""
         INSERT INTO `{catalog}`.`app`.ingestion_quality_log
         VALUES (
             'live-' || CAST(UNIX_TIMESTAMP() AS STRING), 'live_batch_drop', 'PASS',

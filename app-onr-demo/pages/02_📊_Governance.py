@@ -155,7 +155,7 @@ with st.expander("View Catalog & Schema Setup"):
     st.code(f"""
 -- Create Catalog
 CREATE CATALOG IF NOT EXISTS `{onr_catalog}`
-    MANAGED LOCATION 's3://onr-demo-uc-bucket/{onr_catalog}';
+    COMMENT 'ONR ITSS POC';
 
 CREATE SCHEMA IF NOT EXISTS `{onr_catalog}`.bronze;
 CREATE SCHEMA IF NOT EXISTS `{onr_catalog}`.silver;

@@ -381,9 +381,9 @@ def render_export_history():
     else:
         # Show sample history
         sample_history = [
-            {"timestamp": "2026-08-12 14:30:00", "dataset": "gold_grants_summary", "records": 500, "formats": "CSV, JSON", "user": "analyst@navy.mil"},
-            {"timestamp": "2026-08-12 10:15:00", "dataset": "gold_financial_summary", "records": 1200, "formats": "Parquet", "user": "admin@navy.mil"},
-            {"timestamp": "2026-08-11 16:45:00", "dataset": "silver_grants", "records": 2500, "formats": "CSV", "user": "jsmith@navy.mil"},
+            {"timestamp": "2026-08-12 14:30:00", "dataset": "gold.grants_summary", "records": 400, "formats": "CSV, JSON", "user": "analyst@navy.mil"},
+            {"timestamp": "2026-08-12 10:15:00", "dataset": "gold.financial_summary", "records": 1200, "formats": "Parquet", "user": "admin@navy.mil"},
+            {"timestamp": "2026-08-11 16:45:00", "dataset": "silver.grants", "records": 400, "formats": "CSV", "user": "jsmith@navy.mil"},
         ]
         st.dataframe(pd.DataFrame(sample_history), use_container_width=True)
 

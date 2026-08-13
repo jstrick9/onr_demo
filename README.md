@@ -38,7 +38,7 @@ Landing path: `/Volumes/onr_demo/bronze/landing/`
    - SQL: **`onr demo warehouse`**
    - Notebooks: **`onr demo cluster`**
 4. Create a **Databricks App** from `app-onr-demo/` (binds to `onr demo warehouse` in `app.yml`).
-4. Follow **[DEMO_SCRIPT.md](DEMO_SCRIPT.md)** (50 minutes, including a live 8-row file drop).
+5. Follow **[DEMO_SCRIPT.md](DEMO_SCRIPT.md)** (50 minutes). Live moment = Ingestion → **Drop live file**.
 
 Optional SQL-only create: `sql/setup_uc_objects.sql` (no extra S3 bucket).
 

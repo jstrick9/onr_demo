@@ -67,7 +67,7 @@ grants_bronze_df = (
 )
 
 # Write stream to Delta
-(
+grants_q = (
     grants_bronze_df.writeStream
     .format("delta")
     .option("checkpointLocation", f"/Volumes/onr_demo/bronze/checkpoints/grants")
@@ -75,6 +75,7 @@ grants_bronze_df = (
     .trigger(availableNow=True)
     .toTable(f"`{catalog}`.`bronze`.grants")
 )
+grants_q.awaitTermination()
 
 print("✅ Grants ingestion complete")
 
@@ -99,6 +100,7 @@ financial_schema = StructType([
     StructField("execution_rate", DoubleType(), True),
     StructField("variance", DoubleType(), True),
     StructField("status", StringType(), True),
+    StructField("batch_id", StringType(), True),
 ])
 
 financial_bronze_df = (
@@ -117,7 +119,7 @@ financial_bronze_df = (
 )
 
 # Write stream to Delta
-(
+fin_q = (
     financial_bronze_df.writeStream
     .format("delta")
     .option("checkpointLocation", f"/Volumes/onr_demo/bronze/checkpoints/financial")
@@ -125,6 +127,7 @@ financial_bronze_df = (
     .trigger(availableNow=True)
     .toTable(f"`{catalog}`.`bronze`.financial")
 )
+fin_q.awaitTermination()
 
 print("✅ Financial ingestion complete")
 
