@@ -25,8 +25,9 @@ def render_catalog_registry(cursor, catalog: str, schema: str):
             last_altered,
             format,
             size_bytes
-        FROM `{catalog}`.`{schema}`.information_schema.tables
-        WHERE table_schema = '{schema}'
+        FROM system.information_schema.tables
+        WHERE table_catalog = '{catalog}'
+          AND table_schema IN ('bronze', 'silver', 'gold', 'app')
         ORDER BY table_name
         """
         cursor.execute(query)
@@ -97,7 +98,7 @@ def render_quality_scores(cursor, catalog: str, schema: str):
             consistency,
             timeliness,
             last_assessed
-        FROM `{catalog}`.`{schema}`.data_quality_scores
+        FROM `{catalog}`.`app`.data_quality_scores
         ORDER BY table_name
         """
         cursor.execute(query)
@@ -175,22 +176,22 @@ def render_lineage_visualization():
         {
             "Source": "S3 Landing Zone",
             "Pipeline": "Auto Loader",
-            "Target": "bronze_grants",
+            "Target": "onr_demo.bronze.grants",
             "Transformations": "Schema inference, file metadata",
-            "Quality Gates": "Null check on grant_id"
+            "Quality Gates": "Null check on grant_no"
         },
         {
-            "Source": "bronze_grants",
+            "Source": "onr_demo.bronze.grants",
             "Pipeline": "Silver Transform",
-            "Target": "silver_grants",
+            "Target": "onr_demo.silver.grants",
             "Transformations": "Deduplication, type casting, validation",
-            "Quality Gates": "Valid dates, positive amounts, PI not null"
+            "Quality Gates": "Positive amounts, awardee not null"
         },
         {
-            "Source": "silver_grants",
+            "Source": "onr_demo.silver.grants",
             "Pipeline": "Gold Aggregation",
-            "Target": "gold_grants_summary",
-            "Transformations": "Group by research_area, fiscal_year",
+            "Target": "onr_demo.gold.grants_summary",
+            "Transformations": "Group by program_area, fiscal_year",
             "Quality Gates": "Count validation, freshness check"
         },
         {
@@ -218,12 +219,12 @@ def render_governance_policies(cursor, catalog: str, schema: str):
     with col1:
         st.markdown("#### Data Classification Tags")
         tags_data = [
-            {"Table": "silver_grants", "Tag": "data_sensitivity", "Value": "public"},
-            {"Table": "silver_grants", "Tag": "domain", "Value": "research"},
-            {"Table": "silver_financial", "Tag": "data_sensitivity", "Value": "internal"},
-            {"Table": "silver_financial", "Tag": "domain", "Value": "finance"},
-            {"Table": "gold_grants_summary", "Tag": "data_sensitivity", "Value": "public"},
-            {"Table": "gold_financial_summary", "Tag": "data_sensitivity", "Value": "internal"},
+            {"Table": "silver.grants", "Tag": "data_sensitivity", "Value": "public"},
+            {"Table": "silver.grants", "Tag": "domain", "Value": "research"},
+            {"Table": "silver.financial", "Tag": "data_sensitivity", "Value": "internal"},
+            {"Table": "silver.financial", "Tag": "domain", "Value": "finance"},
+            {"Table": "gold.grants_summary", "Tag": "data_sensitivity", "Value": "public"},
+            {"Table": "gold.financial_summary", "Tag": "data_sensitivity", "Value": "internal"},
         ]
         st.dataframe(pd.DataFrame(tags_data), use_container_width=True)
     
@@ -241,7 +242,7 @@ def render_governance_policies(cursor, catalog: str, schema: str):
     st.markdown("#### Row-Level Security Example")
     st.code("""
 -- Row filter: Users only see their region's data
-ALTER TABLE `{catalog}`.`{schema}`.gold_grants_summary 
+ALTER TABLE `{catalog}`.`gold`.grants_summary 
 SET ROW FILTER region_filter ON (region = current_user_region());
 
 -- Column mask: Mask PI names for viewers
@@ -251,9 +252,9 @@ RETURN CASE
     ELSE CONCAT(LEFT(name, 1), '****') 
 END;
 
-ALTER TABLE `{catalog}`.`{schema}`.silver_grants 
-ALTER COLUMN principal_investigator 
-SET MASK mask_pi_name;
+ALTER TABLE `{catalog}`.`silver`.grants 
+ALTER COLUMN awardee 
+SET MASK mask_awardee;
     """, language="sql")
 
 
@@ -273,7 +274,7 @@ def render_lineage_tracking(cursor, catalog: str, schema: str):
             records_processed,
             processing_time_ms,
             executed_at
-        FROM `{catalog}`.`{schema}`.lineage_tracking
+        FROM `{catalog}`.`app`.lineage_tracking
         ORDER BY executed_at DESC
         LIMIT 20
         """

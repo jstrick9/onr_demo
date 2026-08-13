@@ -2,25 +2,24 @@
 # MAGIC %md
 # MAGIC # Gold Layer Aggregation
 # MAGIC **Purpose:** Create business-ready aggregates from silver data  
-# MAGIC **Catalog:** onr_demo.dev | **Compute:** Serverless  
-# MAGIC **Input:** onr_demo.dev.silver_grants, onr_demo.dev.silver_financial  
-# MAGIC **Output:** gold_grants_summary, gold_financial_summary, gold_grants_by_awardee, gold_budget_execution  
+# MAGIC **Catalog:** onr_demo.bronze / silver / gold / app | **Compute:** Serverless  
+# MAGIC **Input:** onr_demo.silver.grants, onr_demo.silver.financial  
+# MAGIC **Output:** onr_demo.gold.grants_summary, financial_summary, grants_by_awardee, budget_execution  
 # MAGIC **QA:** Count validation + freshness check
 
 # COMMAND ----------
 
 # Configuration widgets
 dbutils.widgets.text("catalog", "onr_demo")
-dbutils.widgets.text("schema", "dev")
+dbutils.widgets.text("bronze_schema", "bronze")
 
 catalog = dbutils.widgets.get("catalog")
-schema = dbutils.widgets.get("schema")
 
 # Set catalog context
 spark.sql(f"USE CATALOG `{catalog}`")
-spark.sql(f"USE SCHEMA `{schema}`")
+spark.sql("USE SCHEMA `bronze`")
 
-print(f"✅ Context set: {catalog}.{schema}")
+print(f"✅ Context set: {catalog}.{{bronze,silver,gold,app}}")
 
 # COMMAND ----------
 
@@ -38,7 +37,7 @@ from pyspark.sql.window import Window
 # COMMAND ----------
 
 # Read silver grants
-silver_grants = spark.table(f"`{catalog}`.`{schema}`.silver_grants")
+silver_grants = spark.table(f"`{catalog}`.`silver`.grants")
 
 # Aggregate by program area and fiscal year
 gold_grants_summary = (
@@ -59,7 +58,7 @@ gold_grants_summary = (
 
 # Write to gold table
 gold_grants_summary.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(
-    f"`{catalog}`.`{schema}`.gold_grants_summary"
+    f"`{catalog}`.`gold`.grants_summary"
 )
 
 summary_count = gold_grants_summary.count()
@@ -73,7 +72,7 @@ print(f"✅ Gold Grants Summary: {summary_count:,} records")
 # COMMAND ----------
 
 # Read silver financial
-silver_financial = spark.table(f"`{catalog}`.`{schema}`.silver_financial")
+silver_financial = spark.table(f"`{catalog}`.`silver`.financial")
 
 # Aggregate by cost center, category, and time
 gold_financial_summary = (
@@ -94,7 +93,7 @@ gold_financial_summary = (
 
 # Write to gold table
 gold_financial_summary.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(
-    f"`{catalog}`.`{schema}`.gold_financial_summary"
+    f"`{catalog}`.`gold`.financial_summary"
 )
 
 fin_count = gold_financial_summary.count()
@@ -121,7 +120,7 @@ gold_grants_by_awardee = (
 )
 
 gold_grants_by_awardee.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(
-    f"`{catalog}`.`{schema}`.gold_grants_by_awardee"
+    f"`{catalog}`.`gold`.grants_by_awardee"
 )
 
 pi_count = gold_grants_by_awardee.count()
@@ -161,7 +160,7 @@ gold_budget_execution = (
 
 # Write to gold table
 gold_budget_execution.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(
-    f"`{catalog}`.`{schema}`.gold_budget_execution"
+    f"`{catalog}`.`gold`.budget_execution"
 )
 
 budget_count = gold_budget_execution.count()
@@ -177,27 +176,27 @@ print(f"✅ Gold Budget Execution: {budget_count:,} records")
 # Record lineage
 lineage_records = spark.createDataFrame([
     (f"lin_{spark.sql('SELECT uuid()').collect()[0][0]}", 
-     "bronze_grants", "silver_grants", "quality_transform", 
-     spark.table(f"`{catalog}`.`{schema}`.bronze_grants").count(), 
+     "bronze.grants", "silver.grants", "quality_transform", 
+     spark.table(f"`{catalog}`.`bronze`.grants").count(), 
      1500, "system"),
     (f"lin_{spark.sql('SELECT uuid()').collect()[0][0]}", 
-     "bronze_financial", "silver_financial", "quality_transform", 
-     spark.table(f"`{catalog}`.`{schema}`.bronze_financial").count(), 
+     "bronze.financial", "silver.financial", "quality_transform", 
+     spark.table(f"`{catalog}`.`bronze`.financial").count(), 
      1200, "system"),
     (f"lin_{spark.sql('SELECT uuid()').collect()[0][0]}", 
-     "silver_grants", "gold_grants_summary", "aggregation", 
-     spark.table(f"`{catalog}`.`{schema}`.silver_grants").count(), 
+     "silver.grants", "gold.grants_summary", "aggregation", 
+     spark.table(f"`{catalog}`.`silver`.grants").count(), 
      800, "system"),
     (f"lin_{spark.sql('SELECT uuid()').collect()[0][0]}", 
-     "silver_financial", "gold_financial_summary", "aggregation", 
-     spark.table(f"`{catalog}`.`{schema}`.silver_financial").count(), 
+     "silver.financial", "gold.financial_summary", "aggregation", 
+     spark.table(f"`{catalog}`.`silver`.financial").count(), 
      600, "system"),
 ], ["lineage_id", "source_table", "target_table", "transformation_type", 
     "records_processed", "processing_time_ms", "executed_by"])
 
 lineage_records = lineage_records.withColumn("executed_at", current_timestamp())
 
-lineage_records.write.mode("append").saveAsTable(f"`{catalog}`.`{schema}`.onr_lineage_tracking")
+lineage_records.write.mode("append").saveAsTable(f"`{catalog}`.`app`.lineage_tracking")
 
 print("✅ Lineage tracking recorded")
 
@@ -215,13 +214,13 @@ print("=" * 50)
 
 # Count checks
 tables = [
-    "gold_grants_summary", "gold_financial_summary", 
-    "gold_grants_by_pi", "gold_budget_execution"
+    "grants_summary", "financial_summary",
+    "grants_by_awardee", "budget_execution"
 ]
 
 all_passed = True
 for table in tables:
-    cnt = spark.table(f"`{catalog}`.`{schema}`.{table}").count()
+    cnt = spark.table(f"`{catalog}`.`gold`.{table}").count()
     status = "✅" if cnt > 0 else "❌"
     print(f"{status} {table}: {cnt:,} records")
     if cnt == 0:
@@ -230,7 +229,7 @@ for table in tables:
 # Freshness check
 freshness = spark.sql(f"""
     SELECT MAX(_updated_at) as latest_update 
-    FROM `{catalog}`.`{schema}`.gold_grants_summary
+    FROM `{catalog}`.`gold`.grants_summary
 """).collect()[0][0]
 
 print(f"\n📅 Latest update: {freshness}")

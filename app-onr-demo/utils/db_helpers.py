@@ -34,7 +34,7 @@ def _get_env(default: str = "dev") -> str:
 
 def _get_configs(dbx_env: str):
     """Load environment-specific configuration."""
-    cfg_path = _app_root() / "config" / dbx_env / "onr-conf.yaml"
+    cfg_path = _app_root() / "config" / "onr-conf.yaml"
 
     if not cfg_path.exists():
         raise FileNotFoundError(f"Configuration file not found for environment: {dbx_env}")
@@ -242,17 +242,16 @@ def execute_query_to_df(cursor, query: str, params: dict = None):
 def validate_source_tables(cursor, configs):
     """Verify source tables exist and contain data."""
     catalog = configs["schema"]["catalog"]
-    schema = configs["schema"].get("schema", "dev")
     
     tables_to_check = [
-        ("silver_grants", "Grants Data"),
-        ("silver_financial", "Financial Data"),
+        (f"`{catalog}`.`silver`.grants", "Silver Grants"),
+        (f"`{catalog}`.`silver`.financial", "Silver Financial"),
+        (f"`{catalog}`.`gold`.grants_summary", "Gold Grants Summary"),
     ]
     
     all_valid = True
     
-    for table_name, display_name in tables_to_check:
-        full_table = f"`{catalog}`.`{schema}`.{table_name}"
+    for full_table, display_name in tables_to_check:
         try:
             cursor.execute(f"""
                 SELECT 

@@ -2,25 +2,24 @@
 # MAGIC %md
 # MAGIC # Silver Layer Quality Transforms
 # MAGIC **Purpose:** Cleanse, deduplicate, and validate bronze data → Silver Delta tables  
-# MAGIC **Catalog:** onr_demo.dev | **Compute:** Serverless  
-# MAGIC **Input:** onr_demo.dev.bronze_grants, onr_demo.dev.bronze_financial  
-# MAGIC **Output:** onr_demo.dev.silver_grants, onr_demo.dev.silver_financial  
+# MAGIC **Catalog:** onr_demo.bronze / silver / gold / app | **Compute:** Serverless  
+# MAGIC **Input:** onr_demo.bronze.grants, onr_demo.bronze.financial  
+# MAGIC **Output:** onr_demo.silver.grants, onr_demo.silver.financial  
 # MAGIC **QA:** Quality constraints + row count validation
 
 # COMMAND ----------
 
 # Configuration widgets
 dbutils.widgets.text("catalog", "onr_demo")
-dbutils.widgets.text("schema", "dev")
+dbutils.widgets.text("bronze_schema", "bronze")
 
 catalog = dbutils.widgets.get("catalog")
-schema = dbutils.widgets.get("schema")
 
 # Set catalog context
 spark.sql(f"USE CATALOG `{catalog}`")
-spark.sql(f"USE SCHEMA `{schema}`")
+spark.sql("USE SCHEMA `bronze`")
 
-print(f"✅ Context set: {catalog}.{schema}")
+print(f"✅ Context set: {catalog}.{{bronze,silver,gold,app}}")
 
 # COMMAND ----------
 
@@ -39,7 +38,7 @@ import pyspark.sql.functions as F
 # COMMAND ----------
 
 # Read bronze grants
-bronze_grants = spark.table(f"`{catalog}`.`{schema}`.bronze_grants")
+bronze_grants = spark.table(f"`{catalog}`.`bronze`.grants")
 
 # Cleanse and transform
 silver_grants = (
@@ -82,7 +81,7 @@ silver_grants = (
 
 # Overwrite silver table
 silver_grants.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(
-    f"`{catalog}`.`{schema}`.silver_grants"
+    f"`{catalog}`.`silver`.grants"
 )
 
 grants_count = silver_grants.count()
@@ -96,7 +95,7 @@ print(f"✅ Silver Grants: {grants_count:,} records")
 # COMMAND ----------
 
 # Read bronze financial
-bronze_financial = spark.table(f"`{catalog}`.`{schema}`.bronze_financial")
+bronze_financial = spark.table(f"`{catalog}`.`bronze`.financial")
 
 # Cleanse and transform
 silver_financial = (
@@ -146,7 +145,7 @@ silver_financial = (
 
 # Overwrite silver table
 silver_financial.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(
-    f"`{catalog}`.`{schema}`.silver_financial"
+    f"`{catalog}`.`silver`.financial"
 )
 
 financial_count = silver_financial.count()
@@ -167,7 +166,7 @@ grants_completeness = spark.sql(f"""
         COUNT(CASE WHEN awardee IS NOT NULL THEN 1 END) as valid_awardee,
         COUNT(CASE WHEN amount_usd > 0 THEN 1 END) as valid_amount,
         COUNT(CASE WHEN program_area IS NOT NULL THEN 1 END) as valid_area
-    FROM `{catalog}`.`{schema}`.silver_grants
+    FROM `{catalog}`.`silver`.grants
 """).collect()[0]
 
 grants_score = (
@@ -183,7 +182,7 @@ financial_completeness = spark.sql(f"""
         COUNT(CASE WHEN transaction_id IS NOT NULL THEN 1 END) as valid_id,
         COUNT(CASE WHEN budget_allocated > 0 THEN 1 END) as valid_budget,
         COUNT(CASE WHEN actual_expenditure >= 0 THEN 1 END) as valid_actual
-    FROM `{catalog}`.`{schema}`.silver_financial
+    FROM `{catalog}`.`silver`.financial
 """).collect()[0]
 
 financial_score = (
@@ -204,7 +203,7 @@ quality_scores = spark.createDataFrame([
 
 quality_scores = quality_scores.withColumn("last_assessed", current_timestamp())
 
-quality_scores.write.mode("overwrite").saveAsTable(f"`{catalog}`.`{schema}`.onr_data_quality_scores")
+quality_scores.write.mode("overwrite").saveAsTable(f"`{catalog}`.`app`.data_quality_scores")
 
 print(f"📊 Grants Quality Score: {grants_score:.2%}")
 print(f"📊 Financial Quality Score: {financial_score:.2%}")
@@ -222,35 +221,33 @@ print("SILVER LAYER VALIDATION")
 print("=" * 50)
 
 # Count checks
-grants_final = spark.table(f"`{catalog}`.`{schema}`.silver_grants").count()
-financial_final = spark.table(f"`{catalog}`.`{schema}`.silver_financial").count()
+grants_final = spark.table(f"`{catalog}`.`silver`.grants").count()
+financial_final = spark.table(f"`{catalog}`.`silver`.financial").count()
 
 print(f"\n📊 Silver Grants: {grants_final:,} records")
 print(f"📊 Silver Financial: {financial_final:,} records")
 
 # Null checks
-null_pi = spark.sql(f"""
-    SELECT COUNT(*) FROM `{catalog}`.`{schema}`.silver_grants 
-    WHERE principal_investigator IS NULL
+null_awardee = spark.sql(f"""
+    SELECT COUNT(*) FROM `{catalog}`.`silver`.grants 
+    WHERE awardee IS NULL
 """).collect()[0][0]
 
-print(f"⚠️ Null PIs: {null_pi}")
+print(f"⚠️ Null awardees: {null_awardee}")
 
-# Duplicate check
 dup_grants = spark.sql(f"""
     SELECT COUNT(*) FROM (
-        SELECT grant_id, COUNT(*) as cnt 
-        FROM `{catalog}``.`{schema}`.silver_grants 
-        GROUP BY grant_id HAVING cnt > 1
+        SELECT grant_no, COUNT(*) as cnt 
+        FROM `{catalog}`.`silver`.grants 
+        GROUP BY grant_no HAVING cnt > 1
     )
 """).collect()[0][0]
 
-print(f"⚠️ Duplicate grant_ids: {dup_grants}")
+print(f"⚠️ Duplicate grant_no: {dup_grants}")
 
-# Assert success
-assert grants_final > 0, "FAIL: silver_grants empty"
-assert financial_final > 0, "FAIL: silver_financial empty"
-assert null_pi == 0, "FAIL: null principal_investigator found"
+assert grants_final > 0, "FAIL: silver.grants empty"
+assert financial_final > 0, "FAIL: silver.financial empty"
+assert null_awardee == 0, "FAIL: null awardee found"
 
 print("\n✅ All silver layer validations passed!")
 

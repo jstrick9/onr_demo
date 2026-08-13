@@ -1,45 +1,47 @@
 -- =====================================================
--- ONR ITSS POC — Unity Catalog Setup
--- =====================================================
--- Run as Account Admin or Metastore Admin
--- Target: Databricks on AWS (Serverless-first)
-
--- =====================================================
--- 1. CATALOG & SCHEMA
+-- ONR ITSS POC — Unity Catalog Setup (medallion)
+-- Catalog: onr_demo
+-- Schemas: bronze | silver | gold | app
+-- Single POC environment (no prod)
 -- =====================================================
 
--- Create Catalog
+-- =====================================================
+-- 1. CATALOG & SCHEMAS
+-- =====================================================
+
 CREATE CATALOG IF NOT EXISTS `onr_demo`
     MANAGED LOCATION 's3://onr-demo-uc-bucket/onr_demo'
     COMMENT 'ONR ITSS POC — Technical Demonstration Catalog';
 
--- Create Schemas
-CREATE SCHEMA IF NOT EXISTS `onr_demo`.`dev`
-    COMMENT 'Development environment for ONR POC';
+CREATE SCHEMA IF NOT EXISTS `onr_demo`.`bronze`
+    COMMENT 'Bronze — raw ingested S&T grants and ERP';
 
-CREATE SCHEMA IF NOT EXISTS `onr_demo`.`prod`
-    COMMENT 'Production environment for ONR POC';
+CREATE SCHEMA IF NOT EXISTS `onr_demo`.`silver`
+    COMMENT 'Silver — cleansed, validated, deduplicated';
+
+CREATE SCHEMA IF NOT EXISTS `onr_demo`.`gold`
+    COMMENT 'Gold — business-ready aggregates for analytics';
+
+CREATE SCHEMA IF NOT EXISTS `onr_demo`.`app`
+    COMMENT 'Application state, quality scores, lineage, audit';
 
 -- =====================================================
--- 2. VOLUMES (Landing Zone)
+-- 2. VOLUMES (landing in bronze)
 -- =====================================================
 
--- Landing Volume for raw file ingestion
-CREATE VOLUME IF NOT EXISTS `onr_demo`.`dev`.landing
+CREATE VOLUME IF NOT EXISTS `onr_demo`.`bronze`.landing
     COMMENT 'Landing zone for raw file ingestion'
     VOLUME_TYPE MANAGED;
 
--- Checkpoint Volume for streaming
-CREATE VOLUME IF NOT EXISTS `onr_demo`.`dev`.checkpoints
-    COMMENT 'Checkpoint location for streaming queries'
+CREATE VOLUME IF NOT EXISTS `onr_demo`.`bronze`.checkpoints
+    COMMENT 'Auto Loader / streaming checkpoints'
     VOLUME_TYPE MANAGED;
 
 -- =====================================================
--- 3. BRONZE LAYER (Raw Ingestion)
+-- 3. BRONZE
 -- =====================================================
 
--- Bronze: Grants (Raw) — Compass fixture schema
-CREATE TABLE IF NOT EXISTS `onr_demo`.`dev`.bronze_grants (
+CREATE TABLE IF NOT EXISTS `onr_demo`.`bronze`.grants (
     grant_no STRING NOT NULL,
     title STRING,
     abstract STRING,
@@ -59,10 +61,9 @@ TBLPROPERTIES (
     'delta.feature.allowColumnDefaults' = 'supported',
     'quality' = 'bronze'
 )
-COMMENT 'Bronze layer: Raw S&T grants data from ingestion pipeline';
+COMMENT 'Bronze: raw Compass S&T grants fixture';
 
--- Bronze: Financial (Raw)
-CREATE TABLE IF NOT EXISTS `onr_demo`.`dev`.bronze_financial (
+CREATE TABLE IF NOT EXISTS `onr_demo`.`bronze`.financial (
     transaction_id STRING NOT NULL,
     grant_no STRING,
     cost_center STRING,
@@ -84,14 +85,13 @@ TBLPROPERTIES (
     'delta.feature.allowColumnDefaults' = 'supported',
     'quality' = 'bronze'
 )
-COMMENT 'Bronze layer: Raw financial ERP data from ingestion pipeline';
+COMMENT 'Bronze: raw ERP derived from grants';
 
 -- =====================================================
--- 4. SILVER LAYER (Cleansed & Validated)
+-- 4. SILVER
 -- =====================================================
 
--- Silver: Grants (Cleansed)
-CREATE TABLE IF NOT EXISTS `onr_demo`.`dev`.silver_grants (
+CREATE TABLE IF NOT EXISTS `onr_demo`.`silver`.grants (
     grant_no STRING NOT NULL,
     title STRING NOT NULL,
     abstract STRING,
@@ -115,10 +115,9 @@ TBLPROPERTIES (
     'delta.feature.allowColumnDefaults' = 'supported',
     'quality' = 'silver'
 )
-COMMENT 'Silver layer: Cleansed and validated grants data';
+COMMENT 'Silver: cleansed grants';
 
--- Silver: Financial (Cleansed)
-CREATE TABLE IF NOT EXISTS `onr_demo`.`dev`.silver_financial (
+CREATE TABLE IF NOT EXISTS `onr_demo`.`silver`.financial (
     transaction_id STRING NOT NULL,
     grant_no STRING,
     cost_center STRING NOT NULL,
@@ -143,14 +142,13 @@ TBLPROPERTIES (
     'delta.feature.allowColumnDefaults' = 'supported',
     'quality' = 'silver'
 )
-COMMENT 'Silver layer: Cleansed and validated financial data';
+COMMENT 'Silver: cleansed ERP';
 
 -- =====================================================
--- 5. GOLD LAYER (Business-Ready Aggregates)
+-- 5. GOLD
 -- =====================================================
 
--- Gold: Grants Summary
-CREATE TABLE IF NOT EXISTS `onr_demo`.`dev`.gold_grants_summary (
+CREATE TABLE IF NOT EXISTS `onr_demo`.`gold`.grants_summary (
     program_area STRING,
     fiscal_year INT,
     grant_count INT,
@@ -163,10 +161,9 @@ CREATE TABLE IF NOT EXISTS `onr_demo`.`dev`.gold_grants_summary (
     _updated_at TIMESTAMP
 ) USING DELTA
 CLUSTER BY (program_area, fiscal_year)
-COMMENT 'Gold layer: Aggregated grants summary by research area and fiscal year';
+COMMENT 'Gold: grants by program area and FY';
 
--- Gold: Financial Summary
-CREATE TABLE IF NOT EXISTS `onr_demo`.`dev`.gold_financial_summary (
+CREATE TABLE IF NOT EXISTS `onr_demo`.`gold`.financial_summary (
     cost_center STRING,
     category STRING,
     fiscal_year INT,
@@ -179,10 +176,9 @@ CREATE TABLE IF NOT EXISTS `onr_demo`.`dev`.gold_financial_summary (
     _updated_at TIMESTAMP
 ) USING DELTA
 CLUSTER BY (fiscal_year, quarter)
-COMMENT 'Gold layer: Aggregated financial summary by cost center';
+COMMENT 'Gold: ERP by cost center';
 
--- Gold: Grants by PI
-CREATE TABLE IF NOT EXISTS `onr_demo`.`dev`.gold_grants_by_awardee (
+CREATE TABLE IF NOT EXISTS `onr_demo`.`gold`.grants_by_awardee (
     awardee STRING,
     org_unit STRING,
     grant_count INT,
@@ -192,10 +188,9 @@ CREATE TABLE IF NOT EXISTS `onr_demo`.`dev`.gold_grants_by_awardee (
     _updated_at TIMESTAMP
 ) USING DELTA
 CLUSTER BY (awardee)
-COMMENT 'Gold layer: Grant performance aggregated by awardee organization';
+COMMENT 'Gold: grants by awardee';
 
--- Gold: Budget Execution
-CREATE TABLE IF NOT EXISTS `onr_demo`.`dev`.gold_budget_execution (
+CREATE TABLE IF NOT EXISTS `onr_demo`.`gold`.budget_execution (
     fiscal_year INT,
     quarter STRING,
     category STRING,
@@ -208,14 +203,13 @@ CREATE TABLE IF NOT EXISTS `onr_demo`.`dev`.gold_budget_execution (
     _updated_at TIMESTAMP
 ) USING DELTA
 CLUSTER BY (fiscal_year, quarter)
-COMMENT 'Gold layer: Budget execution tracking for financial planning';
+COMMENT 'Gold: budget execution';
 
 -- =====================================================
--- 6. APP TABLES (Application State)
+-- 6. APP
 -- =====================================================
 
--- Search History
-CREATE TABLE IF NOT EXISTS `onr_demo`.`dev`.onr_app_search_history (
+CREATE TABLE IF NOT EXISTS `onr_demo`.`app`.search_history (
     search_id STRING NOT NULL,
     user_email STRING,
     search_type STRING,
@@ -224,10 +218,9 @@ CREATE TABLE IF NOT EXISTS `onr_demo`.`dev`.onr_app_search_history (
     execution_time_ms INT,
     created_at TIMESTAMP
 ) USING DELTA
-COMMENT 'Application table: Search history for audit and replay';
+COMMENT 'Search history for audit and replay';
 
--- Export History
-CREATE TABLE IF NOT EXISTS `onr_demo`.`dev`.onr_app_export_history (
+CREATE TABLE IF NOT EXISTS `onr_demo`.`app`.export_history (
     export_id STRING NOT NULL,
     user_email STRING,
     dataset_name STRING,
@@ -236,10 +229,9 @@ CREATE TABLE IF NOT EXISTS `onr_demo`.`dev`.onr_app_export_history (
     file_size_bytes BIGINT,
     created_at TIMESTAMP
 ) USING DELTA
-COMMENT 'Application table: Export history for audit trail';
+COMMENT 'Export audit trail';
 
--- Data Quality Scores
-CREATE TABLE IF NOT EXISTS `onr_demo`.`dev`.onr_data_quality_scores (
+CREATE TABLE IF NOT EXISTS `onr_demo`.`app`.data_quality_scores (
     table_name STRING,
     quality_score DOUBLE,
     completeness DOUBLE,
@@ -248,10 +240,9 @@ CREATE TABLE IF NOT EXISTS `onr_demo`.`dev`.onr_data_quality_scores (
     timeliness DOUBLE,
     last_assessed TIMESTAMP
 ) USING DELTA
-COMMENT 'Application table: Data quality health scores';
+COMMENT 'Data quality health scores';
 
--- Lineage Tracking
-CREATE TABLE IF NOT EXISTS `onr_demo`.`dev`.onr_lineage_tracking (
+CREATE TABLE IF NOT EXISTS `onr_demo`.`app`.lineage_tracking (
     lineage_id STRING NOT NULL,
     source_table STRING,
     target_table STRING,
@@ -261,10 +252,9 @@ CREATE TABLE IF NOT EXISTS `onr_demo`.`dev`.onr_lineage_tracking (
     executed_at TIMESTAMP,
     executed_by STRING
 ) USING DELTA
-COMMENT 'Application table: Data lineage tracking records';
+COMMENT 'Lineage tracking records';
 
--- Ingestion Quality Log
-CREATE TABLE IF NOT EXISTS `onr_demo`.`dev`.ingestion_quality_log (
+CREATE TABLE IF NOT EXISTS `onr_demo`.`app`.ingestion_quality_log (
     check_id STRING NOT NULL,
     check_name STRING,
     check_status STRING,
@@ -274,89 +264,81 @@ CREATE TABLE IF NOT EXISTS `onr_demo`.`dev`.ingestion_quality_log (
     check_timestamp TIMESTAMP,
     pipeline_name STRING
 ) USING DELTA
-COMMENT 'Application table: Ingestion quality check results';
+COMMENT 'Ingestion quality check results';
 
 -- =====================================================
 -- 7. GRANTS (Access Control)
 -- =====================================================
 
--- Grant to data engineers (full access)
 GRANT ALL PRIVILEGES ON CATALOG `onr_demo` TO `data-engineers`;
 
--- Grant to analysts (read access to gold)
 GRANT USE CATALOG ON CATALOG `onr_demo` TO `analysts`;
-GRANT USE SCHEMA ON SCHEMA `onr_demo`.`dev` TO `analysts`;
-GRANT SELECT ON SCHEMA `onr_demo`.`dev` TO `analysts`;
+GRANT USE SCHEMA ON SCHEMA `onr_demo`.`bronze` TO `analysts`;
+GRANT USE SCHEMA ON SCHEMA `onr_demo`.`silver` TO `analysts`;
+GRANT USE SCHEMA ON SCHEMA `onr_demo`.`gold` TO `analysts`;
+GRANT SELECT ON SCHEMA `onr_demo`.`silver` TO `analysts`;
+GRANT SELECT ON SCHEMA `onr_demo`.`gold` TO `analysts`;
 
--- Grant to viewers (read access to specific tables)
 GRANT USE CATALOG ON CATALOG `onr_demo` TO `viewers`;
-GRANT USE SCHEMA ON SCHEMA `onr_demo`.`dev` TO `viewers`;
-GRANT SELECT ON TABLE `onr_demo`.`dev`.gold_grants_summary TO `viewers`;
-GRANT SELECT ON TABLE `onr_demo`.`dev`.gold_financial_summary TO `viewers`;
+GRANT USE SCHEMA ON SCHEMA `onr_demo`.`gold` TO `viewers`;
+GRANT SELECT ON TABLE `onr_demo`.`gold`.grants_summary TO `viewers`;
+GRANT SELECT ON TABLE `onr_demo`.`gold`.financial_summary TO `viewers`;
 
 -- =====================================================
--- 8. TAGS (Data Classification)
+-- 8. TAGS
 -- =====================================================
 
--- Apply tags to tables
-ALTER TABLE `onr_demo`.`dev`.silver_grants SET TAGS (
+ALTER TABLE `onr_demo`.`silver`.grants SET TAGS (
     'domain' = 'research',
     'data_sensitivity' = 'public',
     'data_source' = 'mock',
     'owner' = 'data-engineers',
-    'refresh_frequency' = 'daily'
+    'refresh_frequency' = 'daily',
+    'medallion' = 'silver'
 );
 
-ALTER TABLE `onr_demo`.`dev`.silver_financial SET TAGS (
+ALTER TABLE `onr_demo`.`silver`.financial SET TAGS (
     'domain' = 'finance',
     'data_sensitivity' = 'internal',
     'data_source' = 'mock',
     'owner' = 'data-engineers',
-    'refresh_frequency' = 'daily'
+    'refresh_frequency' = 'daily',
+    'medallion' = 'silver'
 );
 
-ALTER TABLE `onr_demo`.`dev`.gold_grants_summary SET TAGS (
+ALTER TABLE `onr_demo`.`gold`.grants_summary SET TAGS (
     'domain' = 'research',
     'data_sensitivity' = 'public',
     'data_source' = 'mock',
-    'owner' = 'analysts'
+    'owner' = 'analysts',
+    'medallion' = 'gold'
 );
 
-ALTER TABLE `onr_demo`.`dev`.gold_financial_summary SET TAGS (
+ALTER TABLE `onr_demo`.`gold`.financial_summary SET TAGS (
     'domain' = 'finance',
     'data_sensitivity' = 'internal',
     'data_source' = 'mock',
-    'owner' = 'analysts'
+    'owner' = 'analysts',
+    'medallion' = 'gold'
 );
 
 -- =====================================================
--- 9. ROW-LEVEL SECURITY (Example)
+-- 9. ROW / COLUMN SECURITY EXAMPLES
 -- =====================================================
 
--- Create row filter function
-CREATE FUNCTION IF NOT EXISTS `onr_demo`.`dev`.region_filter(region STRING)
+CREATE FUNCTION IF NOT EXISTS `onr_demo`.`app`.region_filter(region STRING)
     RETURN current_user() LIKE '%@navy.mil%' OR region = 'ALL';
 
--- Apply row filter (commented out - enable as needed)
--- ALTER TABLE `onr_demo`.`dev`.gold_grants_summary 
--- SET ROW FILTER `onr_demo`.`dev`.region_filter ON (research_area);
-
--- Create column mask function
-CREATE FUNCTION IF NOT EXISTS `onr_demo`.`dev`.mask_pi_name(name STRING)
-    RETURN CASE 
-        WHEN IS_MEMBER('analysts') THEN name 
-        ELSE CONCAT(LEFT(name, 1), '****') 
+CREATE FUNCTION IF NOT EXISTS `onr_demo`.`app`.mask_awardee(name STRING)
+    RETURN CASE
+        WHEN IS_MEMBER('analysts') THEN name
+        ELSE CONCAT(LEFT(name, 1), '****')
     END;
 
--- Apply column mask (commented out - enable as needed)
--- ALTER TABLE `onr_demo`.`dev`.silver_grants 
--- ALTER COLUMN principal_investigator 
--- SET MASK `onr_demo`.`dev`.mask_pi_name;
+-- ALTER TABLE `onr_demo`.`silver`.grants
+-- ALTER COLUMN awardee SET MASK `onr_demo`.`app`.mask_awardee;
 
 -- =====================================================
 -- SETUP COMPLETE
+-- Next: generate_mock_data.py → notebooks 01–03 → Streamlit app
 -- =====================================================
--- Next steps:
--- 1. Run mock data generator: resources/mock_data/generate_mock_data.py
--- 2. Run notebooks: notebooks/01_bronze_ingestion.py through 03_gold_aggregation.py
--- 3. Deploy Streamlit app via DABs: databricks bundle deploy -t dev

@@ -2,20 +2,19 @@
 # MAGIC %md
 # MAGIC # Bronze Layer Ingestion
 # MAGIC **Purpose:** Auto Loader ingest raw files → Bronze Delta tables  
-# MAGIC **Catalog:** onr_demo.dev | **Compute:** Serverless  
-# MAGIC **Inputs:** /Volumes/onr_demo/dev/landing/*.csv, *.json  
-# MAGIC **Output:** onr_demo.dev.bronze_grants, onr_demo.dev.bronze_financial  
+# MAGIC **Catalog:** onr_demo.bronze / silver / gold / app | **Compute:** Serverless  
+# MAGIC **Inputs:** /Volumes/onr_demo/bronze/landing/*.csv, *.json  
+# MAGIC **Output:** onr_demo.bronze.grants, onr_demo.bronze.financial  
 # MAGIC **QA:** Expectations + row count validation
 
 # COMMAND ----------
 
 # Configuration widgets
 dbutils.widgets.text("catalog", "onr_demo")
-dbutils.widgets.text("schema", "dev")
-dbutils.widgets.text("landing_path", "/Volumes/onr_demo/dev/landing/")
+dbutils.widgets.text("bronze_schema", "bronze")
+dbutils.widgets.text("landing_path", "/Volumes/onr_demo/bronze/landing/")
 
 catalog = dbutils.widgets.get("catalog")
-schema = dbutils.widgets.get("schema")
 landing_path = dbutils.widgets.get("landing_path")
 
 # COMMAND ----------
@@ -25,9 +24,9 @@ from pyspark.sql.types import *
 
 # Set catalog context
 spark.sql(f"USE CATALOG `{catalog}`")
-spark.sql(f"USE SCHEMA `{schema}`")
+spark.sql("USE SCHEMA `bronze`")
 
-print(f"✅ Context set: {catalog}.{schema}")
+print(f"✅ Context set: {catalog}.{{bronze,silver,gold,app}}")
 
 # COMMAND ----------
 
@@ -56,7 +55,7 @@ grants_bronze_df = (
     .format("cloudFiles")
     .option("cloudFiles.format", "csv")
     .option("cloudFiles.inferColumnTypes", "true")
-    .option("cloudFiles.schemaLocation", f"{landing_path}_schemas/bronze_grants")
+    .option("cloudFiles.schemaLocation", f"{landing_path}_schemas/grants")
     .option("cloudFiles.schemaEvolutionMode", "addNewColumns")
     .option("header", "true")
     .schema(grants_schema)
@@ -70,10 +69,10 @@ grants_bronze_df = (
 (
     grants_bronze_df.writeStream
     .format("delta")
-    .option("checkpointLocation", f"{landing_path}_chk/bronze_grants")
+    .option("checkpointLocation", f"/Volumes/onr_demo/bronze/checkpoints/grants")
     .option("mergeSchema", "true")
     .trigger(availableNow=True)
-    .toTable(f"`{catalog}`.`{schema}`.bronze_grants")
+    .toTable(f"`{catalog}`.`bronze`.grants")
 )
 
 print("✅ Grants ingestion complete")
@@ -106,7 +105,7 @@ financial_bronze_df = (
     .format("cloudFiles")
     .option("cloudFiles.format", "csv")
     .option("cloudFiles.inferColumnTypes", "true")
-    .option("cloudFiles.schemaLocation", f"{landing_path}_schemas/bronze_financial")
+    .option("cloudFiles.schemaLocation", f"{landing_path}_schemas/financial")
     .option("cloudFiles.schemaEvolutionMode", "addNewColumns")
     .option("header", "true")
     .schema(financial_schema)
@@ -120,10 +119,10 @@ financial_bronze_df = (
 (
     financial_bronze_df.writeStream
     .format("delta")
-    .option("checkpointLocation", f"{landing_path}_chk/bronze_financial")
+    .option("checkpointLocation", f"/Volumes/onr_demo/bronze/checkpoints/financial")
     .option("mergeSchema", "true")
     .trigger(availableNow=True)
-    .toTable(f"`{catalog}`.`{schema}`.bronze_financial")
+    .toTable(f"`{catalog}`.`bronze`.financial")
 )
 
 print("✅ Financial ingestion complete")
@@ -136,33 +135,33 @@ print("✅ Financial ingestion complete")
 # COMMAND ----------
 
 # Row count + schema checks
-grants_cnt = spark.table(f"`{catalog}`.`{schema}`.bronze_grants").count()
-financial_cnt = spark.table(f"`{catalog}`.`{schema}`.bronze_financial").count()
+grants_cnt = spark.table(f"`{catalog}`.`bronze`.grants").count()
+financial_cnt = spark.table(f"`{catalog}`.`bronze`.financial").count()
 
 print(f"📊 Bronze Grants: {grants_cnt:,} records")
 print(f"📊 Bronze Financial: {financial_cnt:,} records")
 
 # Validate non-zero
-assert grants_cnt > 0, "QA FAIL: bronze_grants empty after ingest"
-assert financial_cnt > 0, "QA FAIL: bronze_financial empty after ingest"
+assert grants_cnt > 0, "QA FAIL: bronze.grants empty after ingest"
+assert financial_cnt > 0, "QA FAIL: bronze.financial empty after ingest"
 
 # Schema verification
 print("\n📋 Grants Schema:")
-spark.table(f"`{catalog}`.`{schema}`.bronze_grants").printSchema()
+spark.table(f"`{catalog}`.`bronze`.grants").printSchema()
 
 print("\n📋 Financial Schema:")
-spark.table(f"`{catalog}`.`{schema}`.bronze_financial").printSchema()
+spark.table(f"`{catalog}`.`bronze`.financial").printSchema()
 
 # Null checks
 null_grants = spark.sql(f"""
     SELECT COUNT(*) as null_ids 
-    FROM `{catalog}`.`{schema}`.bronze_grants 
+    FROM `{catalog}`.`bronze`.grants 
     WHERE grant_no IS NULL
 """).collect()[0][0]
 
 null_financial = spark.sql(f"""
     SELECT COUNT(*) as null_ids 
-    FROM `{catalog}`.`{schema}`.bronze_financial 
+    FROM `{catalog}`.`bronze`.financial 
     WHERE transaction_id IS NULL
 """).collect()[0][0]
 
@@ -181,7 +180,7 @@ quality_log = spark.createDataFrame([
 quality_log = quality_log.withColumn("check_id", lit(None).cast("string"))
 quality_log = quality_log.withColumn("check_timestamp", current_timestamp())
 
-quality_log.write.mode("append").saveAsTable(f"`{catalog}`.`{schema}`.ingestion_quality_log")
+quality_log.write.mode("append").saveAsTable(f"`{catalog}`.`app`.ingestion_quality_log")
 
 print("✅ Quality check logged")
 

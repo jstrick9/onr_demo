@@ -68,12 +68,12 @@ def render_dataset_selection(cursor, catalog: str, schema: str):
     st.markdown("### 📁 Dataset Selection")
     
     datasets = {
-        "Grants Summary": f"`{catalog}`.`{schema}`.gold_grants_summary",
-        "Financial Summary": f"`{catalog}`.`{schema}`.gold_financial_summary",
-        "Grants by Awardee": f"`{catalog}`.`{schema}`.gold_grants_by_awardee",
-        "Budget Execution": f"`{catalog}`.`{schema}`.gold_budget_execution",
-        "Raw Grants": f"`{catalog}`.`{schema}`.silver_grants",
-        "Raw Financial": f"`{catalog}`.`{schema}`.silver_financial",
+        "Grants Summary": f"`{catalog}`.`gold`.grants_summary",
+        "Financial Summary": f"`{catalog}`.`gold`.financial_summary",
+        "Grants by Awardee": f"`{catalog}`.`gold`.grants_by_awardee",
+        "Budget Execution": f"`{catalog}`.`gold`.budget_execution",
+        "Raw Grants": f"`{catalog}`.`silver`.grants",
+        "Raw Financial": f"`{catalog}`.`silver`.financial",
     }
     
     selected_dataset = st.selectbox(

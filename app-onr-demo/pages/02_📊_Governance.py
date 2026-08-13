@@ -43,12 +43,12 @@ dbx_env = get_runtime_env()
 
 # Load configuration
 app_root = Path(__file__).resolve().parent.parent
-config_file = app_root / "config" / dbx_env / "onr-conf.yaml"
+config_file = app_root / "config" / "onr-conf.yaml"
 
 try:
     configs = read_yaml(str(config_file))
     onr_catalog = configs["schema"]["catalog"]
-    onr_schema = configs["schema"].get("schema", "dev")
+    onr_schema = "silver"  # medallion layer used by helpers that still accept schema arg
 except Exception as e:
     st.error(f"Configuration error: {str(e)}")
     st.stop()
@@ -115,19 +115,19 @@ st.markdown("""
 │   ┌─────────────────────────────────────────────────────────────┐   │
 │   │                     Catalog: onr_demo                        │   │
 │   │  ┌───────────────────────────────────────────────────────┐  │   │
-│   │  │                   Schema: dev                          │  │   │
+│   │  │         Schemas: bronze | silver | gold | app          │  │   │
 │   │  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐   │  │   │
 │   │  │  │   Bronze    │  │   Silver    │  │    Gold     │   │  │   │
 │   │  │  │   Tables    │  │   Tables    │  │   Tables    │   │  │   │
 │   │  │  │  ─────────  │  │  ─────────  │  │  ─────────  │   │  │   │
-│   │  │  │ bronze_grants│ │ silver_grants│ │ gold_grants │   │  │   │
-│   │  │  │ bronze_fin   │ │ silver_fin   │ │ gold_fin    │   │  │   │
+│   │  │  │ bronze.grants│ │ silver.grants│ │ gold.*      │   │  │   │
+│   │  │  │ bronze.fin   │ │ silver.fin   │ │ gold.fin    │   │  │   │
 │   │  │  └─────────────┘  └─────────────┘  └─────────────┘   │  │   │
 │   │  │                                                       │  │   │
 │   │  │  ┌─────────────────────────────────────────────────┐  │  │   │
 │   │  │  │              Volumes (Managed)                   │  │  │   │
-│   │  │  │  /Volumes/onr_demo/dev/landing/                  │  │  │   │
-│   │  │  │  /Volumes/onr_demo/dev/checkpoints/              │  │  │   │
+│   │  │  │  /Volumes/onr_demo/bronze/landing/               │  │  │   │
+│   │  │  │  /Volumes/onr_demo/bronze/checkpoints/           │  │  │   │
 │   │  │  └─────────────────────────────────────────────────┘  │  │   │
 │   │  └───────────────────────────────────────────────────────┘  │   │
 │   └─────────────────────────────────────────────────────────────┘   │
@@ -151,22 +151,22 @@ with st.expander("View Catalog & Schema Setup"):
 CREATE CATALOG IF NOT EXISTS `{onr_catalog}`
     MANAGED LOCATION 's3://onr-demo-uc-bucket/{onr_catalog}';
 
--- Create Schema
-CREATE SCHEMA IF NOT EXISTS `{onr_catalog}`.`{onr_schema}`;
+CREATE SCHEMA IF NOT EXISTS `{onr_catalog}`.bronze;
+CREATE SCHEMA IF NOT EXISTS `{onr_catalog}`.silver;
+CREATE SCHEMA IF NOT EXISTS `{onr_catalog}`.gold;
+CREATE SCHEMA IF NOT EXISTS `{onr_catalog}`.app;
 
--- Create Landing Volume
-CREATE VOLUME IF NOT EXISTS `{onr_catalog}`.`{onr_schema}`.landing;
+CREATE VOLUME IF NOT EXISTS `{onr_catalog}`.bronze.landing;
 
--- Grants
 GRANT USE CATALOG ON CATALOG `{onr_catalog}` TO `data-engineers`;
-GRANT USE SCHEMA, CREATE TABLE ON SCHEMA `{onr_catalog}`.`{onr_schema}` TO `data-engineers`;
-GRANT SELECT ON SCHEMA `{onr_catalog}`.`{onr_schema}` TO `analysts`;
+GRANT USE SCHEMA ON SCHEMA `{onr_catalog}`.bronze TO `data-engineers`;
+GRANT SELECT ON SCHEMA `{onr_catalog}`.gold TO `analysts`;
     """, language="sql")
 
 with st.expander("View Table DDL with Quality Constraints"):
     st.code(f"""
 -- Silver Table with Quality Constraints
-CREATE TABLE IF NOT EXISTS `{onr_catalog}`.`{onr_schema}`.silver_grants (
+CREATE TABLE IF NOT EXISTS `{onr_catalog}`.`silver`.grants (
     grant_no STRING NOT NULL,
     title STRING,
     abstract STRING,
@@ -190,7 +190,7 @@ TBLPROPERTIES (
 );
 
 -- Tags for Governance
-ALTER TABLE `{onr_catalog}`.`{onr_schema}`.silver_grants 
+ALTER TABLE `{onr_catalog}`.`silver`.grants 
 SET TAGS (
     'domain' = 'research',
     'data_sensitivity' = 'public',

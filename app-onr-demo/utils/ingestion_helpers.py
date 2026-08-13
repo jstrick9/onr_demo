@@ -25,7 +25,7 @@ def render_ingestion_status(cursor, catalog: str, schema: str):
             SUM(CASE WHEN _ingest_time >= CURRENT_TIMESTAMP() - INTERVAL 1 HOUR THEN 1 ELSE 0 END) as last_hour,
             MAX(_ingest_time) as last_ingest,
             COUNT(DISTINCT _source_file) as source_files
-        FROM `{catalog}`.`{schema}`.bronze_grants
+        FROM `{catalog}`.`bronze`.grants
         UNION ALL
         SELECT 
             'Financial' as pipeline,
@@ -33,7 +33,7 @@ def render_ingestion_status(cursor, catalog: str, schema: str):
             SUM(CASE WHEN _ingest_time >= CURRENT_TIMESTAMP() - INTERVAL 1 HOUR THEN 1 ELSE 0 END) as last_hour,
             MAX(_ingest_time) as last_ingest,
             COUNT(DISTINCT _source_file) as source_files
-        FROM `{catalog}`.`{schema}`.bronze_financial
+        FROM `{catalog}`.`bronze`.financial
         """
         cursor.execute(query)
         results = cursor.fetchall()
@@ -68,7 +68,7 @@ def render_quality_checks(cursor, catalog: str, schema: str):
             records_passed,
             records_failed,
             check_timestamp
-        FROM `{catalog}`.`{schema}`.ingestion_quality_log
+        FROM `{catalog}`.`app`.ingestion_quality_log
         ORDER BY check_timestamp DESC
         LIMIT 10
         """
@@ -107,7 +107,7 @@ def render_schema_evolution(cursor, catalog: str, schema: str):
     
     try:
         query = f"""
-        DESCRIBE HISTORY `{catalog}`.`{schema}`.bronze_grants
+        DESCRIBE HISTORY `{catalog}`.`bronze`.grants
         """
         cursor.execute(query)
         history = cursor.fetchall()
@@ -224,10 +224,10 @@ spark.readStream \\
     .option("cloudFiles.format", "csv") \\
     .option("cloudFiles.inferColumnTypes", "true") \\
     .option("cloudFiles.schemaLocation", 
-            f"/Volumes/{catalog}/{schema}/landing/_schemas") \\
+            f"/Volumes/{catalog}/bronze/landing/_schemas") \\
     .option("cloudFiles.schemaEvolutionMode", 
             "addNewColumns") \\
-    .load(f"/Volumes/{catalog}/{schema}/landing/")
+    .load(f"/Volumes/{catalog}/bronze/landing/")
         """, language="python")
         
         st.markdown("#### Key Features")

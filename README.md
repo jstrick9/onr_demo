@@ -26,7 +26,7 @@ This repository contains a **Databricks Streamlit application** designed for the
 │  └─────┬─────┴─────┬─────┴─────┬─────┴─────┬─────┴─────┬─────┘     │
 │        │           │           │           │           │           │
 │  ┌─────▼───────────▼───────────▼───────────▼───────────▼─────┐     │
-│  │              Unity Catalog (onr_demo.dev)                  │     │
+│  │         Unity Catalog onr_demo.{bronze | silver | gold | app}     │     │
 │  └───────────────────────────────────────────────────────────┘     │
 │                           │                                        │
 │  ┌────────────────────────▼────────────────────────────────┐       │
@@ -44,7 +44,7 @@ This repository contains a **Databricks Streamlit application** designed for the
 ## Prerequisites
 
 - Databricks workspace with Apps enabled (AWS)
-- Unity Catalog with `onr_demo` catalog
+- Unity Catalog catalog `onr_demo` with schemas `bronze`, `silver`, `gold`, `app`
 - SQL Warehouse access
 - Service Principal with appropriate permissions
 - Python 3.10+

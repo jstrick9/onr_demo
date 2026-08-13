@@ -1,5 +1,5 @@
-# Databricks Asset Bundle — ONR ITSS POC Demo
-# Target: Databricks on AWS (Serverless-first, Unity Catalog-governed)
+# Databricks Asset Bundle — ONR ITSS POC
+# Single POC environment. Medallion: onr_demo.bronze | silver | gold | app
 
 bundle:
   name: onr_demo
@@ -8,7 +8,7 @@ include:
   - resources/*.yml
 
 targets:
-  dev:
+  poc:
     mode: development
     default: true
     workspace:
@@ -16,41 +16,28 @@ targets:
       root_path: /Workspace/Users/${workspace.current_user.userName}/.bundle/${bundle.name}/${bundle.target}
     variables:
       catalog: onr_demo
-      schema: dev
     permissions:
       - level: CAN_MANAGE
         group_name: data-engineers
-
-  prod:
-    mode: production
-    workspace:
-      host: https://adb-XXXX.XX.azuredatabricks.net  # Update with prod workspace URL
-      root_path: /Workspace/Users/svc-onr-demo@company.com/.bundle/${bundle.name}/${bundle.target}
-    variables:
-      catalog: onr_demo
-      schema: prod
-    permissions:
-      - level: CAN_VIEW
-        group_name: analysts
 
 variables:
   catalog:
     description: Unity Catalog catalog for ONR Demo
     default: onr_demo
-  schema:
-    description: Default schema
-    default: dev
 
 resources:
-  # UC Volume for landing zone
   volumes:
     landing_volume:
       name: landing
       catalog_name: ${var.catalog}
-      schema_name: ${var.schema}
+      schema_name: bronze
+      volume_type: MANAGED
+    checkpoints_volume:
+      name: checkpoints
+      catalog_name: ${var.catalog}
+      schema_name: bronze
       volume_type: MANAGED
 
-  # SQL Warehouse (serverless)
   sql_warehouses:
     serverless:
       name: onr-demo-warehouse
@@ -60,14 +47,13 @@ resources:
       channel:
         name: CHANNEL_NAME_CURRENT
 
-  # Medallion Pipeline (DLT/SDP)
   pipelines:
     onr_demo_pipeline:
-      name: ${var.catalog}.${var.schema}.onr_demo_pipeline
+      name: ${var.catalog}.onr_demo_pipeline
       serverless: true
       photon: true
       catalog: ${var.catalog}
-      target: ${var.schema}
+      target: bronze
       libraries:
         - notebook:
             path: ../notebooks/01_bronze_ingestion.py
@@ -78,14 +64,14 @@ resources:
       continuous: false
       configuration:
         pipeline.mode: "TRIGGERED"
+        catalog: ${var.catalog}
 
-  # Orchestration Job
   jobs:
     onr_demo_workflow:
-      name: onr_demo_workflow-${bundle.target}
+      name: onr_demo_workflow
       serverless: true
       schedule:
-        quartz_cron_expression: "0 0 6 * * ?"  # Daily at 6 AM UTC
+        quartz_cron_expression: "0 0 6 * * ?"
         timezone_id: "UTC"
       tasks:
         - task_key: run_pipeline
@@ -98,13 +84,11 @@ resources:
             notebook_path: ../notebooks/validation_queries
             base_parameters:
               catalog: ${var.catalog}
-              schema: ${var.schema}
           environment_key: serverless
 
-  # Streamlit App
   apps:
     onr_demo_app:
-      name: onr-demo-${bundle.target}
+      name: onr-demo-poc
       description: "ONR ITSS POC — Technical Demonstration Elements 3–7"
       source_code_path: ../app-onr-demo
       permissions:
@@ -116,26 +100,25 @@ resources:
             id: ${resources.sql_warehouses.serverless.id}
             permission: CAN_USE
 
-  # Quality Monitoring
   quality_monitors:
     grants_monitor:
-      table_name: ${var.catalog}.${var.schema}.gold_grants_summary
-      output_schema_name: ${var.catalog}.${var.schema}
+      table_name: ${var.catalog}.gold.grants_summary
+      output_schema_name: ${var.catalog}.app
       assets_dir: /Workspace/Users/${workspace.current_user.userName}/.bundle/monitoring/grants
       time_series:
         granularities: [1 day]
-        timestamp_col: grant_date
+        timestamp_col: _updated_at
       schedule:
         quartz_cron_expression: "0 0 8 * * ?"
         timezone_id: UTC
 
     financial_monitor:
-      table_name: ${var.catalog}.${var.schema}.gold_financial_summary
-      output_schema_name: ${var.catalog}.${var.schema}
+      table_name: ${var.catalog}.gold.financial_summary
+      output_schema_name: ${var.catalog}.app
       assets_dir: /Workspace/Users/${workspace.current_user.userName}/.bundle/monitoring/financial
       time_series:
         granularities: [1 day]
-        timestamp_col: fiscal_date
+        timestamp_col: _updated_at
       schedule:
         quartz_cron_expression: "0 0 8 * * ?"
         timezone_id: UTC

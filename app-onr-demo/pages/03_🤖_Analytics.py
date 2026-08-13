@@ -43,12 +43,12 @@ dbx_env = get_runtime_env()
 
 # Load configuration
 app_root = Path(__file__).resolve().parent.parent
-config_file = app_root / "config" / dbx_env / "onr-conf.yaml"
+config_file = app_root / "config" / "onr-conf.yaml"
 
 try:
     configs = read_yaml(str(config_file))
     onr_catalog = configs["schema"]["catalog"]
-    onr_schema = configs["schema"].get("schema", "dev")
+    onr_schema = "silver"  # medallion layer used by helpers that still accept schema arg
 except Exception as e:
     st.error(f"Configuration error: {str(e)}")
     st.stop()
@@ -184,7 +184,7 @@ SELECT
     grant_no,
     ai_query('grant_success_predictor', 
              struct(program_area, amount_usd, awardee)) as prediction
-FROM `{onr_catalog}`.`{onr_schema}`.silver_grants;
+FROM `{onr_catalog}`.`silver`.grants;
     """, language="python")
 
 # -------------------------------

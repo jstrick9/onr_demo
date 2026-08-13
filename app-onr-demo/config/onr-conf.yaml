@@ -1,32 +1,28 @@
-# ONR ITSS POC — Development Environment Configuration
-# Unity Catalog: onr_demo.dev
+# ONR ITSS POC — Unity Catalog (single environment, medallion)
+# Catalog: onr_demo
+# Schemas: bronze | silver | gold | app
 
 schema:
   catalog: "onr_demo"
-  schema: "dev"
-  
-  tables:
-    # Bronze layer (raw ingestion)
-    bronze_grants: "bronze_grants"
-    bronze_financial: "bronze_financial"
-    
-    # Silver layer (cleansed, validated)
-    silver_grants: "silver_grants"
-    silver_financial: "silver_financial"
-    
-    # Gold layer (business-ready aggregates)
-    gold_grants_summary: "gold_grants_summary"
-    gold_financial_summary: "gold_financial_summary"
-    gold_grants_by_awardee: "gold_grants_by_awardee"
-    gold_budget_execution: "gold_budget_execution"
-    
-    # App tables
-    search_history: "onr_app_search_history"
-    export_history: "onr_app_export_history"
-    data_quality_scores: "onr_data_quality_scores"
-    lineage_tracking: "onr_lineage_tracking"
+  layers:
+    bronze: "bronze"
+    silver: "silver"
+    gold: "gold"
+    app: "app"
 
-# Database Operation Settings
+  tables:
+    grants: "grants"
+    financial: "financial"
+    grants_summary: "grants_summary"
+    financial_summary: "financial_summary"
+    grants_by_awardee: "grants_by_awardee"
+    budget_execution: "budget_execution"
+    search_history: "search_history"
+    export_history: "export_history"
+    data_quality_scores: "data_quality_scores"
+    lineage_tracking: "lineage_tracking"
+    ingestion_quality_log: "ingestion_quality_log"
+
 database:
   bulk_insert_threshold: 5000
   batch_size_small: 5000
@@ -35,37 +31,33 @@ database:
   query_timeout_seconds: 300
   max_retries: 3
 
-# Ingestion Settings (Element 3)
 ingestion:
   auto_loader_enabled: true
   schema_evolution_mode: "addNewColumns"
   quality_check_enabled: true
   quarantine_enabled: true
   streaming_interval: "30 seconds"
-  landing_volume: "/Volumes/onr_demo/dev/landing"
+  landing_volume: "/Volumes/onr_demo/bronze/landing"
+  checkpoint_volume: "/Volumes/onr_demo/bronze/checkpoints"
 
-# Governance Settings (Element 4)
 governance:
   lineage_tracking_enabled: true
   quality_score_threshold: 0.85
   auto_catalog_enabled: true
   metadata_refresh_hours: 24
 
-# Analytics Settings (Element 5)
 analytics:
-  model_registry: "onr_demo.dev"
+  model_registry: "onr_demo.gold"
   experiment_path: "/Workspace/Users/${user}/experiments/onr-demo"
   default_model: "random_forest"
   forecast_horizon_days: 90
 
-# Dashboard Settings (Element 6)
 dashboard:
   max_records_display: 1000
   cache_ttl_seconds: 300
   auto_refresh_enabled: true
-  anomaly_alert_threshold: 2.0  # std deviations
+  anomaly_alert_threshold: 2.0
 
-# Export Settings (Element 7)
 export:
   allowed_formats:
     - "csv"
@@ -74,15 +66,13 @@ export:
   max_export_rows: 1000000
   export_chunksize: 100000
 
-# Application Settings
 app:
-  version: "1.0.0"
-  environment: "dev"
+  version: "1.1.0"
+  environment: "poc"
   max_file_size_mb: 50
   session_timeout_minutes: 60
   debug_mode: true
 
-# Mock Data Settings
 mock_data:
   fixture: "resources/mock_data/grants_portfolio.json"
   fixture_contract: "compass.synthetic.v1"
@@ -99,14 +89,12 @@ mock_data:
     - "Quantum"
     - "Undersea"
 
-# ETL Integration
 etl:
-  source_bucket: "s3://onr-demo-landing/dev/"
+  source_bucket: "s3://onr-demo-landing/"
   load_frequency: "daily"
   data_freshness_hours: 24
   contact_email: "onr-demo@company.com"
 
-# Logging Configuration
 logging:
   level: "DEBUG"
   log_queries: true

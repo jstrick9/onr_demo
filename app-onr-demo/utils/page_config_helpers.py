@@ -80,11 +80,8 @@ def setup_sidebar():
         st.markdown("---")
         
         # Environment indicator
-        from utils.runtime_env import get_runtime_env
-        env = get_runtime_env()
-        env_colors = {"dev": "🟢", "staging": "🟡", "prod": "🔴"}
-        env_color = env_colors.get(env, "⚪")
-        st.markdown(f"### Environment: {env_color} {env.upper()}")
+        st.markdown("### Environment: 🟢 POC")
+        st.caption("UC: `onr_demo.bronze` · `silver` · `gold` · `app`")
         
         st.markdown("---")
         

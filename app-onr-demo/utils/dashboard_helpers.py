@@ -119,7 +119,7 @@ def render_grants_overview(cursor, catalog: str, schema: str, filters: dict):
             COUNT(*) as grant_count,
             SUM(amount_usd) as total_funding,
             AVG(amount_usd) as avg_award
-        FROM `{catalog}`.`{schema}`.silver_grants
+        FROM `{catalog}`.`silver`.grants
         WHERE {where_clause}
         GROUP BY program_area
         ORDER BY total_funding DESC
@@ -346,7 +346,7 @@ def render_search_extract(cursor, catalog: str, schema: str):
                     research_area,
                     award_amount,
                     status
-                FROM `{catalog}`.`{schema}`.silver_grants
+                FROM `{catalog}`.`silver`.grants
                 WHERE LOWER(title) LIKE '%{search_term.lower()}%'
                     OR LOWER(principal_investigator) LIKE '%{search_term.lower()}%'
                     OR LOWER(institution) LIKE '%{search_term.lower()}%'

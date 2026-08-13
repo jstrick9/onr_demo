@@ -127,7 +127,7 @@ def render_grant_predictions(cursor, catalog: str, schema: str):
             success_probability,
             risk_factors,
             recommendation
-        FROM `{catalog}`.`{schema}`.grant_predictions
+        FROM `{catalog}`.`gold`.grant_predictions
         ORDER BY success_probability DESC
         LIMIT 20
         """

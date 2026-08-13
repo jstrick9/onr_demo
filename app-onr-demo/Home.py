@@ -135,13 +135,14 @@ st.session_state["dbx_env"] = dbx_env
 
 # Load configuration
 app_root = Path(__file__).resolve().parent
-config_file = app_root / "config" / dbx_env / "onr-conf.yaml"
+config_file = app_root / "config" / "onr-conf.yaml"
 
 try:
     configs = read_yaml(str(config_file))
     onr_catalog = configs["schema"]["catalog"]
-    onr_schema = configs["schema"].get("schema", "dev")
+    layers = configs["schema"].get("layers", {"bronze": "bronze", "silver": "silver", "gold": "gold", "app": "app"})
     st.session_state["onr_configs"] = configs
+    st.session_state["onr_layers"] = layers
 except FileNotFoundError:
     st.error(f"Configuration file not found for environment: {dbx_env}")
     st.stop()
@@ -155,16 +156,13 @@ st.session_state["onr_conn"] = conn
 st.session_state["onr_cursor"] = cursor
 
 # Environment indicator
-env_colors = {"dev": "🟢", "staging": "🟡", "prod": "🔴"}
-env_color = env_colors.get(dbx_env, "⚪")
-
 col_env1, col_env2, col_env3 = st.columns(3)
 with col_env1:
-    st.info(f"{env_color} **Environment:** {dbx_env.upper()}")
+    st.info("🟢 **Environment:** POC")
 with col_env2:
     st.info(f"📦 **Catalog:** {onr_catalog}")
 with col_env3:
-    st.info(f"🗄️ **Schema:** {onr_schema}")
+    st.info("🗄️ **Schemas:** bronze · silver · gold · app")
 
 # -------------------------------
 # DATA SOURCE VALIDATION
@@ -215,12 +213,12 @@ try:
     stats_query = f"""
     SELECT 
         'Grants' as dataset, COUNT(*) as records, MAX(_ingest_time) as last_update
-        FROM `{onr_catalog}`.`{onr_schema}`.silver_grants
+        FROM `{onr_catalog}`.`silver`.grants
         WHERE _is_active = true
         UNION ALL
         SELECT 
         'Financial' as dataset, COUNT(*) as records, MAX(_ingest_time) as last_update
-        FROM `{onr_catalog}`.`{onr_schema}`.silver_financial
+        FROM `{onr_catalog}`.`silver`.financial
         WHERE _is_active = true
     """
     cursor.execute(stats_query)
