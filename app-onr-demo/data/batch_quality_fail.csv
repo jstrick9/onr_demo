@@ -1,0 +1,4 @@
+grant_no,title,abstract,program_area,fiscal_year,amount_usd,awardee,org_unit,classification_band,batch_id,created_at
+,Missing grant number row,Should fail silver quality (null grant_no).,AI/ML,2026,100000,Unknown Lab,Code-30,CUI-Mock,quality-fail-2026,2026-08-13T13:00:00+00:00
+ONRD-2026-BAD-00409,Negative award amount,Should fail silver quality (amount_usd <= 0).,Cyber,2026,-50000,Unknown Lab,Code-30,CUI-Mock,quality-fail-2026,2026-08-13T13:01:00+00:00
+ONRD-2026-AIML-00401,Duplicate of live demo grant,Should be dropped as a duplicate grant_no in silver.,AI/ML,2026,100,Unknown Lab,Code-30,CUI-Mock,quality-fail-2026,2026-08-13T13:02:00+00:00

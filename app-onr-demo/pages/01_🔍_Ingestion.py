@@ -18,6 +18,7 @@ from utils.ingestion_helpers import (
     generate_mock_grants_data,
     generate_mock_financial_data,
     render_live_file_drop,
+    render_file_picker_and_reset,
 )
 from utils.eval_prompt import render_eval_prompt
 
@@ -35,7 +36,7 @@ st.markdown("Auto Loader + quality gates on `onr_demo.bronze` → `silver` → `
 render_eval_prompt(
     "Element 3",
     "How do you detect and quality-check new files without recoding the pipeline?",
-    "Click **Drop live file** below. Count moves 400 → 408. Then show Auto Loader code (runs on **onr demo cluster**).",
+    "Pick **Live 8 grants** and click **Process selected files** (400 → 408). Then **Reset demo to seed** to start over.",
 )
 
 # -------------------------------
@@ -57,6 +58,9 @@ except Exception as e:
     st.stop()
 
 conn, cursor = get_connection()
+
+st.markdown("---")
+render_file_picker_and_reset(cursor, onr_catalog)
 
 # -------------------------------
 # ELEMENT OVERVIEW

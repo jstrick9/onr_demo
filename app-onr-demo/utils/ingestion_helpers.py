@@ -152,6 +152,92 @@ def render_streaming_metrics(cursor=None, catalog: str = "onr_demo"):
     st.caption("Notebooks 01–03 run on **onr demo cluster**. SQL in this app uses **onr demo warehouse**.")
 
 
+def render_file_picker_and_reset(cursor, catalog: str):
+    """Pick staged files to land, or reset tables back to the 400-grant seed."""
+    from utils.demo_actions import (
+        FILE_PACKS,
+        grant_count,
+        process_selected_files,
+        reset_to_seed_sql,
+        try_start_cluster_notebooks,
+    )
+    import pandas as pd
+
+    st.markdown("### Process files / reset demo")
+    now = grant_count(cursor, catalog)
+    if now is not None:
+        st.metric("silver.grants", f"{now:,}")
+
+    packs = st.multiselect(
+        "Staged files to process",
+        options=list(FILE_PACKS.keys()),
+        format_func=lambda k: FILE_PACKS[k]["label"],
+        default=["live"],
+        key="ingest_packs",
+    )
+    uploaded = st.file_uploader(
+        "Or upload your own grants CSV (same columns as the fixture)",
+        type=["csv"],
+        key="ingest_multi_upload",
+    )
+    extra_rows = None
+    extra_name = "upload.csv"
+    if uploaded:
+        extra_rows = pd.read_csv(uploaded).to_dict(orient="records")
+        extra_name = uploaded.name
+        st.caption(f"Upload loaded: {len(extra_rows)} rows")
+
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button("Process selected files", type="primary", key="process_files"):
+            if not cursor:
+                st.error("Connect **onr demo warehouse** to write UC tables.")
+            elif not packs and not extra_rows:
+                st.warning("Pick at least one staged file or upload a CSV.")
+            else:
+                with st.spinner("Landing files → bronze → silver → gold…"):
+                    try:
+                        result = process_selected_files(
+                            cursor, catalog, packs, extra_rows=extra_rows, extra_name=extra_name
+                        )
+                        st.success(
+                            f"silver.grants: {result['before']} → {result['after']}"
+                        )
+                        st.dataframe(pd.DataFrame(result["files"]), use_container_width=True)
+                        for fsum in result["files"]:
+                            if fsum.get("reasons"):
+                                with st.expander(f"Details: {fsum['file']}"):
+                                    for r in fsum["reasons"]:
+                                        st.write(f"- {r}")
+                        st.info(try_start_cluster_notebooks())
+                    except Exception as e:
+                        st.error(f"Process failed: {e}")
+                        st.exception(e)
+    with c2:
+        confirm = st.checkbox("I want to reset to the 400-grant seed", key="confirm_reset")
+        if st.button("Reset demo to seed", key="reset_seed", disabled=not confirm):
+            if not cursor:
+                st.error("Connect **onr demo warehouse** to reset tables.")
+            else:
+                with st.spinner("Removing live batches, restoring seed, clearing checkpoints…"):
+                    try:
+                        result = reset_to_seed_sql(cursor, catalog)
+                        st.success(
+                            f"Reset complete. silver.grants {result['before_silver']} → {result['after_silver']} "
+                            f"(bronze={result['bronze_grants']}"
+                            f"{', full fixture reload' if result['reloaded_fixture'] else ''})"
+                        )
+                        st.caption(result["checkpoints"])
+                    except Exception as e:
+                        st.error(f"Reset failed: {e}")
+                        st.exception(e)
+        st.caption(
+            "Reset deletes non-seed bronze rows, rebuilds silver/gold, and tries to clear "
+            "`/Volumes/onr_demo/bronze/checkpoints` so Auto Loader can re-read the same files. "
+            "Cluster equivalent: `notebooks/05_reset_demo.py` on **onr demo cluster**."
+        )
+
+
 def render_live_file_drop(cursor, catalog: str):
     """Primary live moment: 8 new grants through medallion."""
     from utils.demo_actions import (

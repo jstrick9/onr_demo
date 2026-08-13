@@ -11,12 +11,33 @@ import csv
 from pathlib import Path
 from typing import Optional, Tuple
 
+SEED_BATCH_ID = "seed-initial-2026"
 LIVE_BATCH_ID = "live-demo-2026"
+QUALITY_FAIL_BATCH_ID = "quality-fail-2026"
 
-_CANDIDATES = [
-    Path(__file__).resolve().parents[1] / "data" / "batch_live_grants.csv",
-    Path(__file__).resolve().parents[2] / "resources" / "mock_data" / "batch_live_grants.csv",
-]
+_APP_DATA = Path(__file__).resolve().parents[1] / "data"
+_REPO_MOCK = Path(__file__).resolve().parents[2] / "resources" / "mock_data"
+
+FILE_PACKS = {
+    "live": {
+        "label": "Live 8 grants (good file)",
+        "batch_id": LIVE_BATCH_ID,
+        "files": [
+            _APP_DATA / "batch_live_grants.csv",
+            _REPO_MOCK / "batch_live_grants.csv",
+        ],
+    },
+    "quality_fail": {
+        "label": "Quality-fail sample (3 bad rows)",
+        "batch_id": QUALITY_FAIL_BATCH_ID,
+        "files": [
+            _APP_DATA / "batch_quality_fail.csv",
+            _REPO_MOCK / "batch_quality_fail.csv",
+        ],
+    },
+}
+
+_CANDIDATES = FILE_PACKS["live"]["files"]
 
 
 def _live_csv() -> Path:
@@ -49,39 +70,166 @@ def _sql_str(v) -> str:
     return "'" + str(v).replace("'", "''") + "'"
 
 
-def ingest_live_batch_sql(cursor, catalog: str) -> Tuple[int, str]:
-    """Append live-demo grants to bronze (skips grant_no already present)."""
-    rows = load_live_rows()
-    inserted = 0
+def bronze_count(cursor, catalog: str) -> int:
+    cursor.execute(f"SELECT COUNT(*) FROM `{catalog}`.`bronze`.grants")
+    return int(cursor.fetchone()[0])
+
+
+def ingest_grant_rows(cursor, catalog: str, rows: list[dict], source_file: str, skip_existing: bool = True) -> dict:
+    landed = skipped = rejected = 0
+    reasons: list[str] = []
     for rec in rows:
-        gn = rec.get("grant_no")
-        cursor.execute(
-            f"SELECT COUNT(*) FROM `{catalog}`.`bronze`.grants WHERE grant_no = {_sql_str(gn)}"
-        )
-        if int(cursor.fetchone()[0]) > 0:
+        gn = (rec.get("grant_no") or "").strip()
+        if not gn:
+            rejected += 1
+            reasons.append("empty grant_no (bronze NOT NULL)")
             continue
+        try:
+            amount = float(rec.get("amount_usd") or 0)
+        except (TypeError, ValueError):
+            rejected += 1
+            reasons.append(f"{gn}: amount not numeric")
+            continue
+        if skip_existing:
+            cursor.execute(
+                f"SELECT COUNT(*) FROM `{catalog}`.`bronze`.grants WHERE grant_no = {_sql_str(gn)}"
+            )
+            if int(cursor.fetchone()[0]) > 0:
+                skipped += 1
+                reasons.append(f"{gn}: duplicate")
+                continue
+        try:
+            awardee = rec.get("awardee")
+            cursor.execute(
+                f"""
+                INSERT INTO `{catalog}`.`bronze`.grants VALUES (
+                    {_sql_str(gn)},
+                    {_sql_str(rec.get("title"))},
+                    {_sql_str(rec.get("abstract"))},
+                    {_sql_str(rec.get("program_area"))},
+                    {int(float(rec.get("fiscal_year") or 2026))},
+                    {amount},
+                    {_sql_str(awardee) if awardee else "NULL"},
+                    {_sql_str(rec.get("org_unit"))},
+                    {_sql_str(rec.get("classification_band"))},
+                    {_sql_str(rec.get("batch_id") or LIVE_BATCH_ID)},
+                    {_sql_str(rec.get("created_at"))},
+                    CURRENT_TIMESTAMP(),
+                    {_sql_str(source_file)},
+                    {_sql_str(rec.get("batch_id") or LIVE_BATCH_ID)}
+                )
+                """
+            )
+            landed += 1
+        except Exception as e:
+            rejected += 1
+            reasons.append(f"{gn}: {e}")
+    return {"landed": landed, "skipped": skipped, "rejected": rejected, "reasons": reasons[:20], "input_rows": len(rows)}
+
+
+def ingest_live_batch_sql(cursor, catalog: str) -> Tuple[int, str]:
+    result = ingest_grant_rows(cursor, catalog, load_live_rows(), "batch_live_grants.csv", True)
+    return result["landed"], LIVE_BATCH_ID
+
+
+def process_selected_files(cursor, catalog: str, pack_keys: list[str], extra_rows=None, extra_name="upload.csv") -> dict:
+    summaries = []
+    before = grant_count(cursor, catalog)
+    for key in pack_keys:
+        path = next(p for p in FILE_PACKS[key]["files"] if p.exists())
+        rows = list(csv.DictReader(path.open(encoding="utf-8")))
+        summaries.append({"file": path.name, **ingest_grant_rows(cursor, catalog, rows, path.name, skip_existing=(key != "quality_fail"))})
+    if extra_rows:
+        summaries.append({"file": extra_name, **ingest_grant_rows(cursor, catalog, extra_rows, extra_name, True)})
+    refresh_silver_gold_sql(cursor, catalog)
+    return {"before": before, "after": grant_count(cursor, catalog), "files": summaries}
+
+
+def reset_to_seed_sql(cursor, catalog: str) -> dict:
+    before = grant_count(cursor, catalog)
+    cursor.execute(
+        f"""DELETE FROM `{catalog}`.`bronze`.grants
+            WHERE coalesce(batch_id, '{SEED_BATCH_ID}') <> '{SEED_BATCH_ID}'
+               OR coalesce(_batch_id, '{SEED_BATCH_ID}') <> '{SEED_BATCH_ID}'"""
+    )
+    cursor.execute(
+        f"""DELETE FROM `{catalog}`.`bronze`.financial
+            WHERE coalesce(batch_id, '{SEED_BATCH_ID}') <> '{SEED_BATCH_ID}'
+               OR coalesce(_batch_id, '{SEED_BATCH_ID}') <> '{SEED_BATCH_ID}'"""
+    )
+    bronze_n = bronze_count(cursor, catalog)
+    reloaded = False
+    if bronze_n != 400:
+        _reload_seed_tables(cursor, catalog)
+        reloaded = True
+        bronze_n = bronze_count(cursor, catalog)
+    refresh_silver_gold_sql(cursor, catalog)
+    return {
+        "before_silver": before,
+        "after_silver": grant_count(cursor, catalog),
+        "bronze_grants": bronze_n,
+        "reloaded_fixture": reloaded,
+        "checkpoints": clear_autoloader_checkpoints(),
+    }
+
+
+def _reload_seed_tables(cursor, catalog: str) -> None:
+    from utils.portfolio_data import grants_dataframe, financial_dataframe
+
+    cursor.execute(f"TRUNCATE TABLE `{catalog}`.`bronze`.grants")
+    cursor.execute(f"TRUNCATE TABLE `{catalog}`.`bronze`.financial")
+    ingest_grant_rows(cursor, catalog, grants_dataframe().to_dict(orient="records"), "grants_portfolio.json", False)
+    for rec in financial_dataframe().to_dict(orient="records"):
         cursor.execute(
             f"""
-            INSERT INTO `{catalog}`.`bronze`.grants VALUES (
-                {_sql_str(gn)},
-                {_sql_str(rec.get("title"))},
-                {_sql_str(rec.get("abstract"))},
+            INSERT INTO `{catalog}`.`bronze`.financial VALUES (
+                {_sql_str(rec.get("transaction_id"))},
+                {_sql_str(rec.get("grant_no"))},
+                {_sql_str(rec.get("cost_center"))},
                 {_sql_str(rec.get("program_area"))},
+                {_sql_str(rec.get("category"))},
                 {int(rec.get("fiscal_year") or 2026)},
-                {float(rec.get("amount_usd") or 0)},
-                {_sql_str(rec.get("awardee"))},
-                {_sql_str(rec.get("org_unit"))},
-                {_sql_str(rec.get("classification_band"))},
-                {_sql_str(rec.get("batch_id") or LIVE_BATCH_ID)},
-                {_sql_str(rec.get("created_at"))},
+                {_sql_str(rec.get("quarter"))},
+                {float(rec.get("budget_allocated") or 0)},
+                {float(rec.get("actual_expenditure") or 0)},
+                {float(rec.get("execution_rate") or 0)},
+                {float(rec.get("variance") or 0)},
+                {_sql_str(rec.get("status"))},
+                {_sql_str(rec.get("batch_id") or SEED_BATCH_ID)},
                 CURRENT_TIMESTAMP(),
-                'batch_live_grants.csv',
-                {_sql_str(rec.get("batch_id") or LIVE_BATCH_ID)}
+                'derived_erp',
+                {_sql_str(rec.get("batch_id") or SEED_BATCH_ID)}
             )
             """
         )
-        inserted += 1
-    return inserted, LIVE_BATCH_ID
+
+
+def clear_autoloader_checkpoints() -> str:
+    try:
+        from databricks.sdk import WorkspaceClient
+
+        w = WorkspaceClient()
+        root = "/Volumes/onr_demo/bronze/checkpoints"
+        deleted = 0
+        try:
+            for entry in w.files.list_directory_contents(root):
+                path = getattr(entry, "path", None)
+                if not path:
+                    continue
+                try:
+                    w.files.delete_directory(path, recursive=True)
+                    deleted += 1
+                except Exception:
+                    try:
+                        w.files.delete(path)
+                        deleted += 1
+                    except Exception:
+                        pass
+        except Exception as e:
+            return f"Could not list {root}: {e}"
+        return f"Cleared {deleted} checkpoint path(s) under {root}"
+    except Exception as e:
+        return f"Checkpoint cleanup skipped ({e}). Use notebooks/05_reset_demo.py on the cluster."
 
 
 def refresh_silver_gold_sql(cursor, catalog: str) -> None:

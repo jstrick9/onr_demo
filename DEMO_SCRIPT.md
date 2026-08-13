@@ -26,8 +26,12 @@
 
 **Talk:** New file, no recode. SQL path uses **onr demo warehouse**. Auto Loader notebooks run on **onr demo cluster**.
 
-**Do:** On the Ingestion page click **Drop live file (8 grants)**.  
-Say the count out loud: **400 → 408**.
+**Do:** On Ingestion, leave **Live 8 grants** selected → **Process selected files**.  
+Say the count: **400 → 408**.
+
+To show quality: add **Quality-fail sample** and process again (empty `grant_no` rejected, negative amount never reaches silver, duplicate skipped).
+
+**Reset:** check *I want to reset* → **Reset demo to seed** (back to 400). Or run `05_reset_demo.py` on **onr demo cluster**.
 
 Then open `01_bronze_ingestion.py` **attached to `onr demo cluster`** and scroll the Auto Loader `cloudFiles` cell (do not need to re-run if the button already landed the rows).
 

@@ -56,11 +56,14 @@ After bootstrap, extra files sit in:
 | `batch_quality_fail.csv` | 3 bad rows — show silver rejecting them |
 | `sample_grants.csv` / `sample_financial.csv` | Full seed extracts |
 
-**In the app:** Ingestion → **Drop live file (8 grants)** (writes via **onr demo warehouse**).
+**In the app (Ingestion page):**
 
-**Or on the cluster:** attach `01`–`03` to **onr demo cluster** after copying the staged CSV into `landing/grants/`.
+- Multi-select staged files (**Live 8 grants**, **Quality-fail sample**) and/or upload a CSV → **Process selected files**
+- **Reset demo to seed** (confirm checkbox) → back to 400 grants, checkpoints cleared
 
-App count moves **400 → 408**.
+**On the cluster:** `05_reset_demo.py` on **onr demo cluster**, then `01`–`03` if you are showing Auto Loader on Volume files.
+
+App count: **400 → 408** (live file) → **400** (reset).
 
 ---
 
