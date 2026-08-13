@@ -79,8 +79,15 @@ def ingest_grant_rows(cursor, catalog: str, rows: list[dict], source_file: str, 
     landed = skipped = rejected = 0
     reasons: list[str] = []
     for rec in rows:
-        gn = (rec.get("grant_no") or "").strip()
-        if not gn:
+        raw_gn = rec.get("grant_no")
+        try:
+            import math
+            if raw_gn is None or (isinstance(raw_gn, float) and math.isnan(raw_gn)):
+                raw_gn = ""
+        except Exception:
+            pass
+        gn = str(raw_gn).strip()
+        if not gn or gn.lower() in {"nan", "none", "null"}:
             rejected += 1
             reasons.append("empty grant_no (bronze NOT NULL)")
             continue
@@ -138,7 +145,7 @@ def process_selected_files(cursor, catalog: str, pack_keys: list[str], extra_row
     for key in pack_keys:
         path = next(p for p in FILE_PACKS[key]["files"] if p.exists())
         rows = list(csv.DictReader(path.open(encoding="utf-8")))
-        summaries.append({"file": path.name, **ingest_grant_rows(cursor, catalog, rows, path.name, skip_existing=(key != "quality_fail"))})
+        summaries.append({"file": path.name, **ingest_grant_rows(cursor, catalog, rows, path.name, skip_existing=True)})
     if extra_rows:
         summaries.append({"file": extra_name, **ingest_grant_rows(cursor, catalog, extra_rows, extra_name, True)})
     refresh_silver_gold_sql(cursor, catalog)
@@ -149,8 +156,7 @@ def reset_to_seed_sql(cursor, catalog: str) -> dict:
     before = grant_count(cursor, catalog)
     cursor.execute(
         f"""DELETE FROM `{catalog}`.`bronze`.grants
-            WHERE coalesce(batch_id, '{SEED_BATCH_ID}') <> '{SEED_BATCH_ID}'
-               OR coalesce(_batch_id, '{SEED_BATCH_ID}') <> '{SEED_BATCH_ID}'"""
+            WHERE coalesce(batch_id, _batch_id, '{SEED_BATCH_ID}') <> '{SEED_BATCH_ID}'"""
     )
     cursor.execute(
         f"""DELETE FROM `{catalog}`.`bronze`.financial
@@ -160,9 +166,20 @@ def reset_to_seed_sql(cursor, catalog: str) -> dict:
     bronze_n = bronze_count(cursor, catalog)
     reloaded = False
     if bronze_n != 400:
-        _reload_seed_tables(cursor, catalog)
-        reloaded = True
-        bronze_n = bronze_count(cursor, catalog)
+        # Do not INSERT 1,600 rows from the app (warehouse timeouts).
+        # Point the operator at the cluster bootstrap instead.
+        refresh_silver_gold_sql(cursor, catalog)
+        return {
+            "before_silver": before,
+            "after_silver": grant_count(cursor, catalog),
+            "bronze_grants": bronze_n,
+            "reloaded_fixture": False,
+            "checkpoints": clear_autoloader_checkpoints(),
+            "warning": (
+                f"bronze.grants is {bronze_n}, expected 400. "
+                "Run notebooks/00_bootstrap.py on **onr demo cluster** to full-reload the fixture."
+            ),
+        }
     refresh_silver_gold_sql(cursor, catalog)
     return {
         "before_silver": before,
@@ -319,19 +336,25 @@ def refresh_silver_gold_sql(cursor, catalog: str) -> None:
         GROUP BY awardee, org_unit
         """
     )
-    cursor.execute(
-        f"""
-        INSERT INTO `{catalog}`.`app`.ingestion_quality_log
-        VALUES (
-            'live-' || CAST(UNIX_TIMESTAMP() AS STRING), 'live_batch_drop', 'PASS',
-            (SELECT COUNT(*) FROM `{catalog}`.`bronze`.grants),
-            (SELECT COUNT(*) FROM `{catalog}`.`silver`.grants),
-            (SELECT COUNT(*) FROM `{catalog}`.`bronze`.grants)
-              - (SELECT COUNT(*) FROM `{catalog}`.`silver`.grants),
-            CURRENT_TIMESTAMP(), 'streamlit_live_drop'
+    try:
+        cursor.execute(
+            f"""
+            INSERT INTO `{catalog}`.`app`.ingestion_quality_log
+            (check_id, check_name, check_status, records_checked, records_passed,
+             records_failed, check_timestamp, pipeline_name)
+            VALUES (
+                concat('live-', date_format(current_timestamp(), 'yyyyMMddHHmmss')),
+                'live_batch_drop', 'PASS',
+                (SELECT COUNT(*) FROM `{catalog}`.`bronze`.grants),
+                (SELECT COUNT(*) FROM `{catalog}`.`silver`.grants),
+                (SELECT COUNT(*) FROM `{catalog}`.`bronze`.grants)
+                  - (SELECT COUNT(*) FROM `{catalog}`.`silver`.grants),
+                CURRENT_TIMESTAMP(), 'streamlit_live_drop'
+            )
+            """
         )
-        """
-    )
+    except Exception:
+        pass
 
 
 def try_start_cluster_notebooks() -> str:

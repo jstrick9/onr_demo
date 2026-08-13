@@ -224,9 +224,10 @@ def render_file_picker_and_reset(cursor, catalog: str):
                         result = reset_to_seed_sql(cursor, catalog)
                         st.success(
                             f"Reset complete. silver.grants {result['before_silver']} → {result['after_silver']} "
-                            f"(bronze={result['bronze_grants']}"
-                            f"{', full fixture reload' if result['reloaded_fixture'] else ''})"
+                            f"(bronze={result['bronze_grants']})"
                         )
+                        if result.get("warning"):
+                            st.warning(result["warning"])
                         st.caption(result["checkpoints"])
                     except Exception as e:
                         st.error(f"Reset failed: {e}")

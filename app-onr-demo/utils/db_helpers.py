@@ -85,7 +85,8 @@ def show_temp_message(message_type, message, seconds=3):
 # -------------------------------
 def _resolve_http_path_by_name(w: WorkspaceClient, name: str) -> str:
     """Resolve SQL Warehouse HTTP path by warehouse name."""
-    matches = [wh for wh in w.warehouses.list() if (wh.name or "").strip() == name.strip()]
+    want = name.strip().lower()
+    matches = [wh for wh in w.warehouses.list() if (wh.name or "").strip().lower() == want]
     if not matches:
         raise ValueError(f"No SQL Warehouse found with name '{name}'")
     if len(matches) > 1:
@@ -246,21 +247,23 @@ def validate_source_tables(cursor, configs):
     catalog = configs["schema"]["catalog"]
     
     tables_to_check = [
-        (f"`{catalog}`.`silver`.grants", "Silver Grants"),
-        (f"`{catalog}`.`silver`.financial", "Silver Financial"),
-        (f"`{catalog}`.`gold`.grants_summary", "Gold Grants Summary"),
+        (f"`{catalog}`.`silver`.grants", "Silver Grants", True),
+        (f"`{catalog}`.`silver`.financial", "Silver Financial", True),
+        (f"`{catalog}`.`gold`.grants_summary", "Gold Grants Summary", False),
     ]
     
     all_valid = True
     
-    for full_table, display_name in tables_to_check:
+    for full_table, display_name, has_active in tables_to_check:
         try:
+            where = "WHERE _is_active = true" if has_active else ""
+            ts_col = "_ingest_time" if has_active else "_updated_at"
             cursor.execute(f"""
                 SELECT 
                     COUNT(*) as record_count,
-                    MAX(_ingest_time) as latest_update
+                    MAX({ts_col}) as latest_update
                 FROM {full_table}
-                WHERE _is_active = true
+                {where}
             """)
             result = cursor.fetchone()
             

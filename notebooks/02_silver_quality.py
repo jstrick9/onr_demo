@@ -196,9 +196,9 @@ financial_score = (
 from pyspark.sql.functions import current_timestamp
 
 quality_scores = spark.createDataFrame([
-    ("silver_grants", grants_score, grants_completeness[1]/grants_completeness[0],
+    ("silver.grants", grants_score, grants_completeness[1]/grants_completeness[0],
      grants_completeness[3]/grants_completeness[0], grants_completeness[2]/grants_completeness[0], 1.0),
-    ("silver_financial", financial_score, financial_completeness[1]/financial_completeness[0],
+    ("silver.financial", financial_score, financial_completeness[1]/financial_completeness[0],
      financial_completeness[2]/financial_completeness[0], financial_completeness[3]/financial_completeness[0], 1.0),
 ], ["table_name", "quality_score", "completeness", "accuracy", "consistency", "timeliness"])
 

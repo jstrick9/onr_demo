@@ -59,19 +59,14 @@ from pyspark.sql import functions as F
 from pyspark.sql.types import *
 
 fixture_path = f"{repo_root}/resources/mock_data/grants_portfolio.json"
-# Workspace files: copy to a temp volume path Spark can read
-tmp_json = f"{landing}/_bootstrap/grants_portfolio.json"
-dbutils.fs.mkdirs(f"{landing}/_bootstrap")
-dbutils.fs.cp(f"file:{fixture_path}" if fixture_path.startswith("/") else fixture_path, tmp_json, True)
-
-# Also try Workspace path via Python
 import os
-local_candidates = [
+payload = None
+candidates = [
     fixture_path,
     fixture_path.replace("/Workspace", "/Workspace"),
+    "/Workspace" + fixture_path if not fixture_path.startswith("/Workspace") else fixture_path,
 ]
-payload = None
-for p in local_candidates:
+for p in candidates:
     try:
         with open(p, "r", encoding="utf-8") as f:
             payload = json.load(f)
@@ -81,9 +76,9 @@ for p in local_candidates:
         pass
 
 if payload is None:
-    # last resort: read via Spark after cp
     raise FileNotFoundError(
-        f"Could not open {fixture_path}. Set repo_root to the cloned onr_demo folder."
+        f"Could not open {fixture_path}. Set repo_root to the cloned onr_demo folder "
+        "(example /Workspace/Users/you@org/onr_demo)."
     )
 
 grants = payload["grants"]

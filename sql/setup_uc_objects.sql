@@ -317,14 +317,11 @@ ALTER TABLE `onr_demo`.`gold`.financial_summary SET TAGS (
 -- 9. ROW / COLUMN SECURITY EXAMPLES
 -- =====================================================
 
-CREATE FUNCTION IF NOT EXISTS `onr_demo`.`app`.region_filter(region STRING)
-    RETURN current_user() LIKE '%@navy.mil%' OR region = 'ALL';
-
-CREATE FUNCTION IF NOT EXISTS `onr_demo`.`app`.mask_awardee(name STRING)
-    RETURN CASE
-        WHEN IS_MEMBER('analysts') THEN name
-        ELSE CONCAT(LEFT(name, 1), '****')
-    END;
+-- Optional (requires appropriate metastore privileges):
+-- CREATE FUNCTION IF NOT EXISTS `onr_demo`.`app`.region_filter(region STRING)
+--     RETURN current_user() LIKE '%@navy.mil%' OR region = 'ALL';
+-- CREATE FUNCTION IF NOT EXISTS `onr_demo`.`app`.mask_awardee(name STRING)
+--     RETURN CASE WHEN IS_MEMBER('analysts') THEN name ELSE CONCAT(LEFT(name, 1), '****') END;
 
 -- ALTER TABLE `onr_demo`.`silver`.grants
 -- ALTER COLUMN awardee SET MASK `onr_demo`.`app`.mask_awardee;

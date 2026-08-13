@@ -17,6 +17,13 @@ dbutils.widgets.text("landing_path", "/Volumes/onr_demo/bronze/landing/")
 
 catalog = dbutils.widgets.get("catalog")
 landing_path = dbutils.widgets.get("landing_path")
+if not landing_path.endswith("/"):
+    landing_path = landing_path + "/"
+for sub in ("grants", "financial", "_schemas"):
+    try:
+        dbutils.fs.mkdirs(f"{landing_path}{sub}")
+    except Exception:
+        pass
 
 # COMMAND ----------
 
