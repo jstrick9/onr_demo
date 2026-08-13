@@ -339,17 +339,18 @@ def render_search_extract(cursor, catalog: str, schema: str):
             try:
                 query = f"""
                 SELECT 
-                    grant_id,
+                    grant_no,
                     title,
-                    principal_investigator,
-                    institution,
-                    research_area,
-                    award_amount,
-                    status
+                    awardee,
+                    org_unit,
+                    program_area,
+                    amount_usd,
+                    classification_band
                 FROM `{catalog}`.`silver`.grants
                 WHERE LOWER(title) LIKE '%{search_term.lower()}%'
-                    OR LOWER(principal_investigator) LIKE '%{search_term.lower()}%'
-                    OR LOWER(institution) LIKE '%{search_term.lower()}%'
+                    OR LOWER(awardee) LIKE '%{search_term.lower()}%'
+                    OR LOWER(grant_no) LIKE '%{search_term.lower()}%'
+                    OR LOWER(org_unit) LIKE '%{search_term.lower()}%'
                 LIMIT 50
                 """
                 cursor.execute(query)
@@ -357,8 +358,8 @@ def render_search_extract(cursor, catalog: str, schema: str):
                 
                 if results:
                     df = pd.DataFrame(results, columns=[
-                        "Grant ID", "Title", "PI", "Institution", 
-                        "Research Area", "Amount", "Status"
+                        "Grant No", "Title", "Awardee", "Org Unit",
+                        "Program Area", "Amount", "Classification"
                     ])
                     st.dataframe(
                         df.style.format({"Amount": "${:,.0f}"}),

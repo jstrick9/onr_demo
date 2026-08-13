@@ -195,13 +195,14 @@ def render_trend_analysis():
     
     with tab1:
         # Research area distribution
-        research_areas = ["AI/ML", "Cybersecurity", "Autonomous", "Quantum", "Directed Energy", "Hypersonics", "Undersea", "Space"]
-        funding = [45, 38, 32, 28, 25, 22, 18, 15]
-        
+        from utils.portfolio_data import grants_dataframe
+        g = grants_dataframe()
+        pie = g.groupby("program_area")["amount_usd"].sum().reset_index()
         fig = px.pie(
-            values=funding,
-            names=research_areas,
-            title="Funding Distribution by Research Area (FY2026)",
+            pie,
+            values="amount_usd",
+            names="program_area",
+            title="Funding by program area (Compass fixture)",
             hole=0.3
         )
         st.plotly_chart(fig, use_container_width=True)

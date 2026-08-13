@@ -1,182 +1,98 @@
-# ONR ITSS Proof of Concept — Databricks Streamlit Demo
+# ONR ITSS POC — Databricks Streamlit demo (Elements 3–7)
 
-## Office of Naval Research (ONR) Code 08 IT Support Services
-### Technical Demonstration: Elements 3–7
+Single-environment proof of concept for Office of Naval Research Code 08 ITSS.
 
-This repository contains a **Databricks Streamlit application** designed for the ONR ITSS technical demonstration, showcasing capabilities across five key scenario elements:
+**Mock data only** (Compass `grants_portfolio.json`, 400 grants). No CUI / PII / classified.
 
-| Page | Element | Focus |
-|------|---------|-------|
-| **01 Ingestion** | Element 3 | Automated Ingestion, Data Operations, and Streaming |
-| **02 Governance** | Element 4 | Data Governance, Quality, and Cataloging |
-| **03 Analytics** | Element 5 | Decision-Support Analytics and Modeling |
-| **04 Dashboard** | Element 6 | Unified Dashboard, Visualizations, and Process Automation |
-| **05 Integration** | Element 7 | Interoperability, Data Portability, and Secure Export |
-
----
-
-## Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                    Databricks Streamlit App                         │
-│  ┌───────────┬───────────┬───────────┬───────────┬───────────┐     │
-│  │ Ingestion │Governance │ Analytics │ Dashboard │Integration│     │
-│  │   (E3)    │   (E4)    │   (E5)    │   (E6)    │   (E7)    │     │
-│  └─────┬─────┴─────┬─────┴─────┬─────┴─────┬─────┴─────┬─────┘     │
-│        │           │           │           │           │           │
-│  ┌─────▼───────────▼───────────▼───────────▼───────────▼─────┐     │
-│  │         Unity Catalog onr_demo.{bronze | silver | gold | app}     │     │
-│  └───────────────────────────────────────────────────────────┘     │
-│                           │                                        │
-│  ┌────────────────────────▼────────────────────────────────┐       │
-│  │          Medallion Architecture (Bronze/Silver/Gold)     │       │
-│  │  ┌─────────┐    ┌─────────┐    ┌─────────┐             │       │
-│  │  │ Bronze  │───▶│ Silver  │───▶│  Gold   │             │       │
-│  │  │  (Raw)  │    │(Cleansed)│   │(Business)│            │       │
-│  │  └─────────┘    └─────────┘    └─────────┘             │       │
-│  └─────────────────────────────────────────────────────────┘       │
-└─────────────────────────────────────────────────────────────────────┘
-```
+| Page | Element | What you show |
+|------|---------|----------------|
+| Ingestion | 3 | Auto Loader, quality gates, a second file drop |
+| Governance | 4 | Unity Catalog, scores, lineage |
+| Analytics | 5 | Forecasts + a small MLflow model |
+| Dashboard | 6 | KPIs, search, extract |
+| Integration | 7 | CSV / JSON / Parquet export, open APIs |
 
 ---
 
-## Prerequisites
+## Unity Catalog (medallion)
 
-- Databricks workspace with Apps enabled (AWS)
-- Unity Catalog catalog `onr_demo` with schemas `bronze`, `silver`, `gold`, `app`
-- SQL Warehouse access
-- Service Principal with appropriate permissions
-- Python 3.10+
+Catalog **`onr_demo`** — one POC, no prod.
 
-## Deployment
+| Schema | Tables / volumes |
+|--------|------------------|
+| `bronze` | `grants`, `financial` · volumes `landing`, `checkpoints` |
+| `silver` | `grants`, `financial` |
+| `gold` | `grants_summary`, `financial_summary`, `grants_by_awardee`, `budget_execution` |
+| `app` | `ingestion_quality_log`, `data_quality_scores`, `lineage_tracking`, search/export history |
 
-### Using Databricks Asset Bundles:
-
-```bash
-# Validate the bundle
-databricks bundle validate -t dev
-
-# Deploy to dev environment
-databricks bundle deploy -t dev
-
-# Run the pipeline
-databricks bundle run onr_demo_pipeline -t dev
-
-# Deploy to production
-databricks bundle deploy -t prod
-```
-
-### Manual Deployment:
-
-1. Upload the `app-onr-demo` folder to your Databricks workspace
-2. Run the SQL setup scripts in `sql/setup_uc_objects.sql`
-3. Run the mock data generator in `resources/mock_data/generate_mock_data.py`
-4. Create the Databricks App pointing to `app.yml`
+Landing path: `/Volumes/onr_demo/bronze/landing/`
 
 ---
 
-## Project Structure
+## New workspace — four steps
+
+1. **Add the Git repo** to the Databricks workspace (Repos / Git folder).
+2. Open **`notebooks/00_bootstrap.py`**, set `repo_root` to that folder, **Run all**.  
+   This creates UC objects and loads 400 grants + 1,200 ERP rows.
+3. Create a **Databricks App** from `app-onr-demo/` (or `databricks bundle deploy -t poc`).  
+   Warehouse name in `app.yml`: `onr-demo-warehouse`.
+4. Follow **[DEMO_SCRIPT.md](DEMO_SCRIPT.md)** (50 minutes, including a live 8-row file drop).
+
+Optional SQL-only create: `sql/setup_uc_objects.sql` (no extra S3 bucket).
+
+---
+
+## Live second file (Element 3)
+
+After bootstrap, extra files sit in:
+
+`/Volumes/onr_demo/bronze/landing/_staged/`
+
+| File | Purpose |
+|------|---------|
+| `batch_live_grants.csv` | 8 new grants (`live-demo-2026`) — copy into `landing/grants/` |
+| `batch_quality_fail.csv` | 3 bad rows — show silver rejecting them |
+| `sample_grants.csv` / `sample_financial.csv` | Full seed extracts |
+
+Then run `01_bronze_ingestion.py` → `02_silver_quality.py` → `03_gold_aggregation.py`.  
+App count moves **400 → 408**.
+
+---
+
+## Repo layout
 
 ```
 onr_demo/
-├── README.md                          # This file
-├── databricks.yml                     # DABs configuration
-│
-├── app-onr-demo/                      # Streamlit Application
-│   ├── Home.py                        # Main entry point
-│   ├── app.yml                        # App configuration
-│   ├── requirements.txt               # Python dependencies
-│   ├── config/
-│   │   ├── dev/onr-conf.yaml          # Dev environment config
-│   │   └── prod/onr-conf.yaml         # Prod environment config
-│   ├── pages/
-│   │   ├── 01_🔍_Ingestion.py         # Element 3
-│   │   ├── 02_📊_Governance.py        # Element 4
-│   │   ├── 03_🤖_Analytics.py         # Element 5
-│   │   ├── 04_📈_Dashboard.py         # Element 6
-│   │   └── 05_🔗_Integration.py       # Element 7
+├── DEMO_SCRIPT.md                 # 50-minute talk track
+├── databricks.yml                 # Slim DAB: warehouse + volumes + app
+├── app-onr-demo/                  # Streamlit app
+│   ├── Home.py
+│   ├── app.yml
+│   ├── config/onr-conf.yaml
+│   ├── data/grants_portfolio.json # App fixture fallback
+│   ├── pages/                     # Elements 3–7
 │   └── utils/
-│       ├── db_helpers.py              # Database connection
-│       ├── page_config_helpers.py     # UI configuration
-│       ├── runtime_env.py             # Environment detection
-│       ├── user_helpers.py            # SSO user management
-│       ├── ingestion_helpers.py       # Element 3 utilities
-│       ├── governance_helpers.py      # Element 4 utilities
-│       ├── analytics_helpers.py       # Element 5 utilities
-│       ├── dashboard_helpers.py       # Element 6 utilities
-│       └── export_helpers.py          # Element 7 utilities
-│
-├── resources/
-│   ├── images/                        # Logo and assets
-│   └── mock_data/                     # Mock data generation
-│
-├── sql/                               # SQL scripts
-│   ├── setup_uc_objects.sql           # Unity Catalog DDL
-│   └── validation_queries.sql         # QA queries
-│
-├── notebooks/                         # Databricks notebooks
-│   ├── 01_bronze_ingestion.py         # Auto Loader ingestion
-│   ├── 02_silver_quality.py           # Data quality transforms
-│   ├── 03_gold_aggregation.py         # Business aggregations
-│   ├── 04_analytics_model.py          # ML/Analytics
-│   └── 05_rag_agent.py               # RAG agent (optional)
-│
-└── documentation/                     # Supporting docs
+├── notebooks/
+│   ├── 00_bootstrap.py            # RUN FIRST
+│   ├── 01_bronze_ingestion.py     # Auto Loader
+│   ├── 02_silver_quality.py
+│   ├── 03_gold_aggregation.py
+│   └── 04_mlflow_grant_model.py
+├── sql/
+│   ├── setup_uc_objects.sql
+│   └── validation_queries.sql
+└── resources/mock_data/
+    ├── grants_portfolio.json      # Source of truth
+    ├── batch_live_grants.csv
+    ├── batch_quality_fail.csv
+    └── generate_mock_data.py
 ```
 
 ---
 
-## Mock Data
+## Data contract
 
-The demo uses **sanitized mock data** representing typical ONR command datasets:
+`grant_no`, `title`, `abstract`, `program_area`, `fiscal_year`, `amount_usd`,
+`awardee`, `org_unit`, `classification_band`, `batch_id`, `created_at`
 
-- **S&T Research Grants Registry**: Grant IDs, Principal Investigators, funding amounts, research areas, statuses
-- **Financial ERP Data**: Budget categories, quarterly expenditures, cost centers, execution rates
-
-All data is synthetically generated — **no CUI, PII, or classified information**.
-
----
-
-## Evaluation Criteria Alignment
-
-This POC addresses the Government's evaluation criteria:
-
-| Criterion | How This POC Addresses It |
-|-----------|---------------------------|
-| **Technical Competence** | Key Personnel demonstrate live platform navigation, code execution, and pipeline management |
-| **Completeness** | All 5 elements executed sequentially with seamless transitions |
-| **Open Architecture** | Standard APIs, portable data formats (CSV/JSON/Parquet), non-proprietary storage |
-| **Strategic Alignment** | Modular design supports rapid adaptation to evolving command needs |
-
----
-
-## Security & Compliance
-
-- **Zero Trust**: MFA, least-privilege access, continuous authorization
-- **IL4/IL5 Baseline**: Architecture supports DoD Impact Level 5 hosting
-- **Data Constraints**: Mock/sanitized data only — no CUI/PII/classified information
-- **Unity Catalog Governance**: Row-level filters, column masks, ABAC tags
-
----
-
-## Contact
-
-For questions about this POC:
-- **Technical Lead**: [Your Name]
-- **Email**: [your.email@domain.com]
-
----
-
-*Built with Databricks on AWS — Serverless-first, Unity Catalog-governed*
-
-## Mock data (Compass fixture)
-
-Primary grants source: `resources/mock_data/grants_portfolio.json`  
-- Contract: `compass.synthetic.v1` (400 synthetic S&T grants, no CUI/PII)
-- Exact fields: `grant_no`, `title`, `abstract`, `program_area`, `fiscal_year`, `amount_usd`, `awardee`, `org_unit`, `classification_band`, `batch_id`, `created_at`
-- Financial ERP is **derived** from those grants (3 transactions per grant, keyed by `grant_no`) via `resources/mock_data/generate_mock_data.py`
-
-```bash
-python resources/mock_data/generate_mock_data.py --format csv
-```
+ERP is derived (3 lines per grant, keyed by `grant_no`).

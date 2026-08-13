@@ -1,28 +1,18 @@
-# Databricks Asset Bundle — ONR ITSS POC
-# Single POC environment. Medallion: onr_demo.bronze | silver | gold | app
+# Slim DAB for a brand-new workspace (single POC target).
+# Set your workspace with: databricks configure
+# Then: databricks bundle deploy -t poc
 
 bundle:
   name: onr_demo
-
-include:
-  - resources/*.yml
 
 targets:
   poc:
     mode: development
     default: true
-    workspace:
-      host: https://adb-XXXX.XX.azuredatabricks.net  # Update with your AWS workspace URL
-      root_path: /Workspace/Users/${workspace.current_user.userName}/.bundle/${bundle.name}/${bundle.target}
-    variables:
-      catalog: onr_demo
-    permissions:
-      - level: CAN_MANAGE
-        group_name: data-engineers
 
 variables:
   catalog:
-    description: Unity Catalog catalog for ONR Demo
+    description: Unity Catalog catalog
     default: onr_demo
 
 resources:
@@ -44,81 +34,15 @@ resources:
       cluster_size: 2X-Small
       auto_stop_mins: 10
       warehouse_type: PRO
-      channel:
-        name: CHANNEL_NAME_CURRENT
-
-  pipelines:
-    onr_demo_pipeline:
-      name: ${var.catalog}.onr_demo_pipeline
-      serverless: true
-      photon: true
-      catalog: ${var.catalog}
-      target: bronze
-      libraries:
-        - notebook:
-            path: ../notebooks/01_bronze_ingestion.py
-        - notebook:
-            path: ../notebooks/02_silver_quality.py
-        - notebook:
-            path: ../notebooks/03_gold_aggregation.py
-      continuous: false
-      configuration:
-        pipeline.mode: "TRIGGERED"
-        catalog: ${var.catalog}
-
-  jobs:
-    onr_demo_workflow:
-      name: onr_demo_workflow
-      serverless: true
-      schedule:
-        quartz_cron_expression: "0 0 6 * * ?"
-        timezone_id: "UTC"
-      tasks:
-        - task_key: run_pipeline
-          pipeline_task:
-            pipeline_id: ${resources.pipelines.onr_demo_pipeline.id}
-        - task_key: validate_gold
-          depends_on:
-            - task_key: run_pipeline
-          notebook_task:
-            notebook_path: ../notebooks/validation_queries
-            base_parameters:
-              catalog: ${var.catalog}
-          environment_key: serverless
+      enable_serverless_compute: true
 
   apps:
     onr_demo_app:
       name: onr-demo-poc
-      description: "ONR ITSS POC — Technical Demonstration Elements 3–7"
-      source_code_path: ../app-onr-demo
-      permissions:
-        - level: CAN_USE
-          group_name: users
+      description: "ONR ITSS POC — Elements 3–7"
+      source_code_path: ./app-onr-demo
       resources:
         - name: onr-sql-warehouse
           sql_warehouse:
             id: ${resources.sql_warehouses.serverless.id}
             permission: CAN_USE
-
-  quality_monitors:
-    grants_monitor:
-      table_name: ${var.catalog}.gold.grants_summary
-      output_schema_name: ${var.catalog}.app
-      assets_dir: /Workspace/Users/${workspace.current_user.userName}/.bundle/monitoring/grants
-      time_series:
-        granularities: [1 day]
-        timestamp_col: _updated_at
-      schedule:
-        quartz_cron_expression: "0 0 8 * * ?"
-        timezone_id: UTC
-
-    financial_monitor:
-      table_name: ${var.catalog}.gold.financial_summary
-      output_schema_name: ${var.catalog}.app
-      assets_dir: /Workspace/Users/${workspace.current_user.userName}/.bundle/monitoring/financial
-      time_series:
-        granularities: [1 day]
-        timestamp_col: _updated_at
-      schedule:
-        quartz_cron_expression: "0 0 8 * * ?"
-        timezone_id: UTC

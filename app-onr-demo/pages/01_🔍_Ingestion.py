@@ -31,8 +31,8 @@ setup_sidebar()
 st.title("🔍 Element 3: Automated Ingestion, Data Operations, and Streaming")
 st.markdown(
     """
-    This element demonstrates **automated ingestion pipelines (ETL/ELT)**, automated quality checks, 
-    schema evolution handling, and near-real-time data streaming architecture.
+    Auto Loader watches `/Volumes/onr_demo/bronze/landing/`.  
+    **Live demo:** copy `_staged/batch_live_grants.csv` into `landing/grants/`, then re-run notebooks 01 → 03.
     """
 )
 

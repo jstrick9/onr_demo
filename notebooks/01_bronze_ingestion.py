@@ -2,16 +2,15 @@
 # MAGIC %md
 # MAGIC # Bronze Layer Ingestion
 # MAGIC **Purpose:** Auto Loader ingest raw files → Bronze Delta tables  
-# MAGIC **Catalog:** onr_demo.bronze / silver / gold / app | **Compute:** Serverless  
-# MAGIC **Inputs:** /Volumes/onr_demo/bronze/landing/*.csv, *.json  
+# MAGIC **Catalog:** onr_demo | **Inputs:** /Volumes/onr_demo/bronze/landing/grants/ and .../financial/  
 # MAGIC **Output:** onr_demo.bronze.grants, onr_demo.bronze.financial  
+# MAGIC Run **00_bootstrap.py** first. For the live demo, copy `_staged/batch_live_grants.csv` into `landing/grants/`.  
 # MAGIC **QA:** Expectations + row count validation
 
 # COMMAND ----------
 
 # Configuration widgets
 dbutils.widgets.text("catalog", "onr_demo")
-dbutils.widgets.text("bronze_schema", "bronze")
 dbutils.widgets.text("landing_path", "/Volumes/onr_demo/bronze/landing/")
 
 catalog = dbutils.widgets.get("catalog")

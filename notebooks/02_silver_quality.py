@@ -11,7 +11,6 @@
 
 # Configuration widgets
 dbutils.widgets.text("catalog", "onr_demo")
-dbutils.widgets.text("bronze_schema", "bronze")
 
 catalog = dbutils.widgets.get("catalog")
 

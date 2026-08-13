@@ -9,8 +9,8 @@
 -- 1. CATALOG & SCHEMAS
 -- =====================================================
 
+-- Uses the workspace metastore default location (no extra S3 bucket required)
 CREATE CATALOG IF NOT EXISTS `onr_demo`
-    MANAGED LOCATION 's3://onr-demo-uc-bucket/onr_demo'
     COMMENT 'ONR ITSS POC — Technical Demonstration Catalog';
 
 CREATE SCHEMA IF NOT EXISTS `onr_demo`.`bronze`
@@ -270,19 +270,10 @@ COMMENT 'Ingestion quality check results';
 -- 7. GRANTS (Access Control)
 -- =====================================================
 
-GRANT ALL PRIVILEGES ON CATALOG `onr_demo` TO `data-engineers`;
-
-GRANT USE CATALOG ON CATALOG `onr_demo` TO `analysts`;
-GRANT USE SCHEMA ON SCHEMA `onr_demo`.`bronze` TO `analysts`;
-GRANT USE SCHEMA ON SCHEMA `onr_demo`.`silver` TO `analysts`;
-GRANT USE SCHEMA ON SCHEMA `onr_demo`.`gold` TO `analysts`;
-GRANT SELECT ON SCHEMA `onr_demo`.`silver` TO `analysts`;
-GRANT SELECT ON SCHEMA `onr_demo`.`gold` TO `analysts`;
-
-GRANT USE CATALOG ON CATALOG `onr_demo` TO `viewers`;
-GRANT USE SCHEMA ON SCHEMA `onr_demo`.`gold` TO `viewers`;
-GRANT SELECT ON TABLE `onr_demo`.`gold`.grants_summary TO `viewers`;
-GRANT SELECT ON TABLE `onr_demo`.`gold`.financial_summary TO `viewers`;
+-- Optional: uncomment after you create these account groups
+-- GRANT ALL PRIVILEGES ON CATALOG `onr_demo` TO `data-engineers`;
+-- GRANT USE CATALOG ON CATALOG `onr_demo` TO `analysts`;
+-- GRANT SELECT ON SCHEMA `onr_demo`.`gold` TO `analysts`;
 
 -- =====================================================
 -- 8. TAGS
@@ -340,5 +331,5 @@ CREATE FUNCTION IF NOT EXISTS `onr_demo`.`app`.mask_awardee(name STRING)
 
 -- =====================================================
 -- SETUP COMPLETE
--- Next: generate_mock_data.py → notebooks 01–03 → Streamlit app
+-- Next: run notebooks/00_bootstrap.py (loads 400 grants + ERP, stages a live file)
 -- =====================================================
