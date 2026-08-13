@@ -91,7 +91,8 @@ onr_demo/
 │   ├── 04_mlflow_grant_model.py
 │   └── 05_reset_demo.py           # Cluster reset to 400-grant seed
 ├── sql/
-│   ├── setup_uc_objects.sql
+│   ├── setup_uc_objects.sql       # Optional empty DDL
+│   ├── grant_app_principal.sql    # After the app exists
 │   └── validation_queries.sql
 └── resources/mock_data/
     ├── grants_portfolio.json      # Source of truth

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import csv
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Optional
 
 SEED_BATCH_ID = "seed-initial-2026"
 LIVE_BATCH_ID = "live-demo-2026"
@@ -307,6 +307,45 @@ def refresh_silver_gold_sql(cursor, catalog: str) -> None:
         GROUP BY awardee, org_unit
         """
     )
+    cursor.execute(
+        f"""
+        CREATE OR REPLACE TABLE `{catalog}`.`gold`.grant_predictions AS
+        SELECT grant_no, title, program_area, amount_usd, awardee,
+               ROUND(LEAST(0.95, GREATEST(0.35,
+                   0.42
+                   + CASE WHEN amount_usd >= 2000000 THEN 0.22
+                          WHEN amount_usd >= 1000000 THEN 0.15
+                          WHEN amount_usd >= 500000 THEN 0.08 ELSE 0.0 END
+                   + CASE WHEN program_area IN ('AI/ML','Quantum','Autonomy') THEN 0.12
+                          WHEN program_area IN ('Cyber','Undersea') THEN 0.08 ELSE 0.04 END
+                   + CASE WHEN fiscal_year >= 2025 THEN 0.06 ELSE 0.0 END
+               )), 4) AS success_probability,
+               CASE WHEN amount_usd >= 2000000 THEN 'Large award concentration'
+                    WHEN classification_band = 'CUI-Mock' THEN 'CUI-Mock handling'
+                    ELSE 'Standard portfolio risk' END AS risk_factors,
+               CASE WHEN amount_usd >= 1000000 THEN 'Fund'
+                    WHEN amount_usd >= 400000 THEN 'Review'
+                    ELSE 'Defer' END AS recommendation,
+               'heuristic_v1' AS model_name,
+               CURRENT_TIMESTAMP() AS scored_at
+        FROM `{catalog}`.`silver`.grants
+        WHERE _is_active = true
+        """
+    )
+    try:
+        cursor.execute(
+            f"""
+            CREATE OR REPLACE TABLE `{catalog}`.`gold`.model_metrics AS
+            SELECT 'heuristic_v1' AS model_name,
+                   'rows_scored' AS metric_name,
+                   CAST(COUNT(*) AS DOUBLE) AS metric_value,
+                   CAST(COUNT(*) AS INT) AS n_rows,
+                   CURRENT_TIMESTAMP() AS trained_at
+            FROM `{catalog}`.`gold`.grant_predictions
+            """
+        )
+    except Exception:
+        pass
     try:
         cursor.execute(
             f"""

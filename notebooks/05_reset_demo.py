@@ -102,6 +102,13 @@ SELECT grant_no, title, program_area, amount_usd, awardee,
        current_timestamp() AS scored_at
 FROM `{catalog}`.`silver`.grants WHERE _is_active = true
 """)
+spark.sql(f"""
+CREATE OR REPLACE TABLE `{catalog}`.`gold`.model_metrics AS
+SELECT 'heuristic_v1' AS model_name, 'rows_scored' AS metric_name,
+       CAST(COUNT(*) AS DOUBLE) AS metric_value, CAST(COUNT(*) AS INT) AS n_rows,
+       current_timestamp() AS trained_at
+FROM `{catalog}`.`gold`.grant_predictions
+""")
 
 f.groupBy("fiscal_year", "quarter", "category").agg(
     F.sum("budget_allocated").alias("budget_plan"), F.sum("actual_expenditure").alias("actual_spend"),
