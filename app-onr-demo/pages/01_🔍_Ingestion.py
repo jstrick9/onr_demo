@@ -116,35 +116,39 @@ st.markdown("### 🏗️ Ingestion Architecture")
 
 st.markdown("""
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                    Automated Ingestion Pipeline                      │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│   📁 Source Files        🔄 Auto Loader         🥉 Bronze Layer    │
-│   ┌─────────┐           ┌─────────────┐        ┌─────────────┐     │
-│   │  CSV    │──────────▶│  cloudFiles │───────▶│  Raw Delta  │     │
-│   │  JSON   │           │  Schema     │        │  + Metadata │     │
-│   │  Parquet│           │  Evolution  │        └──────┬──────┘     │
-│   └─────────┘           └─────────────┘               │            │
-│                                                        ▼            │
-│                                               ┌──────────────┐     │
-│                                               │   Quality    │     │
-│                                               │   Checks     │     │
-│                                               └──────┬───────┘     │
-│                                                      │             │
-│                              ┌───────────────────────┴──────┐      │
-│                              ▼                              ▼      │
-│                       ┌────────────┐                 ┌──────────┐  │
-│                       │  ✅ Pass   │                 │ ❌ Quarantine││
-│                       │  → Silver  │                 │  → Review  │ │
-│                       └────────────┘                 └──────────┘  │
-│                                                                     │
-│   📡 Streaming Options:                                             │
-│   • Auto Loader (default) — S3 incremental detection                │
-│   • AWS Kinesis — Real-time event streaming                         │
-│   • Lakeflow Connect — Managed connectors (Salesforce, etc.)        │
-│   • Zerobus — High-volume Kafka replacement                         │
-└─────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                 Automated Ingestion Pipeline                                 │
+├──────────────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                              │
+│  landing Volume                  Auto Loader                       bronze.grants             │
+│  +------------------+         +------------------+         +----------------------+          │
+│  | CSV / JSON       | ------> | cloudFiles       | ------> | Raw Delta            |          │
+│  | /landing/grants  |         | addNewColumns    |         | + _ingest_time       |          │
+│  +------------------+         +------------------+         | + _source_file       |          │
+│                                                            +----------+-----------+          │
+│                                                                       |                      │
+│                                                                       v                      │
+│                                                            +----------------------+          │
+│                                                            | Quality gates        |          │
+│                                                            | grant_no NOT NULL    |          │
+│                                                            | amount_usd > 0       |          │
+│                                                            +----------+-----------+          │
+│                                                                       |                      │
+│                                        +------------------------------+-------------+        │
+│                                        |                                            |        │
+│                                        v                                            v        │
+│                         +------------------------+               +------------------------+  │
+│                         | PASS -> silver         |               | REJECT / skip          |  │
+│                         | then gold refresh      |               | empty / dup / amt <= 0 |  │
+│                         +------------------------+               +------------------------+  │
+│                                                                                              │
+│  Triggers (same bronze table unless noted)                                                   │
+│    App Process button : warehouse SQL INSERT                                                 │
+│    Notebook 01 / job  : availableNow (batch, file-arrival)                                   │
+│    Notebook 01b       : processingTime 30s (live stream)                                     │
+│    SDP pipeline       : sibling bronze.grants_stream                                         │
+│                                                                                              │
+└──────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 """)
 

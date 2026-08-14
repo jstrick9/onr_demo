@@ -136,35 +136,32 @@ st.markdown("### 🏗️ Export & Integration Architecture")
 
 st.markdown("""
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                Interoperability & Secure Export                      │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│   📊 Gold Layer              🔒 Secure Export          📤 Output    │
-│   ┌─────────────┐          ┌─────────────┐        ┌─────────────┐  │
-│   │  Business   │─────────▶│  TLS 1.3    │──────▶│    CSV      │  │
-│   │  Ready Data │          │  Encrypted  │        │    JSON     │  │
-│   └─────────────┘          │  Audit Log  │        │    Parquet  │  │
-│                            └─────────────┘        └──────┬──────┘  │
-│                                                          │         │
-│          ┌───────────────────────────────────────────────┤         │
-│          │               │               │               │         │
-│          ▼               ▼               ▼               ▼         │
-│   ┌─────────────┐  ┌─────────────┐  ┌──────────┐  ┌──────────┐   │
-│   │   Advana    │  │  Cloud One  │  │ Tableau  │  │  Excel   │   │
-│   │   (DoD)    │  │   (USAF)    │  │  PowerBI │  │  Sheets  │   │
-│   └─────────────┘  └─────────────┘  └──────────┘  └──────────┘   │
-│                                                                     │
-│   API Endpoints (RESTful):                                          │
-│   • GET /api/v1/grants — Query grants with filters                  │
-│   • GET /api/v1/financial — Query financial data                    │
-│   • POST /api/v1/export — Trigger secure bulk export                │
-│   • GET /api/v1/schema — Get schema documentation                   │
-│                                                                     │
-│   Open Standards:                                                   │
-│   ✅ CSV / JSON / Parquet   ✅ REST APIs    ✅ ODBC/JDBC            │
-│   ✅ Delta Lake (open)      ✅ SQL          ✅ Standard Protocols   │
-└─────────────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────────────────────┐
+│                         Interoperability and Secure Export                        │
+├───────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                   │
+│  gold / silver                     Secure export                      Open files  │
+│  +--------------------+         +--------------------+         +---------------+  │
+│  | Business-ready     | ------> | TLS 1.3            | ------> | CSV           |  │
+│  | filtered query     |         | date + LIMIT       |         | JSON          |  │
+│  +--------------------+         | export_history     |         | Parquet       |  │
+│                                 +--------------------+         +-------+-------+  │
+│                                                                        |          │
+│                  +--------------------------+-------------+------------+          │
+│                  |                          |             |            |          │
+│                  v                          v             v            v          │
+│           +-----------------+        +-----------------+ +-------+ +---------+    │
+│           | Advana          |        | Cloud One       | |Tableau| | Excel / |    │
+│           | JDBC / REST     |        | S3 / REST       | |PowerBI| | Sheets  |    │
+│           +-----------------+        +-----------------+ +-------+ +---------+    │
+│                                                                                   │
+│  Live open API (not fictional hosts)                                              │
+│    POST /api/2.0/sql/statements      Databricks Statement Execution               │
+│    same warehouse the dashboard uses; OAuth, short-lived token                    │
+│                                                                                   │
+│  Open standards: Delta | CSV | JSON | Parquet | SQL | JDBC/ODBC | REST            │
+│                                                                                   │
+└───────────────────────────────────────────────────────────────────────────────────┘
 ```
 """)
 

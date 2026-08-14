@@ -124,27 +124,29 @@ st.markdown("### 🏗️ Analytics Architecture")
 
 st.markdown("""
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                    Decision-Support Analytics                        │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│   🥇 Gold Layer             🤖 ML Pipeline          📊 Output       │
-│   ┌─────────────┐          ┌─────────────┐        ┌─────────────┐  │
-│   │ Aggregated  │─────────▶│   Feature   │──────▶│ Predictions │  │
-│   │   Data      │          │ Engineering │        │ Forecasts   │  │
-│   └─────────────┘          └──────┬──────┘        │ Trends      │  │
-│                                   │               └──────┬──────┘  │
-│                                   ▼                      │         │
-│                          ┌─────────────┐                 ▼         │
-│                          │ MLflow 3    │          ┌─────────────┐  │
-│                          │ Tracking    │          │  Executive  │  │
-│                          │ + Registry  │          │  Dashboard  │  │
-│                          └─────────────┘          └─────────────┘  │
-│                                                                     │
-│   UC: gold.grant_predictions, gold.model_metrics,                   │
-│       gold.funding_forecast, gold.program_trends                    │
-│   Train: 04_mlflow_grant_model.py · Forecast: ols_fy_v1 (SQL)       │
-└─────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────────────────┐
+│                                Decision-Support Analytics                                │
+├──────────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                          │
+│  gold (ingested portfolio: grants + ERP + funding_features)                              │
+│              |                          |                          |                     │
+│              v                          v                          v                     │
+│  +-----------------------+  +-----------------------+  +-----------------------+         │
+│  | RF classifier         |  | IsolationForest       |  | OLS FY forecast       |         │
+│  | notebook 04           |  | notebook 04b          |  | ols_fy_v1 (SQL)       |         │
+│  | large award >= $1M    |  | spike / collapse      |  | 2-yr + 95% band       |         │
+│  | Fund / Review / Defer |  | low-return conc.      |  | TREND-* IDs           |         │
+│  +-----------+-----------+  +-----------+-----------+  +-----------+-----------+         │
+│              |                          |                          |                     │
+│              v                          v                          v                     │
+│  grant_predictions           grant_anomaly_scores        funding_forecast                │
+│  grant_large_award           funding_anomaly_            program_trends                  │
+│  (UC model registry)         detector @ champion         TREND-ACCEL / STEADY / DECLINE  │
+│                                                                                          │
+│  MLflow  /Shared/onr-demo/{grant-size, funding-anomaly}                                  │
+│  App reads Unity Catalog tables -- not screenshots.                                      │
+│                                                                                          │
+└──────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 """)
 
