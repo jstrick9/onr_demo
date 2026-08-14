@@ -445,6 +445,30 @@ def render_process_automation(cursor=None, catalog: str = "onr_demo"):
     else:
         st.dataframe(risk, use_container_width=True)
 
+    flags = pd.DataFrame()
+    if cursor:
+        try:
+            cursor.execute(
+                f"""
+                SELECT grant_no, program_area, amount_usd, anomaly_score,
+                       predicted_type, model_name
+                FROM `{catalog}`.`gold`.grant_anomaly_scores
+                WHERE is_flagged = true
+                ORDER BY anomaly_score DESC
+                LIMIT 12
+                """
+            )
+            cols = [str(d[0]).lower() for d in cursor.description]
+            flags = pd.DataFrame(cursor.fetchall(), columns=cols)
+        except Exception:
+            flags = pd.DataFrame()
+    st.markdown("#### Flagged funding anomalies")
+    if flags.empty:
+        st.caption("No `gold.grant_anomaly_scores` flags yet. Process files or run notebook 04b.")
+    else:
+        st.dataframe(flags, use_container_width=True)
+        st.caption("IsolationForest (04b) or heuristic rules — same queue the Anomalies tab shows.")
+
 
 # -------------------------------
 # SEARCH AND EXTRACT

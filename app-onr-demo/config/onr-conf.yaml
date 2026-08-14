@@ -22,6 +22,9 @@ schema:
     funding_forecast: "funding_forecast"
     program_trends: "program_trends"
     daily_briefs: "daily_briefs"
+    funding_features: "funding_features"
+    grant_anomaly_scores: "grant_anomaly_scores"
+    anomaly_model_metrics: "anomaly_model_metrics"
     search_history: "search_history"
     export_history: "export_history"
     data_quality_scores: "data_quality_scores"
@@ -54,6 +57,8 @@ governance:
 analytics:
   model_registry: "onr_demo.gold"
   registered_model: "onr_demo.gold.grant_large_award"
+  anomaly_model: "onr_demo.gold.funding_anomaly_detector"
+  anomaly_experiment: "/Shared/onr-demo/funding-anomaly"
   experiment_path: "/Shared/onr-demo/grant-size"
   default_model: "random_forest"
   forecast_model: "ols_fy_v1"
@@ -75,7 +80,7 @@ export:
   export_chunksize: 100000
 
 app:
-  version: "1.2.0"
+  version: "1.4.0"
   environment: "poc"
   max_file_size_mb: 50
   session_timeout_minutes: 60

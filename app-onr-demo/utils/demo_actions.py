@@ -574,6 +574,23 @@ def refresh_silver_gold_sql(cursor, catalog: str) -> None:
     except Exception:
         pass
     try:
+        from utils.anomaly_sql import funding_features_sql, heuristic_anomaly_scores_sql
+        cursor.execute(funding_features_sql(catalog))
+        # Do not clobber IsolationForest scores written by notebook 04b.
+        keep_iforest = False
+        try:
+            cursor.execute(
+                f"SELECT MAX(model_name) FROM `{catalog}`.`gold`.grant_anomaly_scores"
+            )
+            mn = cursor.fetchone()[0]
+            keep_iforest = bool(mn) and "iforest" in str(mn).lower()
+        except Exception:
+            keep_iforest = False
+        if not keep_iforest:
+            cursor.execute(heuristic_anomaly_scores_sql(catalog))
+    except Exception:
+        pass
+    try:
         _write_data_quality_scores(cursor, catalog)
     except Exception:
         pass

@@ -240,6 +240,53 @@ CREATE TABLE IF NOT EXISTS `onr_demo`.`gold`.program_trends (
 ) USING DELTA
 COMMENT 'Gold: TREND-ACCEL / TREND-STEADY / TREND-DECLINE per program area';
 
+CREATE TABLE IF NOT EXISTS `onr_demo`.`gold`.funding_features (
+    grant_no STRING,
+    title STRING,
+    program_area STRING,
+    fiscal_year INT,
+    award_amount DOUBLE,
+    awardee STRING,
+    org_unit STRING,
+    classification_band STRING,
+    execution_rate DOUBLE,
+    yoy_growth_ratio DOUBLE,
+    amount_vs_area_median DOUBLE,
+    anomaly_type STRING,
+    is_known_anomaly INT,
+    _updated_at TIMESTAMP
+) USING DELTA
+COMMENT 'Gold: IsolationForest feature table (Compass grants + ERP)';
+
+CREATE TABLE IF NOT EXISTS `onr_demo`.`gold`.grant_anomaly_scores (
+    grant_no STRING,
+    title STRING,
+    program_area STRING,
+    fiscal_year INT,
+    amount_usd DOUBLE,
+    awardee STRING,
+    execution_rate DOUBLE,
+    yoy_growth_ratio DOUBLE,
+    amount_vs_area_median DOUBLE,
+    anomaly_score DOUBLE,
+    is_flagged BOOLEAN,
+    predicted_type STRING,
+    anomaly_type STRING,
+    is_known_anomaly INT,
+    model_name STRING,
+    scored_at TIMESTAMP
+) USING DELTA
+COMMENT 'Gold: award-level anomaly flags (heuristic or IsolationForest)';
+
+CREATE TABLE IF NOT EXISTS `onr_demo`.`gold`.anomaly_model_metrics (
+    model_name STRING,
+    metric_name STRING,
+    metric_value DOUBLE,
+    n_rows INT,
+    trained_at TIMESTAMP
+) USING DELTA
+COMMENT 'Gold: IsolationForest run metrics';
+
 CREATE TABLE IF NOT EXISTS `onr_demo`.`gold`.budget_execution (
     fiscal_year INT,
     quarter STRING,

@@ -391,7 +391,146 @@ def render_model_metrics(cursor=None, catalog: str = "onr_demo"):
         ORDER BY trained_at DESC, metric_name
         """,
     )
-    if df.empty:
-        st.info("No `gold.model_metrics` yet. Process files / bootstrap writes heuristic rows; run notebook 04 for RF accuracy/f1.")
+    anom = _query_df(
+        cursor,
+        f"""
+        SELECT model_name, metric_name, metric_value, n_rows, trained_at
+        FROM `{catalog}`.`gold`.anomaly_model_metrics
+        ORDER BY trained_at DESC, metric_name
+        """,
+    )
+    if df.empty and anom.empty:
+        st.info("No model metrics yet. Process files / bootstrap writes heuristic rows; run notebook 04 (RF) and 04b (IsolationForest).")
         return
-    st.dataframe(df, use_container_width=True)
+    if not df.empty:
+        st.markdown("#### Large-award classifier / heuristic")
+        st.dataframe(df, use_container_width=True)
+    if not anom.empty:
+        st.markdown("#### Funding anomaly detector")
+        st.dataframe(anom, use_container_width=True)
+
+
+def compute_funding_features(grants_df: pd.DataFrame, financial_df: pd.DataFrame) -> pd.DataFrame:
+    """Pandas twin of gold.funding_features for fixture mode."""
+    g = grants_df.dropna(subset=["grant_no", "amount_usd"]).copy()
+    g["fiscal_year"] = pd.to_numeric(g["fiscal_year"], errors="coerce")
+    g["amount_usd"] = pd.to_numeric(g["amount_usd"], errors="coerce")
+    fin = financial_df.copy() if financial_df is not None and not financial_df.empty else pd.DataFrame()
+    if not fin.empty and "grant_no" in fin.columns:
+        agg = (
+            fin.groupby("grant_no", as_index=False)
+            .agg(budget=("budget_allocated", "sum"), actual=("actual_expenditure", "sum"))
+        )
+        agg["execution_rate"] = agg["actual"] / agg["budget"].replace(0, pd.NA)
+        g = g.merge(agg[["grant_no", "execution_rate"]], on="grant_no", how="left")
+    else:
+        g["execution_rate"] = 0.90
+    g["execution_rate"] = g["execution_rate"].fillna(0.90)
+    med = g.groupby(["program_area", "fiscal_year"], as_index=False)["amount_usd"].median()
+    med = med.rename(columns={"amount_usd": "median_amt"})
+    avg = g.groupby(["program_area", "fiscal_year"], as_index=False)["amount_usd"].mean()
+    avg = avg.rename(columns={"amount_usd": "avg_amt"})
+    g = g.merge(med, on=["program_area", "fiscal_year"], how="left")
+    g = g.merge(avg, on=["program_area", "fiscal_year"], how="left")
+    prior = avg.rename(columns={"fiscal_year": "prior_fy", "avg_amt": "prior_avg"})
+    prior["fiscal_year"] = prior["prior_fy"] + 1
+    g = g.merge(prior[["program_area", "fiscal_year", "prior_avg"]], on=["program_area", "fiscal_year"], how="left")
+    denom = g["prior_avg"].fillna(g["avg_amt"])
+    g["yoy_growth_ratio"] = g["amount_usd"] / denom.replace(0, pd.NA)
+    g["amount_vs_area_median"] = g["amount_usd"] / g["median_amt"].replace(0, pd.NA)
+    g["yoy_growth_ratio"] = g["yoy_growth_ratio"].fillna(1.0)
+    g["amount_vs_area_median"] = g["amount_vs_area_median"].fillna(1.0)
+    g["anomaly_type"] = "none"
+    g.loc[g["execution_rate"] < 0.76, "anomaly_type"] = "execution_collapse"
+    g.loc[(g["anomaly_type"] == "none") & (g["amount_usd"] >= 3_000_000) & (g["amount_vs_area_median"] >= 1.8), "anomaly_type"] = "budget_spike"
+    g.loc[
+        (g["anomaly_type"] == "none") & (g["amount_usd"] >= 2_500_000) & (g["execution_rate"] < 0.85),
+        "anomaly_type",
+    ] = "low_return_concentration"
+    g["is_known_anomaly"] = (g["anomaly_type"] != "none").astype(int)
+    g["award_amount"] = g["amount_usd"]
+    return g
+
+
+def render_anomaly_detection(cursor=None, catalog: str = "onr_demo"):
+    """IsolationForest / heuristic flags from gold.grant_anomaly_scores."""
+    st.markdown("### Funding anomalies")
+    st.caption(
+        "`gold.grant_anomaly_scores` — IsolationForest after notebook **04b**, "
+        "heuristic rules after Process/bootstrap. Complements the RF Fund/Review/Defer "
+        "scores and the OLS forecast. Model: `onr_demo.gold.funding_anomaly_detector` @ champion."
+    )
+    df = _query_df(
+        cursor,
+        f"""
+        SELECT grant_no, title, program_area, amount_usd, awardee,
+               execution_rate, yoy_growth_ratio, anomaly_score,
+               is_flagged, predicted_type, anomaly_type, model_name
+        FROM `{catalog}`.`gold`.grant_anomaly_scores
+        ORDER BY anomaly_score DESC
+        LIMIT 40
+        """,
+    )
+    metrics = _query_df(
+        cursor,
+        f"""
+        SELECT metric_name, metric_value, n_rows, trained_at, model_name
+        FROM `{catalog}`.`gold`.anomaly_model_metrics
+        ORDER BY trained_at DESC
+        """,
+    )
+    if df.empty:
+        from utils.portfolio_data import grants_dataframe, financial_dataframe
+        feat = compute_funding_features(grants_dataframe(), financial_dataframe())
+        feat["anomaly_score"] = feat.apply(
+            lambda r: 0.92 if r["anomaly_type"] == "execution_collapse"
+            else 0.88 if r["anomaly_type"] == "budget_spike"
+            else 0.80 if r["anomaly_type"] == "low_return_concentration"
+            else 0.12,
+            axis=1,
+        )
+        feat["is_flagged"] = feat["is_known_anomaly"].astype(bool)
+        feat["predicted_type"] = feat["anomaly_type"]
+        feat["model_name"] = "heuristic_rules_v1"
+        df = feat.rename(columns={"award_amount": "amount_usd"})[
+            ["grant_no", "title", "program_area", "amount_usd", "awardee",
+             "execution_rate", "yoy_growth_ratio", "anomaly_score",
+             "is_flagged", "predicted_type", "anomaly_type", "model_name"]
+        ].sort_values("anomaly_score", ascending=False).head(40)
+        st.caption("Warehouse / gold.grant_anomaly_scores unavailable — rule flags from the Compass fixture.")
+
+    n_flag = int(df["is_flagged"].astype(bool).sum()) if "is_flagged" in df.columns else 0
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Rows scored", f"{len(df):,}")
+    c2.metric("Flagged", f"{n_flag:,}")
+    model = df["model_name"].iloc[0] if not df.empty and "model_name" in df.columns else "—"
+    c3.metric("Scorer", str(model))
+
+    if not metrics.empty:
+        st.dataframe(metrics, use_container_width=True)
+
+    flagged = df[df["is_flagged"].astype(bool)] if "is_flagged" in df.columns else df.head(0)
+    st.markdown("#### Flagged awards (review queue)")
+    if flagged.empty:
+        st.caption("No flags at the current threshold.")
+    else:
+        show = flagged.copy()
+        try:
+            st.dataframe(
+                show.style.format({
+                    "amount_usd": "${:,.0f}",
+                    "anomaly_score": "{:.2f}",
+                    "execution_rate": "{:.1%}",
+                    "yoy_growth_ratio": "{:.2f}",
+                }),
+                use_container_width=True,
+            )
+        except Exception:
+            st.dataframe(show, use_container_width=True)
+    with st.expander("All scored rows"):
+        st.dataframe(df, use_container_width=True)
+    st.markdown(
+        "On **onr demo cluster** run `notebooks/04b_funding_anomaly.py` to train the "
+        "IsolationForest, log four MLflow runs, register "
+        "`onr_demo.gold.funding_anomaly_detector` @ `champion`, and replace heuristic flags."
+    )

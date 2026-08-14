@@ -52,8 +52,9 @@ Then open `01_bronze_ingestion.py` and contrast `.trigger(availableNow=True)` (f
 
 - Decision cards + program-area mix (real fixture numbers).
 - **Forecasting tab:** OLS `ols_fy_v1` on `gold.funding_forecast` — actuals + 2-year horizon + 95% band. Trend IDs `TREND-ACCEL` / `TREND-STEADY` / `TREND-DECLINE` in `gold.program_trends`. Point at a Declining area as the reallocation candidate (Prompt b).
+- **Anomalies tab:** heuristic flags after ingest; run `04b_funding_anomaly.py` on **onr demo cluster** to train IsolationForest, log 4 MLflow runs, register `onr_demo.gold.funding_anomaly_detector` @ `champion`. Same 400 grants you just ingested — not a second dataset.
 - Predictions tab reads `gold.grant_predictions` (heuristic after ingest).
-- Run `04_mlflow_grant_model.py` on **onr demo cluster** — refresh the app; scores and `gold.model_metrics` update. Model registers to Unity Catalog as `onr_demo.gold.grant_large_award`.
+- Run `04_mlflow_grant_model.py` on **onr demo cluster** — RF Fund/Review/Defer + `onr_demo.gold.grant_large_award`.
 
 ## Minute 32–42 — Element 6 Dashboard
 

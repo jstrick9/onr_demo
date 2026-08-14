@@ -17,6 +17,7 @@ from utils.analytics_helpers import (
     render_trend_analysis,
     render_decision_support,
     render_model_metrics,
+    render_anomaly_detection,
 )
 
 # -------------------------------
@@ -38,7 +39,7 @@ st.markdown(
 render_eval_prompt(
     "Element 5",
     "How do analytics and models help leadership decide where to put the next dollar?",
-    "Forecast tab = OLS + 95% band + TREND-* IDs. Predictions tab = heuristic, then RF via notebook 04.",
+    "Anomalies tab = IsolationForest flags. Forecast = OLS + TREND-* IDs. Predictions = RF Fund/Review/Defer.",
 )
 
 # -------------------------------
@@ -90,8 +91,9 @@ render_decision_support(cursor, onr_catalog)
 # -------------------------------
 st.markdown("---")
 
-tab1, tab2, tab3, tab4 = st.tabs([
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "🎯 Predictions",
+    "🚨 Anomalies",
     "📈 Forecasting",
     "📊 Trend Analysis",
     "📏 Model Metrics"
@@ -103,12 +105,15 @@ with tab1:
     render_model_execution(cursor, onr_catalog)
 
 with tab2:
-    render_forecast_visualization(cursor, onr_catalog)
+    render_anomaly_detection(cursor, onr_catalog)
 
 with tab3:
-    render_trend_analysis(cursor, onr_catalog)
+    render_forecast_visualization(cursor, onr_catalog)
 
 with tab4:
+    render_trend_analysis(cursor, onr_catalog)
+
+with tab5:
     render_model_metrics(cursor, onr_catalog)
 
 # -------------------------------
@@ -149,8 +154,9 @@ st.markdown("""
 st.markdown("---")
 st.markdown("### MLflow")
 st.markdown(
-    "Training lives in `notebooks/04_mlflow_grant_model.py` on **onr demo cluster**. "
-    "Scores land in `{catalog}.gold.grant_predictions` and `{catalog}.gold.model_metrics` "
+    "Training lives in `notebooks/04_mlflow_grant_model.py` (RF) and "
+    "`notebooks/04b_funding_anomaly.py` (IsolationForest) on **onr demo cluster**. "
+    "Scores land in `{catalog}.gold.grant_predictions` and `{catalog}.gold.grant_anomaly_scores` "
     "so this page is reading Unity Catalog, not a canned screenshot.".format(catalog=onr_catalog)
 )
 

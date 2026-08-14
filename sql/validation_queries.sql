@@ -122,7 +122,16 @@ SELECT 'program_trends', COUNT(*),
        SUM(CASE WHEN trend_id = 'TREND-DECLINE' THEN 1 ELSE 0 END)
 FROM `onr_demo`.`gold`.program_trends;
 
--- 11. EXPORT / SEARCH / BRIEF AUDIT (Element 7 + 6)
+-- 11. ANOMALY DETECTOR (Element 5 / 04b)
+SELECT 'funding_features' AS tbl, COUNT(*) AS rows,
+       SUM(is_known_anomaly) AS known_anomalies
+FROM `onr_demo`.`gold`.funding_features
+UNION ALL
+SELECT 'grant_anomaly_scores', COUNT(*),
+       SUM(CASE WHEN is_flagged THEN 1 ELSE 0 END)
+FROM `onr_demo`.`gold`.grant_anomaly_scores;
+
+-- 12. EXPORT / SEARCH / BRIEF AUDIT (Element 7 + 6)
 SELECT 'export_history' as audit_table, COUNT(*) as rows
 FROM `onr_demo`.`app`.export_history
 UNION ALL

@@ -22,7 +22,7 @@ Catalog **`onr_demo`** — one POC, no prod.
 |--------|------------------|
 | `bronze` | `grants`, `financial` · volumes `landing`, `checkpoints` |
 | `silver` | `grants`, `financial` |
-| `gold` | `grants_summary`, `financial_summary`, `grants_by_awardee`, `budget_execution`, `grant_predictions`, `model_metrics`, `funding_forecast`, `program_trends` |
+| `gold` | `grants_summary`, `financial_summary`, `grants_by_awardee`, `budget_execution`, `grant_predictions`, `model_metrics`, `funding_forecast`, `program_trends`, `funding_features`, `grant_anomaly_scores` |
 | `app` | `ingestion_quality_log`, `data_quality_scores`, `lineage_tracking`, search/export history, `daily_briefs` |
 
 Landing path: `/Volumes/onr_demo/bronze/landing/`
@@ -91,7 +91,8 @@ onr_demo/
 │   ├── 01b_streaming_autoloader.py # Auto Loader (processingTime, live stream)
 │   ├── 02_silver_quality.py
 │   ├── 03_gold_aggregation.py     # includes OLS forecast + trend IDs
-│   ├── 04_mlflow_grant_model.py
+│   ├── 04_mlflow_grant_model.py   # RF large-award classifier
+│   ├── 04b_funding_anomaly.py     # IsolationForest (adapted from ML engineer demo)
 │   └── 05_reset_demo.py           # Cluster reset to 400-grant seed
 ├── sql/
 │   ├── setup_uc_objects.sql       # Optional empty DDL

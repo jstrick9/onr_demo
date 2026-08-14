@@ -47,6 +47,8 @@ def _date_column_for_table(dataset_table: str):
         return "fiscal_year", "year"
     if "program_trends" in table_l:
         return "computed_at", "ts"
+    if "anomaly" in table_l:
+        return "scored_at", "ts"
     if any(
         name in table_l
         for name in (
@@ -210,6 +212,7 @@ def render_dataset_selection(cursor, catalog: str, schema: str):
         "Grant Predictions": f"`{catalog}`.`gold`.grant_predictions",
         "Funding Forecast": f"`{catalog}`.`gold`.funding_forecast",
         "Program Trends": f"`{catalog}`.`gold`.program_trends",
+        "Anomaly Scores": f"`{catalog}`.`gold`.grant_anomaly_scores",
         "Raw Grants": f"`{catalog}`.`silver`.grants",
         "Raw Financial": f"`{catalog}`.`silver`.financial",
     }
