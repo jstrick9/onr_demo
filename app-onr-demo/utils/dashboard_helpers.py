@@ -492,7 +492,10 @@ def render_search_extract(cursor, catalog: str, schema: str):
     
     with col1:
         if search_term:
+            t0 = time.perf_counter()
+            n_results = 0
             try:
+                like = _like_term(search_term)
                 query = f"""
                 SELECT 
                     grant_no,
@@ -503,10 +506,10 @@ def render_search_extract(cursor, catalog: str, schema: str):
                     amount_usd,
                     classification_band
                 FROM `{catalog}`.`silver`.grants
-                WHERE LOWER(title) LIKE '%{search_term.lower()}%'
-                    OR LOWER(awardee) LIKE '%{search_term.lower()}%'
-                    OR LOWER(grant_no) LIKE '%{search_term.lower()}%'
-                    OR LOWER(org_unit) LIKE '%{search_term.lower()}%'
+                WHERE LOWER(title) LIKE '%{like}%' ESCAPE '\\\\'
+                    OR LOWER(awardee) LIKE '%{like}%' ESCAPE '\\\\'
+                    OR LOWER(grant_no) LIKE '%{like}%' ESCAPE '\\\\'
+                    OR LOWER(org_unit) LIKE '%{like}%' ESCAPE '\\\\'
                 LIMIT 50
                 """
                 if not cursor:
@@ -519,6 +522,7 @@ def render_search_extract(cursor, catalog: str, schema: str):
                         "Grant No", "Title", "Awardee", "Org Unit",
                         "Program Area", "Amount", "Classification"
                     ])
+                    n_results = len(df)
                     st.dataframe(
                         df.style.format({"Amount": "${:,.0f}"}),
                         use_container_width=True
@@ -540,8 +544,19 @@ def render_search_extract(cursor, catalog: str, schema: str):
                 if df.empty:
                     st.info("No results found. Try a different search term.")
                 else:
+                    n_results = len(df)
                     show = df[["grant_no", "title", "awardee", "org_unit", "program_area", "amount_usd", "classification_band"]]
                     st.dataframe(show, use_container_width=True)
+            rec = {
+                "search_id": f"srch-{uuid.uuid4().hex[:12]}",
+                "term": search_term,
+                "search_type": "grants",
+                "results": n_results,
+                "execution_time_ms": int((time.perf_counter() - t0) * 1000),
+                "user": st.session_state.get("email") or "unknown",
+            }
+            st.session_state.setdefault("search_history", []).append(rec)
+            _persist_search(cursor, catalog, rec)
     
     with col2:
         st.markdown("#### Quick Filters")

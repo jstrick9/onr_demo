@@ -110,9 +110,9 @@ def _apply_filter_df(df: pd.DataFrame, dataset_table: str, filters: dict) -> pd.
         y1 = getattr(end, "year", int(str(end)[:4]))
         years = pd.to_numeric(series, errors="coerce")
         return df[(years >= y0) & (years <= y1)]
-    parsed = pd.to_datetime(series, errors="coerce")
-    start_ts = pd.Timestamp(start)
-    end_ts = pd.Timestamp(end) + pd.Timedelta(days=1)
+    parsed = pd.to_datetime(series, errors="coerce", utc=True)
+    start_ts = pd.Timestamp(start, tz="UTC")
+    end_ts = pd.Timestamp(end, tz="UTC") + pd.Timedelta(days=1)
     return df[(parsed >= start_ts) & (parsed < end_ts)]
 
 

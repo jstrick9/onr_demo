@@ -271,28 +271,31 @@ from mlflow.tracking import MlflowClient
 mlflow.set_registry_uri("databricks-uc")
 MODEL_NAME = f"{catalog}.gold.funding_anomaly_detector"
 model_uri = f"runs:/{best_run_id}/model"
-registered = mlflow.register_model(model_uri=model_uri, name=MODEL_NAME)
-print(registered.name, registered.version)
-
-client = MlflowClient(registry_uri="databricks-uc")
-client.update_registered_model(
-    name=MODEL_NAME,
-    description=(
-        "IsolationForest funding anomaly detector trained on the Compass ONR "
-        "grants + ERP fixture (silver.grants / silver.financial). Flags "
-        "budget_spike, execution_collapse, low_return_concentration."
-    ),
-)
-client.update_model_version(
-    name=MODEL_NAME,
-    version=registered.version,
-    description=(
-        f"Trained from run {best_run_id}. F1={best_f1:.3f}, AUC={best_auc:.3f}. "
-        f"Source table: {catalog}.gold.funding_features."
-    ),
-)
-client.set_registered_model_alias(name=MODEL_NAME, alias="champion", version=registered.version)
-print("alias champion ->", registered.version)
+try:
+    registered = mlflow.register_model(model_uri=model_uri, name=MODEL_NAME)
+    print(registered.name, registered.version)
+    client = MlflowClient(registry_uri="databricks-uc")
+    client.update_registered_model(
+        name=MODEL_NAME,
+        description=(
+            "IsolationForest funding anomaly detector trained on the Compass ONR "
+            "grants + ERP fixture (silver.grants / silver.financial). Flags "
+            "budget_spike, execution_collapse, low_return_concentration."
+        ),
+    )
+    client.update_model_version(
+        name=MODEL_NAME,
+        version=registered.version,
+        description=(
+            f"Trained from run {best_run_id}. F1={best_f1:.3f}, AUC={best_auc:.3f}. "
+            f"Source table: {catalog}.gold.funding_features."
+        ),
+    )
+    client.set_registered_model_alias(name=MODEL_NAME, alias="champion", version=registered.version)
+    print("alias champion ->", registered.version)
+except Exception as e:
+    print("UC register optional — skipped:", e)
+    print("Scoring cell will use the in-memory best pipeline.")
 
 # COMMAND ----------
 
@@ -303,15 +306,22 @@ print("alias champion ->", registered.version)
 
 # COMMAND ----------
 
-champion = mlflow.pyfunc.load_model(f"models:/{MODEL_NAME}@champion")
-# pyfunc predict returns IsolationForest -1/1
-raw = champion.predict(X)
-flagged = (raw == -1) if hasattr(raw, "__iter__") else (raw == -1)
-# score_samples from the sklearn pipeline we just logged
-sk = mlflow.sklearn.load_model(f"models:/{MODEL_NAME}@champion")
-anom_score = -sk.named_steps["clf"].score_samples(sk.named_steps["prep"].transform(X))
-# scale to 0-1 for the UI
 import numpy as np
+from datetime import datetime as _dt
+
+# Score with the in-memory best pipeline first so this cell still writes
+# gold.grant_anomaly_scores if the UC alias load fails.
+best_cfg = results_df.iloc[0]
+sk = build_pipeline(int(best_cfg["n_estimators"]), float(best_cfg["contamination"]))
+sk.fit(X)
+try:
+    sk = mlflow.sklearn.load_model(f"models:/{MODEL_NAME}@champion")
+    print("Loaded champion from UC registry")
+except Exception as e:
+    print("champion load failed — using in-memory best pipeline:", e)
+
+raw = np.asarray(sk.predict(X)).reshape(-1)
+anom_score = -sk.named_steps["clf"].score_samples(sk.named_steps["prep"].transform(X))
 smin, smax = float(np.min(anom_score)), float(np.max(anom_score))
 scaled = (anom_score - smin) / (smax - smin + 1e-9)
 
@@ -319,15 +329,9 @@ out = df[["grant_no", "title", "program_area", "fiscal_year", "award_amount",
           "awardee", "execution_rate", "yoy_growth_ratio", "amount_vs_area_median",
           "anomaly_type", "is_known_anomaly"]].copy()
 out = out.rename(columns={"award_amount": "amount_usd"})
-out["anomaly_score"] = scaled.round(4)
-out["is_flagged"] = (raw == -1)
-out["predicted_type"] = out.apply(
-    lambda r: r["anomaly_type"] if r["anomaly_type"] != "none" and r.name in out.index else (
-        r["anomaly_type"] if r["anomaly_type"] != "none" else "none"
-    ),
-    axis=1,
-)
-# If the forest flagged a "none" row, call it budget_spike when amount is high else execution_collapse
+out["anomaly_score"] = [float(x) for x in scaled]
+out["is_flagged"] = [bool(x) for x in (raw == -1)]
+
 def _pred_type(row):
     if row["is_flagged"] and row["anomaly_type"] != "none":
         return row["anomaly_type"]
@@ -338,8 +342,12 @@ def _pred_type(row):
     return "none"
 out["predicted_type"] = out.apply(_pred_type, axis=1)
 out["model_name"] = "iforest_funding_v1"
-from datetime import datetime as _dt
+out["is_known_anomaly"] = out["is_known_anomaly"].fillna(0).astype(int)
 out["scored_at"] = _dt.utcnow()
+# Native Python types — numpy dtypes make spark.createDataFrame infer fail
+for c in ("amount_usd", "execution_rate", "yoy_growth_ratio", "amount_vs_area_median", "anomaly_score"):
+    out[c] = out[c].astype(float)
+out["fiscal_year"] = out["fiscal_year"].astype(int)
 
 (
     spark.createDataFrame(out)
