@@ -9,7 +9,6 @@ from utils.page_config_helpers import setup_sidebar, set_page_config
 from utils.runtime_env import get_runtime_env
 from utils.db_helpers import get_connection, read_yaml
 from utils.user_helpers import init_user_session_state
-from utils.eval_prompt import render_eval_prompt
 from utils.analytics_helpers import (
     render_model_execution,
     render_forecast_visualization,
@@ -23,23 +22,16 @@ from utils.analytics_helpers import (
 # -------------------------------
 # PAGE CONFIGURATION
 # -------------------------------
-set_page_config(page_title="Analytics | ONR ITSS POC")
+set_page_config(page_title="Analytics | ONR Portfolio")
 setup_sidebar()
 
 # -------------------------------
 # HEADER
 # -------------------------------
-st.title("🤖 Element 5: Decision-Support Analytics and Modeling")
-st.markdown(
-    """
-    This element demonstrates **analytical routines and ML models** against the ingested dataset, 
-    showing how model outputs serve as **strategic decision-making aids for leadership**.
-    """
-)
-render_eval_prompt(
-    "Element 5",
-    "How do analytics and models help leadership decide where to put the next dollar?",
-    "Anomalies tab = IsolationForest flags. Forecast = OLS + TREND-* IDs. Predictions = RF Fund/Review/Defer.",
+st.title("Analytics")
+st.caption(
+    "Fund / Review / Defer (RF), award-level anomalies (IsolationForest), "
+    "and FY forecast + TREND-* IDs (OLS) on the ingested portfolio."
 )
 
 # -------------------------------
@@ -62,24 +54,6 @@ except Exception as e:
 
 conn, cursor = get_connection()
 
-# -------------------------------
-# ELEMENT OVERVIEW
-# -------------------------------
-st.markdown("---")
-st.markdown(
-    """
-    <div style="background-color: #d4edda; padding: 15px; border-radius: 10px; border-left: 5px solid #28a745;">
-        <strong>📌 Key Focus Areas:</strong>
-        <ul>
-            <li>ML model execution against ingested data</li>
-            <li>Predictive forecasting and trend analysis</li>
-            <li>Executive decision support with actionable insights</li>
-            <li>Structured analytical outputs for leadership</li>
-        </ul>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
 
 # -------------------------------
 # EXECUTIVE DECISION SUPPORT
@@ -120,7 +94,7 @@ with tab5:
 # ANALYTICS ARCHITECTURE
 # -------------------------------
 st.markdown("---")
-st.markdown("### 🏗️ Analytics Architecture")
+st.markdown("### How it works")
 
 st.markdown("""
 ```
@@ -162,18 +136,3 @@ st.markdown(
     "so this page is reading Unity Catalog, not a canned screenshot.".format(catalog=onr_catalog)
 )
 
-# -------------------------------
-# EVALUATION ALIGNMENT
-# -------------------------------
-st.markdown("---")
-st.markdown("### 📝 Evaluation Alignment")
-
-st.markdown(
-    """
-    | Criterion | How Element 5 Demonstrates It |
-    |-----------|-------------------------------|
-    | **Technical Competence** | Key Personnel execute models live, explain algorithms and workflows |
-    | **Strategic Alignment** | Analytics serve as decision-making aids for leadership, not just technical outputs |
-    | **Completeness** | Model execution seamless within 50-minute demonstration window |
-    """
-)

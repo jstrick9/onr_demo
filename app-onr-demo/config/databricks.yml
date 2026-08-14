@@ -1,0 +1,109 @@
+# Slim DAB. Does NOT create the warehouse or all-purpose cluster — use the
+# existing workspace objects:
+#   SQL warehouse:  onr demo warehouse
+#   All-purpose:    onr demo cluster
+#
+# Host is resolved from the authenticated CLI profile when omitted.
+# For CI / unattended deploy, set:
+#   export DATABRICKS_HOST=https://<workspace>
+#   # or uncomment targets.poc.workspace.host below
+#
+# databricks bundle deploy -t poc
+
+bundle:
+  name: onr_demo
+
+targets:
+  poc:
+    mode: development
+    default: true
+    workspace:
+      root_path: /Workspace/.bundle/${bundle.name}/${bundle.target}
+      # host: https://<your-workspace>.cloud.databricks.com
+
+variables:
+  catalog:
+    description: Unity Catalog name for this POC
+    default: onr_demo
+
+resources:
+  volumes:
+    landing_volume:
+      name: landing
+      catalog_name: ${var.catalog}
+      schema_name: bronze
+      volume_type: MANAGED
+    checkpoints_volume:
+      name: checkpoints
+      catalog_name: ${var.catalog}
+      schema_name: bronze
+      volume_type: MANAGED
+
+  apps:
+    onr_demo_app:
+      name: onr-demo-poc
+      description: "ONR ITSS POC — Elements 3–7"
+      source_code_path: ./app-onr-demo
+
+  # Element 3 — automated file detection. Deployed PAUSED so it does not
+  # fire during rehearsal. Unpause in Workflows during the live take, drop
+  # batch_live_grants.csv into landing/grants/, and the job runs 01 → 02 → 03.
+  # Serverless notebook environment — does not create classic compute.
+  jobs:
+    grants_file_arrival:
+      name: onr-demo-grants-file-arrival
+      description: >
+        Element 3 — Auto-detect new files under /Volumes/${var.catalog}/bronze/landing/grants
+        and refresh bronze → silver → gold.
+      trigger:
+        pause_status: PAUSED
+        file_arrival:
+          url: /Volumes/${var.catalog}/bronze/landing/grants
+          min_time_between_triggers_seconds: 60
+          wait_after_last_change_seconds: 15
+      queue:
+        enabled: true
+      environments:
+        - environment_key: default
+          spec:
+            environment_version: "3"
+      tasks:
+        - task_key: bronze_ingest
+          notebook_task:
+            notebook_path: ./notebooks/01_bronze_ingestion.py
+            base_parameters:
+              catalog: ${var.catalog}
+          environment_key: default
+        - task_key: silver_quality
+          depends_on:
+            - task_key: bronze_ingest
+          notebook_task:
+            notebook_path: ./notebooks/02_silver_quality.py
+            base_parameters:
+              catalog: ${var.catalog}
+          environment_key: default
+        - task_key: gold_aggregation
+          depends_on:
+            - task_key: silver_quality
+          notebook_task:
+            notebook_path: ./notebooks/03_gold_aggregation.py
+            base_parameters:
+              catalog: ${var.catalog}
+          environment_key: default
+
+  # Element 3 — Lakeflow Declarative Pipeline (SDP). Triggered, not continuous.
+  # Writes sibling table bronze.grants_stream so it does not collide with the
+  # batch bronze.grants used by the app. Start from Workflows → Pipelines.
+  pipelines:
+    onr_grants_stream:
+      name: onr-demo-grants-stream
+      catalog: ${var.catalog}
+      target: bronze
+      serverless: true
+      continuous: false
+      channel: CURRENT
+      libraries:
+        - file:
+            path: ./pipelines/onr_grants_sdp.py
+      configuration:
+        catalog: ${var.catalog}

@@ -9,7 +9,6 @@ from utils.page_config_helpers import setup_sidebar, set_page_config
 from utils.runtime_env import get_runtime_env
 from utils.db_helpers import get_connection, read_yaml
 from utils.user_helpers import init_user_session_state
-from utils.eval_prompt import render_eval_prompt
 from utils.dashboard_helpers import (
     render_executive_kpis,
     render_dashboard_filters,
@@ -24,23 +23,16 @@ from utils.brief_helpers import render_daily_brief
 # -------------------------------
 # PAGE CONFIGURATION
 # -------------------------------
-set_page_config(page_title="Dashboard | ONR ITSS POC")
+set_page_config(page_title="Portfolio | ONR Portfolio")
 setup_sidebar()
 
 # -------------------------------
 # HEADER
 # -------------------------------
-st.title("📈 Element 6: Unified Dashboard, Visualizations, and Process Automation")
-st.markdown(
-    """
-    This element demonstrates how a **non-technical leader** can search, filter, and extract 
-    insights, and how the platform **automates repetitive workflows** to drive efficiency.
-    """
-)
-render_eval_prompt(
-    "Element 6",
-    "Can a non-technical leader search, filter, and extract without writing SQL?",
-    "Search `quantum`. Then Process Automation → Generate daily brief. Anomaly flags are the AT_RISK budget rows.",
+st.title("Portfolio")
+st.caption(
+    "Search, filter, and extract without SQL. Generate a daily brief. "
+    "Review budget AT_RISK rows and the anomaly queue."
 )
 
 # -------------------------------
@@ -63,24 +55,6 @@ except Exception as e:
 
 conn, cursor = get_connection()
 
-# -------------------------------
-# ELEMENT OVERVIEW
-# -------------------------------
-st.markdown("---")
-st.markdown(
-    """
-    <div style="background-color: #f8d7da; padding: 15px; border-radius: 10px; border-left: 5px solid #dc3545;">
-        <strong>📌 Key Focus Areas:</strong>
-        <ul>
-            <li>Executive BI dashboard for non-technical users</li>
-            <li>Search, filter, and extract without code</li>
-            <li>Automated summaries, approval routing, anomaly flagging</li>
-            <li>Process automation driving efficiency</li>
-        </ul>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
 
 # -------------------------------
 # EXECUTIVE KPIs
@@ -129,7 +103,7 @@ with tab4:
 # DASHBOARD ARCHITECTURE
 # -------------------------------
 st.markdown("---")
-st.markdown("### 🏗️ Dashboard Architecture")
+st.markdown("### How it works")
 
 st.markdown("""
 ```
@@ -166,18 +140,3 @@ st.markdown("""
 ```
 """)
 
-# -------------------------------
-# EVALUATION ALIGNMENT
-# -------------------------------
-st.markdown("---")
-st.markdown("### 📝 Evaluation Alignment")
-
-st.markdown(
-    """
-    | Criterion | How Element 6 Demonstrates It |
-    |-----------|-------------------------------|
-    | **Technical Competence** | Key Personnel explain architecture behind dashboard and automation |
-    | **Strategic Alignment** | Automated summaries, routing, and anomaly detection meet workforce automation needs |
-    | **Completeness** | Dashboard operations execute smoothly in sequence |
-    """
-)

@@ -9,7 +9,6 @@ from utils.page_config_helpers import setup_sidebar, set_page_config
 from utils.runtime_env import get_runtime_env
 from utils.db_helpers import get_connection, read_yaml
 from utils.user_helpers import init_user_session_state
-from utils.eval_prompt import render_eval_prompt
 from utils.governance_helpers import (
     render_catalog_registry,
     render_quality_scores,
@@ -21,24 +20,16 @@ from utils.governance_helpers import (
 # -------------------------------
 # PAGE CONFIGURATION
 # -------------------------------
-set_page_config(page_title="Governance | ONR ITSS POC")
+set_page_config(page_title="Catalog | ONR Portfolio")
 setup_sidebar()
 
 # -------------------------------
 # HEADER
 # -------------------------------
-st.title("📊 Element 4: Data Governance, Quality, and Cataloging")
-st.markdown(
-    """
-    This element demonstrates how the platform **catalogs datasets**, captures metadata, 
-    calculates data quality/health scores, and visualizes **end-to-end data lineage** 
-    from raw ingestion to the visualization tier.
-    """
-)
-render_eval_prompt(
-    "Element 4",
-    "How are datasets cataloged, scored, and lined from raw files to the dashboard?",
-    "Four schemas in Unity Catalog, quality scores, landing → bronze → silver → gold lineage.",
+st.title("Catalog")
+st.caption(
+    "Unity Catalog is the system of record: tables, tags, quality scores, and lineage. "
+    "Open Catalog Explorer for the native lineage graph."
 )
 
 # -------------------------------
@@ -61,24 +52,6 @@ except Exception as e:
 
 conn, cursor = get_connection()
 
-# -------------------------------
-# ELEMENT OVERVIEW
-# -------------------------------
-st.markdown("---")
-st.markdown(
-    """
-    <div style="background-color: #fff3cd; padding: 15px; border-radius: 10px; border-left: 5px solid #ffc107;">
-        <strong>📌 Key Focus Areas:</strong>
-        <ul>
-            <li>Unity Catalog registry and metadata management</li>
-            <li>Data quality health scores and monitoring</li>
-            <li>End-to-end lineage visualization (raw → visualization)</li>
-            <li>Access policies, tags, and governance controls</li>
-        </ul>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
 
 # -------------------------------
 # TABS
@@ -110,7 +83,7 @@ with tab5:
 # UNITY CATALOG OVERVIEW
 # -------------------------------
 st.markdown("---")
-st.markdown("### 🗄️ Unity Catalog Architecture")
+st.markdown("### How it works")
 
 st.markdown("""
 ```
@@ -200,18 +173,3 @@ SET TAGS (
 );
     """, language="sql")
 
-# -------------------------------
-# EVALUATION ALIGNMENT
-# -------------------------------
-st.markdown("---")
-st.markdown("### 📝 Evaluation Alignment")
-
-st.markdown(
-    """
-    | Criterion | How Element 4 Demonstrates It |
-    |-----------|-------------------------------|
-    | **Technical Competence** | Key Personnel navigate catalog, demonstrate lineage tools, show quality scores |
-    | **Open Architecture** | Portable metadata models, standard catalog APIs, self-describing schemas |
-    | **Strategic Agility** | Governance adapts to evolving data strategies and automation needs |
-    """
-)

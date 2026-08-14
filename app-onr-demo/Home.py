@@ -1,4 +1,4 @@
-"""ONR ITSS POC — Home (60-second opener)."""
+"""ONR Portfolio — Home."""
 
 import streamlit as st
 from pathlib import Path
@@ -8,20 +8,12 @@ from utils.db_helpers import get_connection, read_yaml, validate_source_tables
 from utils.user_helpers import init_user_session_state
 from utils.workspace_names import SQL_WAREHOUSE_NAME, ALL_PURPOSE_CLUSTER_NAME
 
-set_page_config(page_title="Home | ONR ITSS POC Demo")
+set_page_config(page_title="Home | ONR Portfolio")
 setup_sidebar()
 
-st.title("ONR ITSS Proof of Concept")
-st.caption("Office of Naval Research — Code 08 · Elements 3–7 · mock / synthetic data only")
-
-st.markdown(
-    """
-### The story (say this first)
-
-A new S&T grants file lands. **Auto Loader** picks it up. **Quality gates** drop bad rows.
-**Gold** KPIs refresh. Leadership **searches, models, and exports** in open formats —
-without recoding the pipeline.
-"""
+st.title("ONR Portfolio")
+st.caption(
+    "Self-service grants and ERP · catalog `onr_demo` · mock / synthetic data only"
 )
 
 sso_user = init_user_session_state()
@@ -42,22 +34,23 @@ st.session_state["onr_conn"] = conn
 st.session_state["onr_cursor"] = cursor
 
 c1, c2, c3, c4 = st.columns(4)
-c1.info("**Catalog**  \nonr_demo")
-c2.info("**Medallion**  \nbronze · silver · gold · app")
+c1.info(f"**Catalog**  \n`{onr_catalog}`")
+c2.info("**Layers**  \nbronze · silver · gold · app")
 c3.info(f"**SQL**  \n`{SQL_WAREHOUSE_NAME}`")
-c4.info(f"**Notebooks**  \n`{ALL_PURPOSE_CLUSTER_NAME}`")
+c4.info(f"**Jobs**  \n`{ALL_PURPOSE_CLUSTER_NAME}`")
 
-st.markdown("### Start here")
+st.markdown("### What you can do")
 st.markdown(
     """
-| Order | Page | Element | Click this |
-|-------|------|---------|------------|
-| 1 | **Ingestion** | 3 | **Process selected files** (Live 8) — watch 400 → 408 |
-| 2 | **Governance** | 4 | Catalog, quality, lineage |
-| 3 | **Analytics** | 5 | Decision aids + optional MLflow on the cluster |
-| 4 | **Dashboard** | 6 | Filter / search `quantum` |
-| 5 | **Integration** | 7 | Export CSV · JSON · Parquet |
-"""
+| Page | Use it to |
+|------|-----------|
+| **Ingestion** | Land a grants file, inspect quality, reset to the 400-grant seed |
+| **Catalog** | Browse Unity Catalog, health scores, and lineage |
+| **Analytics** | Fund / Review / Defer scores, anomaly queue, FY forecast + trend IDs |
+| **Portfolio** | Filter, search, generate a daily brief, review AT_RISK rows |
+| **Export** | Download CSV / JSON / Parquet; call the Statement Execution API |
+| **Infrastructure** | See what the DAB deploys, compute names, and the operator runbook |
+    """
 )
 
 st.markdown("---")
@@ -68,9 +61,11 @@ try:
         raise RuntimeError("no warehouse")
     cursor.execute(
         f"""
-        SELECT 'Grants' d, COUNT(*) n, MAX(_ingest_time) t FROM `{onr_catalog}`.`silver`.grants WHERE _is_active
+        SELECT 'Grants' d, COUNT(*) n, MAX(_ingest_time) t
+        FROM `{onr_catalog}`.`silver`.grants WHERE _is_active
         UNION ALL
-        SELECT 'Financial', COUNT(*), MAX(_ingest_time) FROM `{onr_catalog}`.`silver`.financial WHERE _is_active
+        SELECT 'Financial', COUNT(*), MAX(_ingest_time)
+        FROM `{onr_catalog}`.`silver`.financial WHERE _is_active
         """
     )
     stats = cursor.fetchall()
@@ -85,12 +80,15 @@ except Exception:
     a.metric("Grants (fixture)", f"{k['grant_count']:,}")
     b.metric("Portfolio", f"${k['total_funding']/1e6:.1f}M")
     c.metric("ERP lines", f"{k['transaction_count']:,}")
-    st.caption("SQL warehouse not connected — showing packaged Compass fixture.")
+    st.caption("SQL warehouse not connected — showing the packaged Compass fixture.")
 
 with st.expander("Source table check"):
     if cursor:
         validate_source_tables(cursor, configs)
     else:
-        st.warning(f"Connect `{SQL_WAREHOUSE_NAME}` for live UC tables. App still runs on fixture data.")
+        st.warning(
+            f"Connect `{SQL_WAREHOUSE_NAME}` for live Unity Catalog tables. "
+            "The app still runs on fixture data."
+        )
 
 st.caption("UNCLASSIFIED // MOCK DATA — no CUI, PII, or classified information.")

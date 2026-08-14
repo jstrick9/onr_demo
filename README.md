@@ -4,13 +4,14 @@ Single-environment proof of concept for Office of Naval Research Code 08 ITSS.
 
 **Mock data only** (Compass `grants_portfolio.json`, 400 grants). No CUI / PII / classified.
 
-| Page | Element | What you show |
-|------|---------|----------------|
-| Ingestion | 3 | Auto Loader, quality gates, a second file drop |
-| Governance | 4 | Unity Catalog, scores, lineage |
-| Analytics | 5 | OLS FY forecast + trend IDs + RF model |
-| Dashboard | 6 | KPIs, search, extract |
-| Integration | 7 | CSV / JSON / Parquet export, open APIs |
+| Page | What you do |
+|------|-------------|
+| Ingestion | Land files, quality gates, reset |
+| Catalog | Unity Catalog, scores, lineage |
+| Analytics | RF scores, IsolationForest, OLS forecast + trend IDs |
+| Portfolio | KPIs, search, daily brief, AT_RISK / anomaly flags |
+| Export | CSV / JSON / Parquet, Statement Execution API |
+| Infrastructure | DAB inventory, compute names, operator runbook |
 
 ---
 

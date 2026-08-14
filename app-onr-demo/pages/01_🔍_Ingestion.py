@@ -19,24 +19,18 @@ from utils.ingestion_helpers import (
     generate_mock_financial_data,
     render_file_picker_and_reset,
 )
-from utils.eval_prompt import render_eval_prompt
 
 # -------------------------------
 # PAGE CONFIGURATION
 # -------------------------------
-set_page_config(page_title="Ingestion | ONR ITSS POC")
+set_page_config(page_title="Ingestion | ONR Portfolio")
 setup_sidebar()
 
 # -------------------------------
 # HEADER
 # -------------------------------
-st.title("🔍 Element 3: Automated Ingestion, Data Operations, and Streaming")
-st.markdown("Auto Loader + quality gates on `onr_demo.bronze` → `silver` → `gold`.")
-render_eval_prompt(
-    "Element 3",
-    "How do you detect and quality-check new files without recoding the pipeline?",
-    "Process Live 8 (400→408) for the warehouse path. For streaming: run `01b_streaming_autoloader.py` on the cluster, drop the CSV into landing/grants/, watch Last 2 min tick.",
-)
+st.title("Ingestion")
+st.caption("Land a grants file, apply quality gates, and rebuild silver / gold. Process uses the SQL warehouse. Auto Loader notebooks run on the cluster.")
 
 # -------------------------------
 # SESSION STATE
@@ -61,24 +55,6 @@ conn, cursor = get_connection()
 st.markdown("---")
 render_file_picker_and_reset(cursor, onr_catalog)
 
-# -------------------------------
-# ELEMENT OVERVIEW
-# -------------------------------
-st.markdown("---")
-st.markdown(
-    """
-    <div style="background-color: #e8f4f8; padding: 15px; border-radius: 10px; border-left: 5px solid #0066cc;">
-        <strong>📌 Key Focus Areas:</strong>
-        <ul>
-            <li>Automated ingestion pipelines with Auto Loader</li>
-            <li>Data quality checks on ingestion</li>
-            <li>Schema evolution without manual reconfiguration</li>
-            <li>Near-real-time streaming architecture support</li>
-        </ul>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
 
 # -------------------------------
 # TABS
@@ -87,7 +63,7 @@ tab1, tab2, tab3, tab4 = st.tabs([
     "📊 Pipeline Status",
     "✅ Quality Checks", 
     "🔄 Schema & Streaming",
-    "🎮 Live Demo"
+    "Auto Loader (cluster)"
 ])
 
 with tab1:
@@ -112,7 +88,7 @@ with tab4:
 # ARCHITECTURE DIAGRAM
 # -------------------------------
 st.markdown("---")
-st.markdown("### 🏗️ Ingestion Architecture")
+st.markdown("### How it works")
 
 st.markdown("""
 ```
@@ -170,18 +146,3 @@ with col2:
     financial_df = generate_mock_financial_data(10)
     st.dataframe(financial_df, use_container_width=True)
 
-# -------------------------------
-# EVALUATION ALIGNMENT
-# -------------------------------
-st.markdown("---")
-st.markdown("### 📝 Evaluation Alignment")
-
-st.markdown(
-    """
-    | Criterion | How Element 3 Demonstrates It |
-    |-----------|-------------------------------|
-    | **Technical Competence** | Key Personnel demonstrate live pipeline navigation and Auto Loader configuration |
-    | **Open Architecture** | Standard streaming protocols (Kinesis, Kafka-compatible), portable data formats |
-    | **Strategic Agility** | Automated detection and quality handling without manual intervention |
-    """
-)

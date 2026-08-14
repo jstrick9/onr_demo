@@ -9,7 +9,6 @@ from utils.page_config_helpers import setup_sidebar, set_page_config
 from utils.runtime_env import get_runtime_env
 from utils.db_helpers import get_connection, read_yaml
 from utils.user_helpers import init_user_session_state
-from utils.eval_prompt import render_eval_prompt
 from utils.export_helpers import (
     render_export_options,
     render_dataset_selection,
@@ -25,24 +24,16 @@ from utils.api_helpers import render_live_statement_api
 # -------------------------------
 # PAGE CONFIGURATION
 # -------------------------------
-set_page_config(page_title="Integration | ONR ITSS POC")
+set_page_config(page_title="Export | ONR Portfolio")
 setup_sidebar()
 
 # -------------------------------
 # HEADER
 # -------------------------------
-st.title("🔗 Element 7: Interoperability, Data Portability, and Secure Export")
-st.markdown(
-    """
-    This element demonstrates **secure bulk data export**, compliance with open data standards, 
-    and how schemas and APIs support **seamless integration with broader enterprise cloud platforms** 
-    while preventing vendor lock-in.
-    """
-)
-render_eval_prompt(
-    "Element 7",
-    "How do you export and move data to Advana / Cloud One without lock-in?",
-    "Filter the date range, export CSV/JSON/Parquet, then run the live Statement Execution API call on the API tab.",
+st.title("Export & APIs")
+st.caption(
+    "Filtered bulk export in CSV, JSON, or Parquet. Audit rows land in app.export_history. "
+    "The live API is Databricks Statement Execution REST."
 )
 
 # -------------------------------
@@ -65,24 +56,6 @@ except Exception as e:
 
 conn, cursor = get_connection()
 
-# -------------------------------
-# ELEMENT OVERVIEW
-# -------------------------------
-st.markdown("---")
-st.markdown(
-    """
-    <div style="background-color: #e2e3e5; padding: 15px; border-radius: 10px; border-left: 5px solid #6c757d;">
-        <strong>📌 Key Focus Areas:</strong>
-        <ul>
-            <li>Non-proprietary format export (CSV, JSON, Parquet)</li>
-            <li>Schema portability and self-describing data</li>
-            <li>API support for Advana, Cloud One integration</li>
-            <li>Secure bulk extraction aligned with Zero Trust</li>
-        </ul>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
 
 # -------------------------------
 # TABS
@@ -126,13 +99,13 @@ with tab4:
     render_schema_documentation()
 
 with tab5:
-    render_export_history()
+    render_export_history(cursor, onr_catalog)
 
 # -------------------------------
 # EXPORT ARCHITECTURE
 # -------------------------------
 st.markdown("---")
-st.markdown("### 🏗️ Export & Integration Architecture")
+st.markdown("### How it works")
 
 st.markdown("""
 ```
@@ -169,7 +142,7 @@ st.markdown("""
 # ZERO TRUST COMPLIANCE
 # -------------------------------
 st.markdown("---")
-st.markdown("### 🔐 Zero Trust Compliance")
+st.markdown("### Security")
 
 col1, col2 = st.columns(2)
 
@@ -186,7 +159,7 @@ with col1:
 
 with col2:
     st.markdown("""
-    #### IL4/IL5 Baseline Compliance
+    #### Hosting note
     - ✅ **Micro-segmentation** — Network isolation
     - ✅ **Least Privilege** — Minimal permissions
     - ✅ **Encryption at Rest** — AES-256
@@ -195,18 +168,3 @@ with col2:
     - ✅ **Disaster Recovery** — Multi-AZ failover
     """)
 
-# -------------------------------
-# EVALUATION ALIGNMENT
-# -------------------------------
-st.markdown("---")
-st.markdown("### 📝 Evaluation Alignment")
-
-st.markdown(
-    """
-    | Criterion | How Element 7 Demonstrates It |
-    |-----------|-------------------------------|
-    | **Open Architecture (Primary)** | Non-proprietary formats, standard APIs, portable schemas, no vendor lock-in |
-    | **Technical Competence** | Key Personnel demonstrate secure extraction and API architecture |
-    | **Strategic Alignment** | Interoperability with DoW/DoN enterprise platforms |
-    """
-)

@@ -4,6 +4,8 @@
 
 **Story:** A new grants file lands → Auto Loader picks it up → quality gates → gold KPIs refresh → leadership searches, models, and exports.
 
+**App pages (product names on screen):** Ingestion · Catalog · Analytics · Portfolio · Export · Infrastructure. Say “Element 3–7” out loud — it is not labeled in the UI.
+
 ---
 
 ## Before the room (once)
@@ -40,7 +42,7 @@ Optional: open Workflows → pipeline `onr-demo-grants-stream` (SDP / Lakeflow) 
 
 Then open `01_bronze_ingestion.py` and contrast `.trigger(availableNow=True)` (file-arrival job) vs 01b.
 
-## Minute 15–22 — Element 4 Governance
+## Minute 15–22 — Element 4 (Catalog page)
 
 - Catalog registry: four schemas.
 - Quality scores (`app.data_quality_scores`) — written by Process/Reset *and* by notebook 02. After the live 8-grant drop they should already be there.
@@ -56,14 +58,14 @@ Then open `01_bronze_ingestion.py` and contrast `.trigger(availableNow=True)` (f
 - Predictions tab reads `gold.grant_predictions` (heuristic after ingest).
 - Run `04_mlflow_grant_model.py` on **onr demo cluster** — RF Fund/Review/Defer + `onr_demo.gold.grant_large_award`.
 
-## Minute 32–42 — Element 6 Dashboard
+## Minute 32–42 — Element 6 (Portfolio page)
 
 - KPIs, filter FY + program area.
 - Search `quantum` or `ONRD-2025` — the search is written to `app.search_history`.
 - **Process Automation tab:** click **Generate daily brief** — `ai_query` if Foundation Models are on, otherwise the structured template. Row lands in `app.daily_briefs`.
 - Budget execution from `gold.budget_execution`. Pipeline health from `app.ingestion_quality_log`.
 
-## Minute 42–46 — Element 7 Integration
+## Minute 42–46 — Element 7 (Export page)
 
 - Narrow the **Date Range** (e.g. 2025–2026) so the evaluator sees a **filtered** export, not `SELECT *`.
 - Export CSV / JSON / Parquet. Open the **Export History** tab — the row is in `app.export_history`.
