@@ -43,6 +43,10 @@ def _date_column_for_table(dataset_table: str):
         return "latest_grant_date", "ts"
     if "grant_predictions" in table_l:
         return "scored_at", "ts"
+    if "funding_forecast" in table_l:
+        return "fiscal_year", "year"
+    if "program_trends" in table_l:
+        return "computed_at", "ts"
     if any(
         name in table_l
         for name in (
@@ -204,6 +208,8 @@ def render_dataset_selection(cursor, catalog: str, schema: str):
         "Grants by Awardee": f"`{catalog}`.`gold`.grants_by_awardee",
         "Budget Execution": f"`{catalog}`.`gold`.budget_execution",
         "Grant Predictions": f"`{catalog}`.`gold`.grant_predictions",
+        "Funding Forecast": f"`{catalog}`.`gold`.funding_forecast",
+        "Program Trends": f"`{catalog}`.`gold`.program_trends",
         "Raw Grants": f"`{catalog}`.`silver`.grants",
         "Raw Financial": f"`{catalog}`.`silver`.financial",
     }

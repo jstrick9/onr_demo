@@ -211,6 +211,35 @@ CREATE TABLE IF NOT EXISTS `onr_demo`.`gold`.model_metrics (
 ) USING DELTA
 COMMENT 'Gold: last model run metrics for the Streamlit app';
 
+CREATE TABLE IF NOT EXISTS `onr_demo`.`gold`.funding_forecast (
+    program_area STRING,
+    fiscal_year INT,
+    series STRING,
+    predicted_funding DOUBLE,
+    lower_95 DOUBLE,
+    upper_95 DOUBLE,
+    slope_usd_per_year DOUBLE,
+    intercept_usd DOUBLE,
+    resid_sd DOUBLE,
+    model_name STRING
+) USING DELTA
+COMMENT 'Gold: OLS FY forecast (actual + 2-year horizon) with 95% residual band';
+
+CREATE TABLE IF NOT EXISTS `onr_demo`.`gold`.program_trends (
+    program_area STRING,
+    trend_id STRING,
+    trend_label STRING,
+    slope_usd_per_year DOUBLE,
+    velocity_yoy DOUBLE,
+    last_actual DOUBLE,
+    forecast_next_fy DOUBLE,
+    resid_sd DOUBLE,
+    next_fiscal_year INT,
+    model_name STRING,
+    computed_at TIMESTAMP
+) USING DELTA
+COMMENT 'Gold: TREND-ACCEL / TREND-STEADY / TREND-DECLINE per program area';
+
 CREATE TABLE IF NOT EXISTS `onr_demo`.`gold`.budget_execution (
     fiscal_year INT,
     quarter STRING,
@@ -274,6 +303,17 @@ CREATE TABLE IF NOT EXISTS `onr_demo`.`app`.lineage_tracking (
     executed_by STRING
 ) USING DELTA
 COMMENT 'Lineage tracking records';
+
+CREATE TABLE IF NOT EXISTS `onr_demo`.`app`.daily_briefs (
+    brief_id STRING NOT NULL,
+    generated_at TIMESTAMP,
+    generated_by STRING,
+    source STRING,
+    model_name STRING,
+    brief_text STRING,
+    prompt_chars INT
+) USING DELTA
+COMMENT 'Automated daily portfolio briefs (ai_query or template)';
 
 CREATE TABLE IF NOT EXISTS `onr_demo`.`app`.ingestion_quality_log (
     check_id STRING NOT NULL,

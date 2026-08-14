@@ -19,6 +19,9 @@ schema:
     budget_execution: "budget_execution"
     grant_predictions: "grant_predictions"
     model_metrics: "model_metrics"
+    funding_forecast: "funding_forecast"
+    program_trends: "program_trends"
+    daily_briefs: "daily_briefs"
     search_history: "search_history"
     export_history: "export_history"
     data_quality_scores: "data_quality_scores"
@@ -53,6 +56,8 @@ analytics:
   registered_model: "onr_demo.gold.grant_large_award"
   experiment_path: "/Shared/onr-demo/grant-size"
   default_model: "random_forest"
+  forecast_model: "ols_fy_v1"
+  forecast_horizon_years: 2
   forecast_horizon_days: 90
 
 dashboard:

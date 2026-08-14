@@ -20,6 +20,7 @@ from utils.export_helpers import (
     render_export_history,
     render_schema_documentation,
 )
+from utils.api_helpers import render_live_statement_api
 
 # -------------------------------
 # PAGE CONFIGURATION
@@ -41,7 +42,7 @@ st.markdown(
 render_eval_prompt(
     "Element 7",
     "How do you export and move data to Advana / Cloud One without lock-in?",
-    "Pick a date range, export CSV/JSON/Parquet, then open Export History — the row is in app.export_history.",
+    "Filter the date range, export CSV/JSON/Parquet, then run the live Statement Execution API call on the API tab.",
 )
 
 # -------------------------------
@@ -114,6 +115,8 @@ with tab1:
         st.warning("Please select at least one export format and a dataset.")
 
 with tab2:
+    render_live_statement_api(cursor, onr_catalog)
+    st.markdown("---")
     render_api_documentation()
 
 with tab3:

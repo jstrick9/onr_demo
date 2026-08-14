@@ -115,7 +115,11 @@ The Streamlit app authenticates as a **different** service principal. Without gr
 | Open the app Home | Live counts 400 grants (not only “fixture”) if the warehouse is up |
 | Ingestion → Process **Live 8 grants** | `silver.grants` 400 → 408 |
 | Analytics → Predictions | Rows in `gold.grant_predictions` (`heuristic_v1`) |
-| Optional: run `04_mlflow_grant_model.py` on the cluster | Predictions become `rf_large_award_v1`; `gold.model_metrics` has accuracy / f1; model registered as `onr_demo.gold.grant_large_award` |
+| Analytics → Forecasting | `gold.funding_forecast` + `gold.program_trends` (OLS, trend IDs) after bootstrap / Process |
+| Dashboard → Generate daily brief | Row in `app.daily_briefs` (ai_query or template) |
+| Integration → Execute live Statement API | `statement_id` + JSON from `/api/2.0/sql/statements` |
+| Optional: run `04_mlflow_grant_model.py` on the cluster | Predictions become `rf_large_award_v1`; model registered as `onr_demo.gold.grant_large_award` |
+| Optional: `01b_streaming_autoloader.py` | processingTime stream; drop live CSV; bronze ticks within 30s |
 | Ingestion → Reset (checkbox) | Back to 400 |
 
 ---
@@ -124,8 +128,9 @@ The Streamlit app authenticates as a **different** service principal. Without gr
 
 | Item | When |
 |------|------|
-| `01`–`03` on the cluster | To show Auto Loader on Volume files (copy `_staged/batch_live_grants.csv` → `landing/grants/`) |
-| `databricks bundle deploy -t poc` | Only **after** bootstrap (volumes need schema `bronze`). Does **not** create the warehouse/cluster. Deploys a **paused** file-arrival job (`onr-demo-grants-file-arrival`). |
+| `01`–`03` on the cluster | availableNow Auto Loader on Volume files |
+| `01b_streaming_autoloader.py` | Live `processingTime('30 seconds')` stream (auto-stops). Reset first so the stream checkpoint is empty. |
+| `databricks bundle deploy -t poc` | After bootstrap. Deploys paused file-arrival job **and** SDP pipeline `onr-demo-grants-stream`. Does **not** create the warehouse/cluster. |
 | [STRATEGIC_PROMPTS.md](STRATEGIC_PROMPTS.md) | Key-Personnel 60–90 s answers for 11.4 (a–e). Required for Completeness. |
 | `sql/setup_uc_objects.sql` | Only if you want empty DDL without running Spark. Skip if bootstrap already ran. |
 

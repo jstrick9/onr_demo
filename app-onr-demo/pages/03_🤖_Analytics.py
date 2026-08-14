@@ -38,7 +38,7 @@ st.markdown(
 render_eval_prompt(
     "Element 5",
     "How do analytics and models help leadership decide where to put the next dollar?",
-    "Scores in gold.grant_predictions. Run 04_mlflow_grant_model.py on **onr demo cluster** to replace the heuristic with RF + MLflow.",
+    "Forecast tab = OLS + 95% band + TREND-* IDs. Predictions tab = heuristic, then RF via notebook 04.",
 )
 
 # -------------------------------
@@ -136,8 +136,9 @@ st.markdown("""
 │                          │ + Registry  │          │  Dashboard  │  │
 │                          └─────────────┘          └─────────────┘  │
 │                                                                     │
-│   UC: gold.grant_predictions, gold.model_metrics                    │
-│   Train: 04_mlflow_grant_model.py on onr demo cluster               │
+│   UC: gold.grant_predictions, gold.model_metrics,                   │
+│       gold.funding_forecast, gold.program_trends                    │
+│   Train: 04_mlflow_grant_model.py · Forecast: ols_fy_v1 (SQL)       │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 """)

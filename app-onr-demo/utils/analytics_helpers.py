@@ -85,9 +85,13 @@ def render_decision_support(cursor=None, catalog: str = "onr_demo"):
             area = rec.get("program_area") or rec.get("PROGRAM_AREA")
             fund = float(rec.get("funding") or rec.get("FUNDING") or 0)
             n = int(rec.get("n") or rec.get("N") or 0)
-            lines.append(f"- **{area}**: ${fund:,.0f} across {n} grants")
+            lines.append("- **{}**: ${:,.0f} across {} grants".format(area, fund, n))
         st.markdown("Largest program areas in gold / fixture:\n" + "\n".join(lines))
-    st.caption("Refresh gold via Process selected files or notebooks 03 / 04. Run `04_mlflow_grant_model.py` on **onr demo cluster** to replace heuristic scores with the RF model.")
+    st.caption(
+        "Refresh gold via Process selected files or notebooks 03 / 04. "
+        "Forecast + trend IDs land in `gold.funding_forecast` / `gold.program_trends`. "
+        "Run `04_mlflow_grant_model.py` on **onr demo cluster** to replace heuristic scores with the RF model."
+    )
 
 
 def render_grant_predictions(cursor, catalog: str, schema: str = "silver"):
@@ -128,7 +132,8 @@ def render_model_execution(cursor=None, catalog: str = "onr_demo"):
     st.markdown(
         "On **onr demo cluster** run `notebooks/04_mlflow_grant_model.py`. "
         "It trains on `silver.grants`, writes `gold.grant_predictions` + `gold.model_metrics`, "
-        "and logs to MLflow `/Shared/onr-demo/grant-size` when that experiment exists."
+        "registers `onr_demo.gold.grant_large_award` in Unity Catalog, "
+        "and logs to MLflow `/Shared/onr-demo/grant-size`."
     )
     df = _query_df(
         cursor,
@@ -144,46 +149,162 @@ def render_model_execution(cursor=None, catalog: str = "onr_demo"):
         st.dataframe(df, use_container_width=True)
 
 
+def compute_forecast_and_trends(grants_df: pd.DataFrame):
+    """OLS of funding ~ fiscal_year per program_area. Returns (forecast_df, trends_df)."""
+    g = grants_df.dropna(subset=["program_area", "fiscal_year", "amount_usd"]).copy()
+    g["fiscal_year"] = g["fiscal_year"].astype(int)
+    hist = (
+        g.groupby(["program_area", "fiscal_year"], as_index=False)["amount_usd"]
+        .sum()
+        .rename(columns={"amount_usd": "funding"})
+    )
+    rows = []
+    trend_rows = []
+    for area, sub in hist.groupby("program_area"):
+        sub = sub.sort_values("fiscal_year")
+        xs = sub["fiscal_year"].astype(float).to_numpy()
+        ys = sub["funding"].astype(float).to_numpy()
+        n = len(xs)
+        if n < 2:
+            continue
+        sx, sy = float(xs.sum()), float(ys.sum())
+        sxy = float((xs * ys).sum())
+        sx2 = float((xs * xs).sum())
+        den = n * sx2 - sx * sx
+        slope = 0.0 if den == 0 else (n * sxy - sx * sy) / den
+        intercept = (sy - slope * sx) / n
+        fitted = intercept + slope * xs
+        resid = ys - fitted
+        resid_sd = float(resid.std(ddof=0)) if n else 0.0
+        last_fy = int(xs[-1])
+        last_actual = float(ys[-1])
+        prior = float(ys[-2]) if n >= 2 else None
+        velocity = ((last_actual - prior) / prior) if prior else None
+        rel = slope / last_actual if last_actual else 0.0
+        if rel > 0.05:
+            tid, tlab = "TREND-ACCEL", "Accelerating"
+        elif rel < -0.05:
+            tid, tlab = "TREND-DECLINE", "Declining"
+        else:
+            tid, tlab = "TREND-STEADY", "Steady"
+        for x, y in zip(xs, ys):
+            rows.append({
+                "program_area": area, "fiscal_year": int(x), "series": "actual",
+                "predicted_funding": float(y), "lower_95": float(y), "upper_95": float(y),
+                "slope_usd_per_year": slope, "resid_sd": resid_sd, "model_name": "ols_fy_v1",
+            })
+        next_pred = None
+        for off in (1, 2):
+            fy = last_fy + off
+            pred = intercept + slope * fy
+            if next_pred is None:
+                next_pred = pred
+            rows.append({
+                "program_area": area, "fiscal_year": fy, "series": "forecast",
+                "predicted_funding": pred,
+                "lower_95": pred - 1.96 * resid_sd,
+                "upper_95": pred + 1.96 * resid_sd,
+                "slope_usd_per_year": slope, "resid_sd": resid_sd, "model_name": "ols_fy_v1",
+            })
+        trend_rows.append({
+            "program_area": area, "trend_id": tid, "trend_label": tlab,
+            "slope_usd_per_year": slope, "velocity_yoy": velocity,
+            "last_actual": last_actual, "forecast_next_fy": next_pred,
+            "resid_sd": resid_sd, "next_fiscal_year": last_fy + 1,
+            "model_name": "ols_fy_v1",
+        })
+    return pd.DataFrame(rows), pd.DataFrame(trend_rows)
+
+
 def render_forecast_visualization(cursor=None, catalog: str = "onr_demo"):
-    """Actual ERP spend by FY from UC, plus a one-year extension of observed YoY."""
-    st.markdown("### Budget by fiscal year")
-    df = _query_df(
+    """OLS FY forecast from gold.funding_forecast, with 95% band + trend IDs."""
+    st.markdown("### Funding forecast (OLS by program area)")
+    fc = _query_df(
         cursor,
         f"""
-        SELECT fiscal_year, SUM(actual_expenditure) / 1e6 AS actual_m
-        FROM `{catalog}`.`silver`.financial
-        WHERE _is_active = true
-        GROUP BY fiscal_year
-        ORDER BY fiscal_year
+        SELECT program_area, fiscal_year, series, predicted_funding, lower_95, upper_95
+        FROM `{catalog}`.`gold`.funding_forecast
+        ORDER BY program_area, fiscal_year, series
         """,
     )
-    if df.empty:
-        from utils.portfolio_data import financial_dataframe
-        f = financial_dataframe()
-        df = (
-            f.groupby("fiscal_year", as_index=False)
-            .agg(actual_m=("actual_expenditure", "sum"))
-        )
-        df["actual_m"] = df["actual_m"] / 1e6
-        st.caption("Warehouse unavailable — Compass fixture ERP.")
+    trends = _query_df(
+        cursor,
+        f"""
+        SELECT program_area, trend_id, trend_label, slope_usd_per_year,
+               velocity_yoy, last_actual, forecast_next_fy
+        FROM `{catalog}`.`gold`.program_trends
+        ORDER BY trend_id, program_area
+        """,
+    )
+    if fc.empty:
+        from utils.portfolio_data import grants_dataframe
+        fc, trends = compute_forecast_and_trends(grants_dataframe())
+        st.caption("Warehouse / gold.funding_forecast unavailable — OLS computed from the Compass fixture.")
     else:
-        st.caption("`silver.financial` actuals. Next-year point = last year × mean YoY (not a trained forecast).")
+        st.caption(
+            "`gold.funding_forecast` · model `ols_fy_v1` — ordinary least squares of "
+            "`total_funding ~ fiscal_year` per program area, 2-year horizon, 95% residual band. "
+            "Trend IDs live in `gold.program_trends`."
+        )
 
-    df = df.sort_values(df.columns[0])
-    years = [int(y) for y in df.iloc[:, 0].tolist()]
-    actual = [float(v) for v in df.iloc[:, 1].tolist()]
+    if fc.empty:
+        st.info("No forecast rows yet. Process files or run notebook 03.")
+        return
+    roll = (
+        fc.groupby(["fiscal_year", "series"], as_index=False)
+        .agg(predicted_funding=("predicted_funding", "sum"),
+             lower_95=("lower_95", "sum"),
+             upper_95=("upper_95", "sum"))
+        .sort_values("fiscal_year")
+    )
+    actual = roll[roll["series"] == "actual"]
+    fcast = roll[roll["series"] == "forecast"]
     fig = go.Figure()
-    fig.add_trace(go.Bar(x=years, y=actual, name="Actual ($M)", marker_color="steelblue"))
-    if len(actual) >= 2 and actual[-2] != 0:
-        growths = []
-        for i in range(1, len(actual)):
-            if actual[i - 1]:
-                growths.append(actual[i] / actual[i - 1])
-        g = sum(growths) / len(growths) if growths else 1.0
-        nxt = years[-1] + 1
-        fig.add_trace(go.Bar(x=[nxt], y=[actual[-1] * g], name=f"YoY extension FY{nxt}", marker_color="lightgray"))
-    fig.update_layout(yaxis_title="Actual spend ($M)", height=400, barmode="group")
+    if not actual.empty:
+        fig.add_trace(go.Bar(
+            x=actual["fiscal_year"], y=actual["predicted_funding"] / 1e6,
+            name="Actual ($M)", marker_color="steelblue",
+        ))
+    if not fcast.empty:
+        fig.add_trace(go.Bar(
+            x=fcast["fiscal_year"], y=fcast["predicted_funding"] / 1e6,
+            name="OLS forecast ($M)", marker_color="orange",
+        ))
+        fig.add_trace(go.Scatter(
+            x=list(fcast["fiscal_year"]) + list(fcast["fiscal_year"])[::-1],
+            y=list(fcast["upper_95"] / 1e6) + list(fcast["lower_95"] / 1e6)[::-1],
+            fill="toself", fillcolor="rgba(255,165,0,0.2)",
+            line=dict(color="rgba(255,165,0,0)"),
+            name="95% band", hoverinfo="skip",
+        ))
+    fig.update_layout(yaxis_title="Funding ($M)", height=420, barmode="group")
     st.plotly_chart(fig, use_container_width=True)
+
+    st.markdown("#### Trend IDs")
+    if trends.empty:
+        st.caption("No `gold.program_trends` yet.")
+    else:
+        show = trends.copy()
+        for col in ("slope_usd_per_year", "last_actual", "forecast_next_fy"):
+            if col in show.columns:
+                show[col] = pd.to_numeric(show[col], errors="coerce")
+        try:
+            st.dataframe(
+                show.style.format({
+                    "slope_usd_per_year": "${:,.0f}",
+                    "last_actual": "${:,.0f}",
+                    "forecast_next_fy": "${:,.0f}",
+                    "velocity_yoy": "{:.1%}",
+                }),
+                use_container_width=True,
+            )
+        except Exception:
+            st.dataframe(show, use_container_width=True)
+        st.caption(
+            "`TREND-ACCEL` / `TREND-STEADY` / `TREND-DECLINE` — slope vs last actual "
+            "(±5% / year). Velocity is last-FY vs prior-FY. Use Declining + AT_RISK "
+            "together as the reallocation set."
+        )
 
 
 def render_trend_analysis(cursor=None, catalog: str = "onr_demo"):

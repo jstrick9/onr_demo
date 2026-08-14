@@ -19,6 +19,7 @@ from utils.dashboard_helpers import (
     render_search_extract,
     render_activity_log,
 )
+from utils.brief_helpers import render_daily_brief
 
 # -------------------------------
 # PAGE CONFIGURATION
@@ -39,7 +40,7 @@ st.markdown(
 render_eval_prompt(
     "Element 6",
     "Can a non-technical leader search, filter, and extract without writing SQL?",
-    "Use the filters and search `quantum` or `ONRD-2025`. Export the result as CSV.",
+    "Search `quantum`. Then Process Automation → Generate daily brief. Anomaly flags are the AT_RISK budget rows.",
 )
 
 # -------------------------------
@@ -114,6 +115,8 @@ with tab1:
     render_budget_execution(cursor, onr_catalog)
 
 with tab2:
+    render_daily_brief(cursor, onr_catalog)
+    st.markdown("---")
     render_process_automation(cursor, onr_catalog)
 
 with tab3:

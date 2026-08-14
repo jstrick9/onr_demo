@@ -90,3 +90,20 @@ resources:
             base_parameters:
               catalog: ${var.catalog}
           environment_key: default
+
+  # Element 3 — Lakeflow Declarative Pipeline (SDP). Triggered, not continuous.
+  # Writes sibling table bronze.grants_stream so it does not collide with the
+  # batch bronze.grants used by the app. Start from Workflows → Pipelines.
+  pipelines:
+    onr_grants_stream:
+      name: onr-demo-grants-stream
+      catalog: ${var.catalog}
+      target: bronze
+      serverless: true
+      continuous: false
+      channel: CURRENT
+      libraries:
+        - file:
+            path: ./pipelines/onr_grants_sdp.py
+      configuration:
+        catalog: ${var.catalog}

@@ -113,7 +113,16 @@ FROM `onr_demo`.`app`.ingestion_quality_log
 ORDER BY check_timestamp DESC
 LIMIT 10;
 
--- 10. EXPORT / SEARCH AUDIT (Element 7 + 6)
+-- 10. FORECAST + TREND IDs (Element 5)
+SELECT 'funding_forecast' AS tbl, COUNT(*) AS rows,
+       SUM(CASE WHEN series = 'forecast' THEN 1 ELSE 0 END) AS forecast_rows
+FROM `onr_demo`.`gold`.funding_forecast
+UNION ALL
+SELECT 'program_trends', COUNT(*),
+       SUM(CASE WHEN trend_id = 'TREND-DECLINE' THEN 1 ELSE 0 END)
+FROM `onr_demo`.`gold`.program_trends;
+
+-- 11. EXPORT / SEARCH / BRIEF AUDIT (Element 7 + 6)
 SELECT 'export_history' as audit_table, COUNT(*) as rows
 FROM `onr_demo`.`app`.export_history
 UNION ALL
@@ -121,7 +130,9 @@ SELECT 'search_history', COUNT(*) FROM `onr_demo`.`app`.search_history
 UNION ALL
 SELECT 'data_quality_scores', COUNT(*) FROM `onr_demo`.`app`.data_quality_scores
 UNION ALL
-SELECT 'lineage_tracking', COUNT(*) FROM `onr_demo`.`app`.lineage_tracking;
+SELECT 'lineage_tracking', COUNT(*) FROM `onr_demo`.`app`.lineage_tracking
+UNION ALL
+SELECT 'daily_briefs', COUNT(*) FROM `onr_demo`.`app`.daily_briefs;
 
 -- SUMMARY
 SELECT

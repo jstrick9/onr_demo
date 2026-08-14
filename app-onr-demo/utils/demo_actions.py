@@ -301,6 +301,20 @@ def _ensure_app_tables(cursor, catalog: str) -> None:
         COMMENT 'Ingestion quality check results'
         """
     )
+    cursor.execute(
+        f"""
+        CREATE TABLE IF NOT EXISTS `{catalog}`.`app`.daily_briefs (
+            brief_id STRING NOT NULL,
+            generated_at TIMESTAMP,
+            generated_by STRING,
+            source STRING,
+            model_name STRING,
+            brief_text STRING,
+            prompt_chars INT
+        ) USING DELTA
+        COMMENT 'Automated daily portfolio briefs (ai_query or template)'
+        """
+    )
 
 
 def _write_data_quality_scores(cursor, catalog: str) -> None:
@@ -553,6 +567,12 @@ def refresh_silver_gold_sql(cursor, catalog: str) -> None:
         silver_f = int(cursor.fetchone()[0])
     except Exception:
         bronze_g = bronze_f = silver_g = silver_f = 0
+    try:
+        from utils.forecast_sql import forecast_sql, trends_sql
+        cursor.execute(forecast_sql(catalog))
+        cursor.execute(trends_sql(catalog))
+    except Exception:
+        pass
     try:
         _write_data_quality_scores(cursor, catalog)
     except Exception:

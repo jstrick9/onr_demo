@@ -8,7 +8,7 @@ Single-environment proof of concept for Office of Naval Research Code 08 ITSS.
 |------|---------|----------------|
 | Ingestion | 3 | Auto Loader, quality gates, a second file drop |
 | Governance | 4 | Unity Catalog, scores, lineage |
-| Analytics | 5 | Forecasts + a small MLflow model |
+| Analytics | 5 | OLS FY forecast + trend IDs + RF model |
 | Dashboard | 6 | KPIs, search, extract |
 | Integration | 7 | CSV / JSON / Parquet export, open APIs |
 
@@ -22,8 +22,8 @@ Catalog **`onr_demo`** — one POC, no prod.
 |--------|------------------|
 | `bronze` | `grants`, `financial` · volumes `landing`, `checkpoints` |
 | `silver` | `grants`, `financial` |
-| `gold` | `grants_summary`, `financial_summary`, `grants_by_awardee`, `budget_execution`, `grant_predictions`, `model_metrics` |
-| `app` | `ingestion_quality_log`, `data_quality_scores`, `lineage_tracking`, search/export history |
+| `gold` | `grants_summary`, `financial_summary`, `grants_by_awardee`, `budget_execution`, `grant_predictions`, `model_metrics`, `funding_forecast`, `program_trends` |
+| `app` | `ingestion_quality_log`, `data_quality_scores`, `lineage_tracking`, search/export history, `daily_briefs` |
 
 Landing path: `/Volumes/onr_demo/bronze/landing/`
 
@@ -40,7 +40,7 @@ Follow **[FIRST_RUN.md](FIRST_RUN.md)** in order. Short version:
 5. Run **`sql/grant_app_principal.sql`** (replace the app SP) and grant **CAN USE** on the warehouse.
 6. Smoke test: Home shows 400 → Ingestion Process Live 8 → 408.
 
-Do **not** `databricks bundle deploy` before bootstrap (volumes need schema `bronze`). The bundle does **not** create the warehouse or cluster. It *does* define a paused `trigger.file_arrival` job (`onr-demo-grants-file-arrival`) that runs notebooks 01→02→03 when a file lands in `landing/grants/`.
+Do **not** `databricks bundle deploy` before bootstrap (volumes need schema `bronze`). The bundle does **not** create the warehouse or cluster. It *does* define a paused `trigger.file_arrival` job (`onr-demo-grants-file-arrival`) and a Lakeflow pipeline (`onr-demo-grants-stream`).
 
 Optional empty DDL only: `sql/setup_uc_objects.sql` (skip if bootstrap already ran).
 
@@ -76,7 +76,8 @@ onr_demo/
 ├── FIRST_RUN.md                   # Greenfield workspace checklist
 ├── DEMO_SCRIPT.md                 # 50-minute talk track
 ├── STRATEGIC_PROMPTS.md           # 11.4 (a–e) Key-Personnel talking points
-├── databricks.yml                 # Slim DAB: volumes + app + paused file-arrival job
+├── databricks.yml                 # Slim DAB: volumes + app + file-arrival job + SDP pipeline
+├── pipelines/onr_grants_sdp.py    # Lakeflow streaming table (bronze.grants_stream)
 ├── app-onr-demo/                  # Streamlit app
 │   ├── Home.py
 │   ├── app.yml
@@ -86,9 +87,10 @@ onr_demo/
 │   └── utils/
 ├── notebooks/
 │   ├── 00_bootstrap.py            # RUN FIRST
-│   ├── 01_bronze_ingestion.py     # Auto Loader
+│   ├── 01_bronze_ingestion.py     # Auto Loader (availableNow)
+│   ├── 01b_streaming_autoloader.py # Auto Loader (processingTime, live stream)
 │   ├── 02_silver_quality.py
-│   ├── 03_gold_aggregation.py
+│   ├── 03_gold_aggregation.py     # includes OLS forecast + trend IDs
 │   ├── 04_mlflow_grant_model.py
 │   └── 05_reset_demo.py           # Cluster reset to 400-grant seed
 ├── sql/

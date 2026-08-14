@@ -41,7 +41,7 @@ Full prompt text is quoted from Volume IV §11.4. Show a live artifact while you
 
 > Describe how your platform's analytical modeling techniques (predictive, prescriptive) and your proposed team will support financial execution tracking, budget formulation, and cost optimization for various command resourcing priorities.
 
-**Show:** Dashboard → Budget Execution gauge + “Budget rows not ON_TARGET”; Analytics → `gold.grant_predictions` (heuristic, then RF after notebook 04).
+**Show:** Analytics → Forecasting tab (`gold.funding_forecast` + trend IDs); Dashboard → Budget gauge + **Generate daily brief**.
 
 **Say (~80 s):**
 
@@ -49,13 +49,13 @@ Full prompt text is quoted from Volume IV §11.4. Show a live artifact while you
 >
 > *Descriptive:* the executive dashboard is what a Code 08 resource officer would open — portfolio dollars, execution rate, and a status of `ON_TARGET` / `WARNING` / `AT_RISK` per FY-quarter-category. That is automated anomaly flagging, not a monthly Excel.
 >
-> *Predictive:* notebook `04` trains a Random Forest on `silver.grants` (large-award ≥ $1M), writes `gold.grant_predictions` and `gold.model_metrics`, and registers the model to the Unity Catalog registry `onr_demo.gold.grant_large_award`. Leadership sees Fund / Review / Defer with a probability, not a black-box score. The heuristic_v1 scores are already in gold after ingest so the page is never empty if we skip the train during a take.
+> *Predictive:* two models, both in gold. `ols_fy_v1` is an ordinary-least-squares fit of `total_funding ~ fiscal_year` per program area — two-year horizon, 95% residual band, written to `gold.funding_forecast`. Each area gets a **trend ID**: `TREND-ACCEL`, `TREND-STEADY`, or `TREND-DECLINE`, plus a YoY velocity, in `gold.program_trends`. Separately, notebook `04` trains a Random Forest on `silver.grants` (large-award ≥ $1M), writes `gold.grant_predictions` / `gold.model_metrics`, and registers `onr_demo.gold.grant_large_award`. Leadership sees Fund / Review / Defer with a probability, not a black-box score.
 >
 > *Prescriptive / budget formulation:* AT_RISK categories are the reallocation candidates. A resource officer filters to those rows, exports Parquet, and the same gold table is what a budget-formulation workbook or Advana cube would consume. Cost optimization is “move dollars off AT_RISK, protect ON_TARGET, review large-award concentration.”
 >
 > Team split on a live program: data engineer owns bronze/silver and the file-arrival job; data scientist owns the UC-registered model; analyst owns gold definitions and the dashboard. Same catalog, same identity, no copy-out.
 
-**Honest boundary (only if asked):** the on-screen FY bar labeled “forecast” is a YoY extension until we ship the time-series table. The decision aid on screen today is the classifier + budget status, not a Prophet forecast.
+**Honest boundary (only if asked):** `ols_fy_v1` is linear OLS, not Prophet / ARIMA. Eight fiscal years is enough to show a real fitted forecast with a confidence band and named trend IDs; it is not a deep time-series model.
 
 ---
 
@@ -136,6 +136,6 @@ If you are already over time, cut (d) and (e) to the first four sentences each �
 ## What not to invent
 
 - Do not claim the POC warehouse is IL5 or FedRAMP High. Commercial AWS = Moderate; GovCloud + IL5 PA is the production cell.
-- Do not claim the FY “forecast” bar is a trained time-series model.
+- Do not claim the FY forecast is Prophet / a neural net. It is OLS (`ols_fy_v1`) with a 95% residual band and named trend IDs — say that.
 - Do not claim native UC lineage is drawn inside Streamlit — open **Catalog Explorer → `onr_demo` → Lineage** for that beat.
 - Do not let a non-Key-Personnel voice deliver any of these five answers.

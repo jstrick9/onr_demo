@@ -263,16 +263,26 @@ def render_file_picker_and_reset(cursor, catalog: str):
 
 def render_ingestion_demo(catalog: str, schema: str):
     """Auto Loader snippet — writes happen via Process selected files or notebook 01."""
-    st.markdown("### Auto Loader (cluster notebook 01)")
-    st.caption("Use **Process selected files** above to land CSVs through the warehouse. This cell is the cluster equivalent.")
+    st.markdown("### Auto Loader (cluster)")
+    st.caption(
+        "Use **Process selected files** above to land CSVs through the warehouse. "
+        "For the *streaming* beat, run `notebooks/01b_streaming_autoloader.py` on **onr demo cluster** "
+        "(processingTime 30s). Notebook 01 is the availableNow / file-arrival path."
+    )
     st.code(
         f'''
+# 01 — availableNow (file-arrival job). 01b — processingTime (live stream).
 spark.readStream.format("cloudFiles")
     .option("cloudFiles.format", "csv")
     .option("cloudFiles.schemaLocation", "/Volumes/{catalog}/bronze/landing/_schemas/grants")
     .option("cloudFiles.schemaEvolutionMode", "addNewColumns")
     .option("header", "true")
     .load("/Volumes/{catalog}/bronze/landing/grants/")
+    .writeStream.format("delta")
+    .option("checkpointLocation", "/Volumes/{catalog}/bronze/checkpoints/grants_stream")
+    .trigger(processingTime="30 seconds")   # 01b
+    # .trigger(availableNow=True)           # 01 / job
+    .toTable("`{catalog}`.`bronze`.grants")
         '''.strip(),
         language="python",
     )

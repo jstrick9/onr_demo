@@ -34,9 +34,11 @@ To show quality: add **Quality-fail sample** and process again (empty `grant_no`
 
 **Reset:** check *I want to reset* → **Reset demo to seed** (back to 400). Or run `05_reset_demo.py` on **onr demo cluster**.
 
-Then open `01_bronze_ingestion.py` **attached to `onr demo cluster`** and scroll the Auto Loader `cloudFiles` cell (do not need to re-run if the button already landed the rows).
+**Streaming beat (do this once, after Reset):** attach `01b_streaming_autoloader.py` to **onr demo cluster**, Run all (90-second safety stop). While it is running, copy `_staged/batch_live_grants.csv` → `landing/grants/`. Watch Ingestion **Last 2 min** tick and bronze 400 → 408. Say: *this is `processingTime('30 seconds')`, not a batch trigger.* Then run 02+03 or Process to refresh gold.
 
-Optional: drop `batch_quality_fail.csv` via the cluster notebooks to show 3 rows rejected.
+Optional: open Workflows → pipeline `onr-demo-grants-stream` (SDP / Lakeflow) — sibling table `bronze.grants_stream` with expect_or_drop on `grant_no`.
+
+Then open `01_bronze_ingestion.py` and contrast `.trigger(availableNow=True)` (file-arrival job) vs 01b.
 
 ## Minute 15–22 — Element 4 Governance
 
@@ -49,20 +51,22 @@ Optional: drop `batch_quality_fail.csv` via the cluster notebooks to show 3 rows
 ## Minute 22–32 — Element 5 Analytics
 
 - Decision cards + program-area mix (real fixture numbers).
+- **Forecasting tab:** OLS `ols_fy_v1` on `gold.funding_forecast` — actuals + 2-year horizon + 95% band. Trend IDs `TREND-ACCEL` / `TREND-STEADY` / `TREND-DECLINE` in `gold.program_trends`. Point at a Declining area as the reallocation candidate (Prompt b).
 - Predictions tab reads `gold.grant_predictions` (heuristic after ingest).
-- Run `04_mlflow_grant_model.py` on **onr demo cluster** — refresh the app; scores and `gold.model_metrics` update. Model registers to Unity Catalog as `onr_demo.gold.grant_large_award` (experiment `/Shared/onr-demo/grant-size`).
+- Run `04_mlflow_grant_model.py` on **onr demo cluster** — refresh the app; scores and `gold.model_metrics` update. Model registers to Unity Catalog as `onr_demo.gold.grant_large_award`.
 
 ## Minute 32–42 — Element 6 Dashboard
 
 - KPIs, filter FY + program area.
 - Search `quantum` or `ONRD-2025` — the search is written to `app.search_history`.
+- **Process Automation tab:** click **Generate daily brief** — `ai_query` if Foundation Models are on, otherwise the structured template. Row lands in `app.daily_briefs`.
 - Budget execution from `gold.budget_execution`. Pipeline health from `app.ingestion_quality_log`.
 
 ## Minute 42–46 — Element 7 Integration
 
 - Narrow the **Date Range** (e.g. 2025–2026) so the evaluator sees a **filtered** export, not `SELECT *`.
 - Export CSV / JSON / Parquet. Open the **Export History** tab — the row is in `app.export_history`.
-- API + Advana / Cloud One talking point: open formats, JDBC/ODBC, Statement Execution REST. No lock-in.
+- **API tab:** click **Execute live Statement API call**. Show the curl (token redacted) and the live JSON/`statement_id`. Say: *this is `/api/2.0/sql/statements` — the same open REST Advana or Cloud One would call.*
 - Schema card matches `grant_no`, `program_area`, `amount_usd`, `awardee`.
 
 ## Minute 46–50 — Close + Strategic Prompts (11.4)

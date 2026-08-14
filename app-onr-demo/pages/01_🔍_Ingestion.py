@@ -35,7 +35,7 @@ st.markdown("Auto Loader + quality gates on `onr_demo.bronze` → `silver` → `
 render_eval_prompt(
     "Element 3",
     "How do you detect and quality-check new files without recoding the pipeline?",
-    "Pick **Live 8 grants** and click **Process selected files** (400 → 408). Then **Reset demo to seed** to start over.",
+    "Process Live 8 (400→408) for the warehouse path. For streaming: run `01b_streaming_autoloader.py` on the cluster, drop the CSV into landing/grants/, watch Last 2 min tick.",
 )
 
 # -------------------------------
