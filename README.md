@@ -40,7 +40,7 @@ Follow **[FIRST_RUN.md](FIRST_RUN.md)** in order. Short version:
 5. Run **`sql/grant_app_principal.sql`** (replace the app SP) and grant **CAN USE** on the warehouse.
 6. Smoke test: Home shows 400 → Ingestion Process Live 8 → 408.
 
-Do **not** `databricks bundle deploy` before bootstrap (volumes need schema `bronze`). The bundle does **not** create compute.
+Do **not** `databricks bundle deploy` before bootstrap (volumes need schema `bronze`). The bundle does **not** create the warehouse or cluster. It *does* define a paused `trigger.file_arrival` job (`onr-demo-grants-file-arrival`) that runs notebooks 01→02→03 when a file lands in `landing/grants/`.
 
 Optional empty DDL only: `sql/setup_uc_objects.sql` (skip if bootstrap already ran).
 
@@ -75,7 +75,8 @@ App count: **400 → 408** (live file) → **400** (reset).
 onr_demo/
 ├── FIRST_RUN.md                   # Greenfield workspace checklist
 ├── DEMO_SCRIPT.md                 # 50-minute talk track
-├── databricks.yml                 # Slim DAB: volumes + app (does not create compute)
+├── STRATEGIC_PROMPTS.md           # 11.4 (a–e) Key-Personnel talking points
+├── databricks.yml                 # Slim DAB: volumes + app + paused file-arrival job
 ├── app-onr-demo/                  # Streamlit app
 │   ├── Home.py
 │   ├── app.yml

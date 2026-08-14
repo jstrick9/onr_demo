@@ -85,9 +85,14 @@ def render_quality_scores(cursor, catalog: str, schema: str):
                     
                     st.caption(f"Last assessed: {assessed}")
         else:
-            st.info("No `app.data_quality_scores` yet. Run `02_silver_quality.py` on **onr demo cluster**.")
+            st.info(
+                "No `app.data_quality_scores` yet. "
+                "Process a file (or Reset) on the Ingestion page, or run `02_silver_quality.py` on **onr demo cluster**."
+            )
     except Exception:
-        st.info("Quality scores appear after notebook 02 writes `app.data_quality_scores`.")
+        st.info(
+            "Quality scores appear after Process/Reset or notebook 02 writes `app.data_quality_scores`."
+        )
 
 
 # -------------------------------

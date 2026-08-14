@@ -5,6 +5,22 @@
 --
 -- Also in the UI: SQL Warehouses → "onr demo warehouse" → Permissions → CAN USE
 -- for the same principal.
+--
+-- ---------------------------------------------------------------------------
+-- Least-privilege / Zero Trust talking point (Strategic Prompt (c))
+-- ---------------------------------------------------------------------------
+-- MANAGE on the four schemas is a POC concession: CREATE OR REPLACE TABLE on a
+-- table owned by the human who ran bootstrap requires ownership or MANAGE.
+-- This is NOT the IL5 production grant set.
+--
+-- In production we would do one of:
+--   1. Have the job / app identity OWN the silver/gold tables it rebuilds, OR
+--   2. GRANT SELECT, MODIFY only and use INSERT OVERWRITE / MERGE, OR
+--   3. Run rebuilds as a dedicated pipeline principal that owns the tables.
+-- The app SP would then be: USE CATALOG + USE SCHEMA + SELECT on gold/silver
+-- + MODIFY on app.* (audit tables) + READ VOLUME on landing.
+-- Do not copy MANAGE-on-schema into an IL5 production grant set.
+-- ---------------------------------------------------------------------------
 
 GRANT USE CATALOG ON CATALOG `onr_demo` TO `<APP_SERVICE_PRINCIPAL>`;
 
@@ -15,7 +31,7 @@ GRANT USE SCHEMA ON SCHEMA `onr_demo`.`app` TO `<APP_SERVICE_PRINCIPAL>`;
 
 -- SELECT/MODIFY/CREATE TABLE are not enough to CREATE OR REPLACE a table
 -- owned by the human who ran bootstrap. MANAGE is required for the app
--- Process / Reset path.
+-- Process / Reset path in this POC only (see note above).
 GRANT SELECT, MODIFY, CREATE TABLE, MANAGE ON SCHEMA `onr_demo`.`bronze` TO `<APP_SERVICE_PRINCIPAL>`;
 GRANT SELECT, MODIFY, CREATE TABLE, MANAGE ON SCHEMA `onr_demo`.`silver` TO `<APP_SERVICE_PRINCIPAL>`;
 GRANT SELECT, MODIFY, CREATE TABLE, MANAGE ON SCHEMA `onr_demo`.`gold` TO `<APP_SERVICE_PRINCIPAL>`;

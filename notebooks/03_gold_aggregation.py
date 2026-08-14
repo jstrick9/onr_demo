@@ -28,6 +28,9 @@ from pyspark.sql.functions import (
     col, current_timestamp, count, sum as spark_sum, avg, min, max,
     when, collect_set, round as spark_round
 )
+import time
+
+_timing = {}
 
 # COMMAND ----------
 
@@ -57,12 +60,14 @@ gold_grants_summary = (
 )
 
 # Write to gold table
+_t = time.perf_counter()
 gold_grants_summary.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(
     f"`{catalog}`.`gold`.grants_summary"
 )
+_timing["grants_summary"] = int((time.perf_counter() - _t) * 1000)
 
 summary_count = gold_grants_summary.count()
-print(f"✅ Gold Grants Summary: {summary_count:,} records")
+print(f"✅ Gold Grants Summary: {summary_count:,} records ({_timing['grants_summary']} ms)")
 
 # COMMAND ----------
 
@@ -92,12 +97,14 @@ gold_financial_summary = (
 )
 
 # Write to gold table
+_t = time.perf_counter()
 gold_financial_summary.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(
     f"`{catalog}`.`gold`.financial_summary"
 )
+_timing["financial_summary"] = int((time.perf_counter() - _t) * 1000)
 
 fin_count = gold_financial_summary.count()
-print(f"✅ Gold Financial Summary: {fin_count:,} records")
+print(f"✅ Gold Financial Summary: {fin_count:,} records ({_timing['financial_summary']} ms)")
 
 # COMMAND ----------
 
@@ -119,12 +126,14 @@ gold_grants_by_awardee = (
     .withColumn("_updated_at", current_timestamp())
 )
 
+_t = time.perf_counter()
 gold_grants_by_awardee.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(
     f"`{catalog}`.`gold`.grants_by_awardee"
 )
+_timing["grants_by_awardee"] = int((time.perf_counter() - _t) * 1000)
 
 pi_count = gold_grants_by_awardee.count()
-print(f"✅ Gold Grants by Awardee: {pi_count:,} records")
+print(f"✅ Gold Grants by Awardee: {pi_count:,} records ({_timing['grants_by_awardee']} ms)")
 
 # COMMAND ----------
 
@@ -159,12 +168,14 @@ gold_budget_execution = (
 )
 
 # Write to gold table
+_t = time.perf_counter()
 gold_budget_execution.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(
     f"`{catalog}`.`gold`.budget_execution"
 )
+_timing["budget_execution"] = int((time.perf_counter() - _t) * 1000)
 
 budget_count = gold_budget_execution.count()
-print(f"✅ Gold Budget Execution: {budget_count:,} records")
+print(f"✅ Gold Budget Execution: {budget_count:,} records ({_timing['budget_execution']} ms)")
 
 # COMMAND ----------
 
@@ -212,6 +223,9 @@ FROM `{catalog}`.`gold`.grant_predictions
 # COMMAND ----------
 
 import uuid as _uuid
+_ms_summary = int(_timing.get("grants_summary") or 0)
+_ms_fin = int(_timing.get("financial_summary") or 0)
+# bronze→silver is owned by notebook 02; this notebook only measures gold writes.
 lineage_records = spark.createDataFrame([
     (f"lin_{_uuid.uuid4()}",
      "bronze.grants", "silver.grants", "quality_transform",
@@ -224,11 +238,11 @@ lineage_records = spark.createDataFrame([
     (f"lin_{_uuid.uuid4()}",
      "silver.grants", "gold.grants_summary", "aggregation",
      spark.table(f"`{catalog}`.`silver`.grants").count(),
-     0, "system"),
+     _ms_summary, "system"),
     (f"lin_{_uuid.uuid4()}",
      "silver.financial", "gold.financial_summary", "aggregation",
      spark.table(f"`{catalog}`.`silver`.financial").count(),
-     0, "system"),
+     _ms_fin, "system"),
 ], ["lineage_id", "source_table", "target_table", "transformation_type",
     "records_processed", "processing_time_ms", "executed_by"])
 

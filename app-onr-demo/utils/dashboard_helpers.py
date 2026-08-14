@@ -7,7 +7,71 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+import time
+import uuid
 from datetime import datetime
+
+
+def _sql_str(v) -> str:
+    if v is None:
+        return "NULL"
+    return "'" + str(v).replace("'", "''") + "'"
+
+
+def _like_term(term: str) -> str:
+    """Escape quotes and LIKE wildcards so user input cannot change the predicate."""
+    return (
+        (term or "")
+        .replace("\\", "\\\\")
+        .replace("'", "''")
+        .replace("%", "\\%")
+        .replace("_", "\\_")
+        .lower()
+    )
+
+
+def _ensure_search_history_table(cursor, catalog: str) -> None:
+    if not cursor:
+        return
+    cursor.execute(
+        f"""
+        CREATE TABLE IF NOT EXISTS `{catalog}`.`app`.search_history (
+            search_id STRING NOT NULL,
+            user_email STRING,
+            search_type STRING,
+            search_params STRING,
+            results_count INT,
+            execution_time_ms INT,
+            created_at TIMESTAMP
+        ) USING DELTA
+        COMMENT 'Search history for audit and replay'
+        """
+    )
+
+
+def _persist_search(cursor, catalog: str, rec: dict) -> None:
+    if not cursor:
+        return
+    try:
+        _ensure_search_history_table(cursor, catalog)
+        cursor.execute(
+            f"""
+            INSERT INTO `{catalog}`.`app`.search_history
+            (search_id, user_email, search_type, search_params, results_count,
+             execution_time_ms, created_at)
+            VALUES (
+                {_sql_str(rec.get("search_id"))},
+                {_sql_str(rec.get("user"))},
+                {_sql_str(rec.get("search_type") or "grants")},
+                {_sql_str(rec.get("term"))},
+                {int(rec.get("results") or 0)},
+                {int(rec.get("execution_time_ms") or 0)},
+                CURRENT_TIMESTAMP()
+            )
+            """
+        )
+    except Exception:
+        pass
 
 
 # -------------------------------
@@ -466,28 +530,64 @@ def render_search_extract(cursor, catalog: str, schema: str):
 # RECENT ACTIVITY LOG
 # -------------------------------
 def render_activity_log(cursor=None, catalog: str = "onr_demo"):
-    """Export + quality log from UC / this session — no invented users."""
+    """Export + search + quality log from UC / this session — no invented users."""
     st.markdown("### Recent activity")
     session_hist = st.session_state.get("export_history") or []
     if session_hist:
-        st.markdown("#### This app session")
+        st.markdown("#### This app session (exports)")
         st.dataframe(pd.DataFrame(session_hist), use_container_width=True)
-    uc = pd.DataFrame()
-    if cursor:
+    session_search = st.session_state.get("search_history") or []
+    if session_search:
+        st.markdown("#### This app session (searches)")
+        st.dataframe(pd.DataFrame(session_search), use_container_width=True)
+
+    def _uc(sql: str) -> pd.DataFrame:
+        if not cursor:
+            return pd.DataFrame()
         try:
-            cursor.execute(
-                f"""
-                SELECT check_timestamp, pipeline_name, check_name, check_status,
-                       records_checked, records_failed
-                FROM `{catalog}`.`app`.ingestion_quality_log
-                ORDER BY check_timestamp DESC
-                LIMIT 20
-                """
-            )
+            cursor.execute(sql)
             cols = [str(d[0]).lower() for d in cursor.description]
-            uc = pd.DataFrame(cursor.fetchall(), columns=cols)
+            return pd.DataFrame(cursor.fetchall(), columns=cols)
         except Exception:
-            uc = pd.DataFrame()
+            return pd.DataFrame()
+
+    exports = _uc(
+        f"""
+        SELECT created_at, user_email, dataset_name, format, record_count
+        FROM `{catalog}`.`app`.export_history
+        ORDER BY created_at DESC
+        LIMIT 20
+        """
+    )
+    st.markdown("#### Export audit (`app.export_history`)")
+    if exports.empty:
+        st.caption("No persisted exports yet.")
+    else:
+        st.dataframe(exports, use_container_width=True)
+
+    searches = _uc(
+        f"""
+        SELECT created_at, user_email, search_type, search_params, results_count, execution_time_ms
+        FROM `{catalog}`.`app`.search_history
+        ORDER BY created_at DESC
+        LIMIT 20
+        """
+    )
+    st.markdown("#### Search audit (`app.search_history`)")
+    if searches.empty:
+        st.caption("No persisted searches yet.")
+    else:
+        st.dataframe(searches, use_container_width=True)
+
+    uc = _uc(
+        f"""
+        SELECT check_timestamp, pipeline_name, check_name, check_status,
+               records_checked, records_failed
+        FROM `{catalog}`.`app`.ingestion_quality_log
+        ORDER BY check_timestamp DESC
+        LIMIT 20
+        """
+    )
     st.markdown("#### Ingestion quality log")
     if uc.empty:
         st.caption("No UC activity yet.")

@@ -198,11 +198,39 @@ financial_score = (
 # Save quality scores
 from pyspark.sql.functions import current_timestamp
 
+# Gold-layer scores (same shape as the app SQL path) — skip if gold not built yet
+try:
+    gold_summary = spark.sql(f"""
+        SELECT COUNT(*) as total,
+               COUNT(CASE WHEN program_area IS NOT NULL THEN 1 END) as valid_area,
+               COUNT(CASE WHEN total_funding > 0 THEN 1 END) as valid_funding
+        FROM `{catalog}`.`gold`.grants_summary
+    """).collect()[0]
+    _gst = gold_summary[0] or 1
+    gold_summary_score = (gold_summary[1] / _gst) * 0.5 + (gold_summary[2] / _gst) * 0.5
+    gold_budget = spark.sql(f"""
+        SELECT COUNT(*) as total,
+               COUNT(CASE WHEN status IS NOT NULL THEN 1 END) as valid_status,
+               COUNT(CASE WHEN execution_rate IS NOT NULL THEN 1 END) as valid_rate
+        FROM `{catalog}`.`gold`.budget_execution
+    """).collect()[0]
+    _gbt = gold_budget[0] or 1
+    gold_budget_score = (gold_budget[1] / _gbt) * 0.5 + (gold_budget[2] / _gbt) * 0.5
+    gold_rows = [
+        ("gold.grants_summary", gold_summary_score, gold_summary[1]/_gst,
+         gold_summary[2]/_gst, 1.0, 1.0),
+        ("gold.budget_execution", gold_budget_score, gold_budget[1]/_gbt,
+         gold_budget[2]/_gbt, 1.0, 1.0),
+    ]
+except Exception:
+    gold_rows = []
+
 quality_scores = spark.createDataFrame([
     ("silver.grants", grants_score, grants_completeness[1]/_gt,
      grants_completeness[3]/_gt, grants_completeness[2]/_gt, 1.0),
     ("silver.financial", financial_score, financial_completeness[1]/_ft,
      financial_completeness[2]/_ft, financial_completeness[3]/_ft, 1.0),
+    *gold_rows,
 ], ["table_name", "quality_score", "completeness", "accuracy", "consistency", "timeliness"])
 
 quality_scores = quality_scores.withColumn("last_assessed", current_timestamp())

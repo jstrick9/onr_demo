@@ -50,7 +50,8 @@ governance:
 
 analytics:
   model_registry: "onr_demo.gold"
-  experiment_path: "/Workspace/Users/${user}/experiments/onr-demo"
+  registered_model: "onr_demo.gold.grant_large_award"
+  experiment_path: "/Shared/onr-demo/grant-size"
   default_model: "random_forest"
   forecast_horizon_days: 90
 
@@ -69,11 +70,11 @@ export:
   export_chunksize: 100000
 
 app:
-  version: "1.1.0"
+  version: "1.2.0"
   environment: "poc"
   max_file_size_mb: 50
   session_timeout_minutes: 60
-  debug_mode: true
+  debug_mode: false
 
 mock_data:
   fixture: "resources/mock_data/grants_portfolio.json"
@@ -92,13 +93,14 @@ mock_data:
     - "Undersea"
 
 etl:
-  source_bucket: "s3://onr-demo-landing/"
+  # Landing is the UC Volume, not an S3 mount. Kept as a documentation pointer only.
+  landing_volume: "/Volumes/onr_demo/bronze/landing"
   load_frequency: "daily"
   data_freshness_hours: 24
   contact_email: "onr-demo@company.com"
 
 logging:
-  level: "DEBUG"
-  log_queries: true
+  level: "INFO"
+  log_queries: false
   log_performance: true
   log_user_actions: true

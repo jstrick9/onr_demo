@@ -213,14 +213,209 @@ def clear_autoloader_checkpoints() -> str:
                     except Exception:
                         pass
         except Exception as e:
-            return f"Could not list {root}: {e}"
+            return (
+            f"Could not list {root}: {e}. "
+            "WorkspaceClient.files does not operate on UC Volumes — "
+            "run notebooks/05_reset_demo.py on **onr demo cluster** to clear checkpoints."
+        )
         return f"Cleared {deleted} checkpoint path(s) under {root}"
     except Exception as e:
-        return f"Checkpoint cleanup skipped ({e}). Use notebooks/05_reset_demo.py on the cluster."
+        return (
+            f"Checkpoint cleanup skipped ({e}). "
+            "App reset does not clear Auto Loader checkpoints; "
+            "use notebooks/05_reset_demo.py on **onr demo cluster**."
+        )
+
+
+def _ensure_app_tables(cursor, catalog: str) -> None:
+    """Create app audit / quality tables if bootstrap has not yet."""
+    cursor.execute(
+        f"""
+        CREATE TABLE IF NOT EXISTS `{catalog}`.`app`.data_quality_scores (
+            table_name STRING,
+            quality_score DOUBLE,
+            completeness DOUBLE,
+            accuracy DOUBLE,
+            consistency DOUBLE,
+            timeliness DOUBLE,
+            last_assessed TIMESTAMP
+        ) USING DELTA
+        COMMENT 'Data quality health scores'
+        """
+    )
+    cursor.execute(
+        f"""
+        CREATE TABLE IF NOT EXISTS `{catalog}`.`app`.lineage_tracking (
+            lineage_id STRING NOT NULL,
+            source_table STRING,
+            target_table STRING,
+            transformation_type STRING,
+            records_processed INT,
+            processing_time_ms INT,
+            executed_at TIMESTAMP,
+            executed_by STRING
+        ) USING DELTA
+        COMMENT 'Lineage tracking records'
+        """
+    )
+    cursor.execute(
+        f"""
+        CREATE TABLE IF NOT EXISTS `{catalog}`.`app`.export_history (
+            export_id STRING NOT NULL,
+            user_email STRING,
+            dataset_name STRING,
+            format STRING,
+            record_count INT,
+            file_size_bytes BIGINT,
+            created_at TIMESTAMP
+        ) USING DELTA
+        COMMENT 'Export audit trail'
+        """
+    )
+    cursor.execute(
+        f"""
+        CREATE TABLE IF NOT EXISTS `{catalog}`.`app`.search_history (
+            search_id STRING NOT NULL,
+            user_email STRING,
+            search_type STRING,
+            search_params STRING,
+            results_count INT,
+            execution_time_ms INT,
+            created_at TIMESTAMP
+        ) USING DELTA
+        COMMENT 'Search history for audit and replay'
+        """
+    )
+    cursor.execute(
+        f"""
+        CREATE TABLE IF NOT EXISTS `{catalog}`.`app`.ingestion_quality_log (
+            check_id STRING NOT NULL,
+            check_name STRING,
+            check_status STRING,
+            records_checked INT,
+            records_passed INT,
+            records_failed INT,
+            check_timestamp TIMESTAMP,
+            pipeline_name STRING
+        ) USING DELTA
+        COMMENT 'Ingestion quality check results'
+        """
+    )
+
+
+def _write_data_quality_scores(cursor, catalog: str) -> None:
+    """Same completeness/accuracy/consistency math as notebooks/02_silver_quality.py."""
+    cursor.execute(
+        f"""
+        CREATE OR REPLACE TABLE `{catalog}`.`app`.data_quality_scores AS
+        WITH g AS (
+            SELECT
+                COUNT(*) AS total,
+                COUNT(CASE WHEN grant_no IS NOT NULL THEN 1 END) AS valid_id,
+                COUNT(CASE WHEN awardee IS NOT NULL THEN 1 END) AS valid_awardee,
+                COUNT(CASE WHEN amount_usd > 0 THEN 1 END) AS valid_amount,
+                COUNT(CASE WHEN program_area IS NOT NULL THEN 1 END) AS valid_area
+            FROM `{catalog}`.`silver`.grants
+        ),
+        f AS (
+            SELECT
+                COUNT(*) AS total,
+                COUNT(CASE WHEN transaction_id IS NOT NULL THEN 1 END) AS valid_id,
+                COUNT(CASE WHEN budget_allocated > 0 THEN 1 END) AS valid_budget,
+                COUNT(CASE WHEN actual_expenditure >= 0 THEN 1 END) AS valid_actual
+            FROM `{catalog}`.`silver`.financial
+        ),
+        gs AS (
+            SELECT
+                COUNT(*) AS total,
+                COUNT(CASE WHEN program_area IS NOT NULL THEN 1 END) AS valid_area,
+                COUNT(CASE WHEN total_funding > 0 THEN 1 END) AS valid_funding
+            FROM `{catalog}`.`gold`.grants_summary
+        ),
+        be AS (
+            SELECT
+                COUNT(*) AS total,
+                COUNT(CASE WHEN status IS NOT NULL THEN 1 END) AS valid_status,
+                COUNT(CASE WHEN execution_rate IS NOT NULL THEN 1 END) AS valid_rate
+            FROM `{catalog}`.`gold`.budget_execution
+        )
+        SELECT 'silver.grants' AS table_name,
+               (g.valid_id / NULLIF(g.total, 0)) * 0.3
+             + (g.valid_awardee / NULLIF(g.total, 0)) * 0.3
+             + (g.valid_amount / NULLIF(g.total, 0)) * 0.2
+             + (g.valid_area / NULLIF(g.total, 0)) * 0.2 AS quality_score,
+               g.valid_id / NULLIF(g.total, 0) AS completeness,
+               g.valid_amount / NULLIF(g.total, 0) AS accuracy,
+               g.valid_awardee / NULLIF(g.total, 0) AS consistency,
+               1.0 AS timeliness,
+               CURRENT_TIMESTAMP() AS last_assessed
+        FROM g
+        UNION ALL
+        SELECT 'silver.financial',
+               (f.valid_id / NULLIF(f.total, 0)) * 0.4
+             + (f.valid_budget / NULLIF(f.total, 0)) * 0.3
+             + (f.valid_actual / NULLIF(f.total, 0)) * 0.3,
+               f.valid_id / NULLIF(f.total, 0),
+               f.valid_budget / NULLIF(f.total, 0),
+               f.valid_actual / NULLIF(f.total, 0),
+               1.0,
+               CURRENT_TIMESTAMP()
+        FROM f
+        UNION ALL
+        SELECT 'gold.grants_summary',
+               (gs.valid_area / NULLIF(gs.total, 0)) * 0.5
+             + (gs.valid_funding / NULLIF(gs.total, 0)) * 0.5,
+               gs.valid_area / NULLIF(gs.total, 0),
+               gs.valid_funding / NULLIF(gs.total, 0),
+               1.0,
+               1.0,
+               CURRENT_TIMESTAMP()
+        FROM gs
+        UNION ALL
+        SELECT 'gold.budget_execution',
+               (be.valid_status / NULLIF(be.total, 0)) * 0.5
+             + (be.valid_rate / NULLIF(be.total, 0)) * 0.5,
+               be.valid_status / NULLIF(be.total, 0),
+               be.valid_rate / NULLIF(be.total, 0),
+               1.0,
+               1.0,
+               CURRENT_TIMESTAMP()
+        FROM be
+        """
+    )
+
+
+def _write_lineage(cursor, catalog: str, timings: dict) -> None:
+    """Append measured bronze→silver→gold hops into app.lineage_tracking."""
+    hops = [
+        ("bronze.grants", "silver.grants", "quality_transform", "bronze_grants", "silver_ms"),
+        ("bronze.financial", "silver.financial", "quality_transform", "bronze_financial", "silver_ms"),
+        ("silver.grants", "gold.grants_summary", "aggregation", "silver_grants", "gold_ms"),
+        ("silver.financial", "gold.financial_summary", "aggregation", "silver_financial", "gold_ms"),
+    ]
+    for src, tgt, kind, n_key, ms_key in hops:
+        n = int(timings.get(n_key) or 0)
+        ms = int(timings.get(ms_key) or 0)
+        cursor.execute(
+            f"""
+            INSERT INTO `{catalog}`.`app`.lineage_tracking
+            (lineage_id, source_table, target_table, transformation_type,
+             records_processed, processing_time_ms, executed_at, executed_by)
+            VALUES (
+                concat('lin-', date_format(current_timestamp(), 'yyyyMMddHHmmss'), '-', '{tgt}'),
+                '{src}', '{tgt}', '{kind}',
+                {n}, {ms}, CURRENT_TIMESTAMP(), 'streamlit_live_drop'
+            )
+            """
+        )
 
 
 def refresh_silver_gold_sql(cursor, catalog: str) -> None:
     """Rebuild silver + gold from bronze (same rules as notebooks 02/03)."""
+    import time
+
+    _ensure_app_tables(cursor, catalog)
+    t_silver = time.perf_counter()
     cursor.execute(
         f"""
         CREATE OR REPLACE TABLE `{catalog}`.`silver`.grants AS
@@ -343,6 +538,37 @@ def refresh_silver_gold_sql(cursor, catalog: str) -> None:
                    CURRENT_TIMESTAMP() AS trained_at
             FROM `{catalog}`.`gold`.grant_predictions
             """
+        )
+    except Exception:
+        pass
+    silver_ms = int((time.perf_counter() - t_silver) * 1000)
+    try:
+        cursor.execute(f"SELECT COUNT(*) FROM `{catalog}`.`bronze`.grants")
+        bronze_g = int(cursor.fetchone()[0])
+        cursor.execute(f"SELECT COUNT(*) FROM `{catalog}`.`bronze`.financial")
+        bronze_f = int(cursor.fetchone()[0])
+        cursor.execute(f"SELECT COUNT(*) FROM `{catalog}`.`silver`.grants")
+        silver_g = int(cursor.fetchone()[0])
+        cursor.execute(f"SELECT COUNT(*) FROM `{catalog}`.`silver`.financial")
+        silver_f = int(cursor.fetchone()[0])
+    except Exception:
+        bronze_g = bronze_f = silver_g = silver_f = 0
+    try:
+        _write_data_quality_scores(cursor, catalog)
+    except Exception:
+        pass
+    try:
+        _write_lineage(
+            cursor,
+            catalog,
+            {
+                "bronze_grants": bronze_g,
+                "bronze_financial": bronze_f,
+                "silver_grants": silver_g,
+                "silver_financial": silver_f,
+                "silver_ms": silver_ms,
+                "gold_ms": silver_ms,
+            },
         )
     except Exception:
         pass

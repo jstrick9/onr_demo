@@ -41,7 +41,7 @@ st.markdown(
 render_eval_prompt(
     "Element 7",
     "How do you export and move data to Advana / Cloud One without lock-in?",
-    "Download CSV, JSON, and Parquet. Same schema as Unity Catalog — open formats, JDBC/REST.",
+    "Pick a date range, export CSV/JSON/Parquet, then open Export History — the row is in app.export_history.",
 )
 
 # -------------------------------

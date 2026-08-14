@@ -122,13 +122,21 @@ def render_schema_evolution(cursor, catalog: str, schema: str):
         history = cursor.fetchall()
         
         if history:
-            # Show last 5 schema changes
-            # DESCRIBE HISTORY: version, timestamp, userId, userName, operation, operationParameters, ...
+            colnames = [str(d[0]).lower() for d in (cursor.description or [])]
+
+            def _col(entry, *names, fallback_idx=None):
+                for name in names:
+                    if name in colnames:
+                        return entry[colnames.index(name)]
+                if fallback_idx is not None and len(entry) > fallback_idx:
+                    return entry[fallback_idx]
+                return None
+
             for entry in history[:5]:
-                version = entry[0] if len(entry) > 0 else "?"
-                ts = entry[1] if len(entry) > 1 else ""
-                op = entry[4] if len(entry) > 4 else ""
-                params = entry[5] if len(entry) > 5 else None
+                version = _col(entry, "version", fallback_idx=0) or "?"
+                ts = _col(entry, "timestamp", fallback_idx=1) or ""
+                op = _col(entry, "operation", fallback_idx=4) or ""
+                params = _col(entry, "operationparameters", "operation_parameters", fallback_idx=5)
                 with st.expander(f"Version {version} — {ts}"):
                     st.write(f"**Operation:** {op}")
                     st.write(f"**Timestamp:** {ts}")

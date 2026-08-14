@@ -1,3 +1,16 @@
-
 __pycache__/
 *.pyc
+*.pyo
+.databricks/
+.venv/
+venv/
+.env
+.env.*
+*.log
+*.egg-info/
+.DS_Store
+.idea/
+.vscode/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/

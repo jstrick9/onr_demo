@@ -339,7 +339,70 @@ qlog = spark.createDataFrame([{
 }])
 qlog.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(f"`{catalog}`.`app`.ingestion_quality_log")
 
-print("gold + app quality log written")
+# App audit / quality tables so Process / Export / Search work on a fresh workspace
+spark.sql(f"""
+CREATE TABLE IF NOT EXISTS `{catalog}`.`app`.export_history (
+    export_id STRING NOT NULL,
+    user_email STRING,
+    dataset_name STRING,
+    format STRING,
+    record_count INT,
+    file_size_bytes BIGINT,
+    created_at TIMESTAMP
+) USING DELTA
+COMMENT 'Export audit trail'
+""")
+spark.sql(f"""
+CREATE TABLE IF NOT EXISTS `{catalog}`.`app`.search_history (
+    search_id STRING NOT NULL,
+    user_email STRING,
+    search_type STRING,
+    search_params STRING,
+    results_count INT,
+    execution_time_ms INT,
+    created_at TIMESTAMP
+) USING DELTA
+COMMENT 'Search history for audit and replay'
+""")
+spark.sql(f"""
+CREATE TABLE IF NOT EXISTS `{catalog}`.`app`.lineage_tracking (
+    lineage_id STRING NOT NULL,
+    source_table STRING,
+    target_table STRING,
+    transformation_type STRING,
+    records_processed INT,
+    processing_time_ms INT,
+    executed_at TIMESTAMP,
+    executed_by STRING
+) USING DELTA
+COMMENT 'Lineage tracking records'
+""")
+
+# Same quality math as notebooks/02_silver_quality.py so Governance is populated
+# without requiring a separate notebook 02 run.
+_gt = max(sg.count(), 1)
+_ft = max(sf.count(), 1)
+_g_id = sg.filter("grant_no IS NOT NULL").count()
+_g_aw = sg.filter("awardee IS NOT NULL").count()
+_g_amt = sg.filter("amount_usd > 0").count()
+_g_area = sg.filter("program_area IS NOT NULL").count()
+_f_id = sf.filter("transaction_id IS NOT NULL").count()
+_f_bud = sf.filter("budget_allocated > 0").count()
+_f_act = sf.filter("actual_expenditure >= 0").count()
+quality_scores = spark.createDataFrame([
+    ("silver.grants",
+     (_g_id / _gt) * 0.3 + (_g_aw / _gt) * 0.3 + (_g_amt / _gt) * 0.2 + (_g_area / _gt) * 0.2,
+     _g_id / _gt, _g_amt / _gt, _g_aw / _gt, 1.0),
+    ("silver.financial",
+     (_f_id / _ft) * 0.4 + (_f_bud / _ft) * 0.3 + (_f_act / _ft) * 0.3,
+     _f_id / _ft, _f_bud / _ft, _f_act / _ft, 1.0),
+], ["table_name", "quality_score", "completeness", "accuracy", "consistency", "timeliness"])
+quality_scores = quality_scores.withColumn("last_assessed", F.current_timestamp())
+quality_scores.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(
+    f"`{catalog}`.`app`.data_quality_scores"
+)
+
+print("gold + app quality log + audit tables + quality scores written")
 print("grants_summary", spark.table(f"`{catalog}`.`gold`.grants_summary").count())
 
 # COMMAND ----------

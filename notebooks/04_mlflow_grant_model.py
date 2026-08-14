@@ -5,7 +5,8 @@
 # MAGIC # 04 — MLflow large-award model (Element 5)
 # MAGIC Trains a Random Forest on `silver.grants` to score whether an award is large (≥ $1M).
 # MAGIC Writes **`gold.grant_predictions`** and **`gold.model_metrics`** so the Streamlit app
-# MAGIC shows the same scores. Logs to MLflow when the experiment is available.
+# MAGIC shows the same scores. Logs to MLflow experiment `/Shared/onr-demo/grant-size` and
+# MAGIC registers the model to Unity Catalog as `{catalog}.gold.grant_large_award`.
 # MAGIC
 # MAGIC First cells install scikit-learn (standard DBR does not ship it).
 
@@ -91,13 +92,32 @@ print("Wrote gold.grant_predictions and gold.model_metrics")
 
 try:
     import mlflow
-    mlflow.set_experiment("/Shared/onr-demo/grant-size")
+    import mlflow.sklearn
+
+    mlflow.set_registry_uri("databricks-uc")
+    experiment_path = "/Shared/onr-demo/grant-size"
+    try:
+        mlflow.set_experiment(experiment_path)
+    except Exception:
+        mlflow.create_experiment(experiment_path)
+        mlflow.set_experiment(experiment_path)
+
+    registered = f"{catalog}.gold.grant_large_award"
     with mlflow.start_run(run_name="rf-large-award"):
-        mlflow.log_params({"n_estimators": 80, "max_depth": 8})
+        mlflow.log_params({
+            "n_estimators": 80,
+            "max_depth": 8,
+            "threshold_usd": 1_000_000,
+        })
         mlflow.log_metrics({"accuracy": acc, "f1": f1})
-        mlflow.sklearn.log_model(clf, "model")
-    print("Logged to MLflow")
+        mlflow.sklearn.log_model(
+            clf,
+            artifact_path="model",
+            registered_model_name=registered,
+        )
+    print(f"Logged to MLflow and registered {registered}")
 except Exception as e:
     print("MLflow optional — skipped:", e)
+    print("gold.grant_predictions / gold.model_metrics still written above.")
 
 display(pd.DataFrame({"metric": ["accuracy", "f1", "rows"], "value": [acc, f1, len(pdf)]}))

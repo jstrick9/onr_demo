@@ -113,6 +113,16 @@ FROM `onr_demo`.`app`.ingestion_quality_log
 ORDER BY check_timestamp DESC
 LIMIT 10;
 
+-- 10. EXPORT / SEARCH AUDIT (Element 7 + 6)
+SELECT 'export_history' as audit_table, COUNT(*) as rows
+FROM `onr_demo`.`app`.export_history
+UNION ALL
+SELECT 'search_history', COUNT(*) FROM `onr_demo`.`app`.search_history
+UNION ALL
+SELECT 'data_quality_scores', COUNT(*) FROM `onr_demo`.`app`.data_quality_scores
+UNION ALL
+SELECT 'lineage_tracking', COUNT(*) FROM `onr_demo`.`app`.lineage_tracking;
+
 -- SUMMARY
 SELECT
     'VALIDATION COMPLETE' as status,

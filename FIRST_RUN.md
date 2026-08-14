@@ -115,7 +115,7 @@ The Streamlit app authenticates as a **different** service principal. Without gr
 | Open the app Home | Live counts 400 grants (not only “fixture”) if the warehouse is up |
 | Ingestion → Process **Live 8 grants** | `silver.grants` 400 → 408 |
 | Analytics → Predictions | Rows in `gold.grant_predictions` (`heuristic_v1`) |
-| Optional: run `04_mlflow_grant_model.py` on the cluster | Predictions become `rf_large_award_v1`; `gold.model_metrics` has accuracy / f1 |
+| Optional: run `04_mlflow_grant_model.py` on the cluster | Predictions become `rf_large_award_v1`; `gold.model_metrics` has accuracy / f1; model registered as `onr_demo.gold.grant_large_award` |
 | Ingestion → Reset (checkbox) | Back to 400 |
 
 ---
@@ -125,7 +125,8 @@ The Streamlit app authenticates as a **different** service principal. Without gr
 | Item | When |
 |------|------|
 | `01`–`03` on the cluster | To show Auto Loader on Volume files (copy `_staged/batch_live_grants.csv` → `landing/grants/`) |
-| `databricks bundle deploy -t poc` | Only **after** bootstrap (volumes need schema `bronze`). Does **not** create compute. |
+| `databricks bundle deploy -t poc` | Only **after** bootstrap (volumes need schema `bronze`). Does **not** create the warehouse/cluster. Deploys a **paused** file-arrival job (`onr-demo-grants-file-arrival`). |
+| [STRATEGIC_PROMPTS.md](STRATEGIC_PROMPTS.md) | Key-Personnel 60–90 s answers for 11.4 (a–e). Required for Completeness. |
 | `sql/setup_uc_objects.sql` | Only if you want empty DDL without running Spark. Skip if bootstrap already ran. |
 
 ---
@@ -139,4 +140,6 @@ The Streamlit app authenticates as a **different** service principal. Without gr
 | App: fixture mode + warehouse error | Warehouse name mismatch, warehouse stopped too long, or app SP cannot **CAN USE** the warehouse |
 | Process files fails with permission | Re-run `sql/grant_app_principal.sql` (needs **MANAGE** on silver/gold so the app can `CREATE OR REPLACE` tables you own) |
 | Notebook 04: no sklearn | Re-run all cells; first cells `%pip install` then restart Python |
-| MLflow “skipped” | Optional. UC tables still write. Create `/Shared/onr-demo` if you want the experiment |
+| MLflow “skipped” | Optional. UC tables still write. Notebook 04 creates `/Shared/onr-demo/grant-size` and registers `onr_demo.gold.grant_large_award` when MLflow is available |
+| Governance page has no quality scores | Process a file (or Reset) — the app SQL path now writes `app.data_quality_scores`. Or run `02_silver_quality.py`. |
+| Export date range ignored / no audit row | Pull latest `main`. Date filter is applied; exports land in `app.export_history`. |

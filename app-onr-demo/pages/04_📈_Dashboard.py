@@ -120,7 +120,7 @@ with tab3:
     render_search_extract(cursor, onr_catalog, onr_schema)
 
 with tab4:
-    render_activity_log()
+    render_activity_log(cursor, onr_catalog)
 
 # -------------------------------
 # DASHBOARD ARCHITECTURE
