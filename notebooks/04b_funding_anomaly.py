@@ -200,11 +200,42 @@ import mlflow
 import mlflow.sklearn
 
 EXPERIMENT = "/Shared/onr-demo/funding-anomaly"
-try:
-    mlflow.set_experiment(EXPERIMENT)
-except Exception:
-    mlflow.create_experiment(EXPERIMENT)
-    mlflow.set_experiment(EXPERIMENT)
+
+def _ensure_mlflow_experiment(path: str) -> str:
+    """Create /Shared/onr-demo if needed. Nested experiment create fails without the parent folder."""
+    parent = path.rsplit("/", 1)[0]
+    try:
+        from databricks.sdk import WorkspaceClient
+        w = WorkspaceClient()
+        for folder in (parent, f"/Workspace{parent}"):
+            try:
+                w.workspace.mkdirs(folder)
+            except Exception:
+                pass
+    except Exception as e:
+        print("workspace mkdirs skipped:", e)
+    try:
+        mlflow.set_experiment(path)
+        return path
+    except Exception as e1:
+        print("set_experiment failed:", e1)
+    try:
+        mlflow.create_experiment(path)
+        mlflow.set_experiment(path)
+        return path
+    except Exception as e2:
+        print("create_experiment failed:", e2)
+    fallback = "/Shared/funding-anomaly-onr-demo"
+    print(f"Falling back to {fallback}")
+    try:
+        mlflow.set_experiment(fallback)
+    except Exception:
+        mlflow.create_experiment(fallback)
+        mlflow.set_experiment(fallback)
+    return fallback
+
+EXPERIMENT = _ensure_mlflow_experiment(EXPERIMENT)
+print("MLflow experiment:", EXPERIMENT)
 
 def train_and_log(n_estimators, contamination, run_name=None):
     with mlflow.start_run(run_name=run_name) as run:

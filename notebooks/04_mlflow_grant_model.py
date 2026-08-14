@@ -97,10 +97,30 @@ try:
     mlflow.set_registry_uri("databricks-uc")
     experiment_path = "/Shared/onr-demo/grant-size"
     try:
+        from databricks.sdk import WorkspaceClient
+        w = WorkspaceClient()
+        for folder in ("/Shared/onr-demo", "/Workspace/Shared/onr-demo"):
+            try:
+                w.workspace.mkdirs(folder)
+            except Exception:
+                pass
+    except Exception:
+        pass
+    try:
         mlflow.set_experiment(experiment_path)
     except Exception:
-        mlflow.create_experiment(experiment_path)
-        mlflow.set_experiment(experiment_path)
+        try:
+            mlflow.create_experiment(experiment_path)
+            mlflow.set_experiment(experiment_path)
+        except Exception as e:
+            print("MLflow experiment create failed:", e)
+            experiment_path = "/Shared/grant-size-onr-demo"
+            try:
+                mlflow.set_experiment(experiment_path)
+            except Exception:
+                mlflow.create_experiment(experiment_path)
+                mlflow.set_experiment(experiment_path)
+            print("Fell back to", experiment_path)
 
     registered = f"{catalog}.gold.grant_large_award"
     with mlflow.start_run(run_name="rf-large-award"):
