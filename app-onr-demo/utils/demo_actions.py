@@ -14,6 +14,13 @@ from typing import Optional
 SEED_BATCH_ID = "seed-initial-2026"
 LIVE_BATCH_ID = "live-demo-2026"
 QUALITY_FAIL_BATCH_ID = "quality-fail-2026"
+STREAM_BATCH_ID = "stream-demo-2026"
+DEMO_BATCH_IDS = (
+    LIVE_BATCH_ID,
+    QUALITY_FAIL_BATCH_ID,
+    STREAM_BATCH_ID,
+    "sdp-stream-2026",
+)
 
 _APP_DATA = Path(__file__).resolve().parents[1] / "data"
 _REPO_MOCK = Path(__file__).resolve().parents[2] / "resources" / "mock_data"
@@ -94,7 +101,7 @@ def ingest_volume_csv_sql(cursor, catalog: str, volume_path: str, batch_id: str 
             SELECT
                 grant_no, title, abstract, program_area,
                 TRY_CAST(fiscal_year AS INT), TRY_CAST(amount_usd AS DOUBLE),
-                awardee, org_unit, classification_band, batch_id, created_at,
+                awardee, org_unit, classification_band, '{bid}', created_at,
                 CURRENT_TIMESTAMP(),
                 '{name}',
                 '{bid}'
@@ -575,17 +582,41 @@ def _write_baseline_quality_log(cursor, catalog: str, silver_n: int, bronze_n: i
         )
 
 
+def _demo_batch_sql() -> str:
+    return ", ".join("'" + b.replace("'", "") + "'" for b in DEMO_BATCH_IDS)
+
+
+def delete_non_seed_bronze(cursor, catalog: str) -> None:
+    """Remove inbound + stream batches. Check both batch_id and _batch_id.
+
+    Stream rows set `_batch_id = stream-demo-2026` even when the CSV still
+    carries a seed `batch_id`. coalesce(batch_id, _batch_id) would miss those.
+    """
+    demo = _demo_batch_sql()
+    for table in ("grants", "financial"):
+        cursor.execute(
+            f"""
+            DELETE FROM `{catalog}`.`bronze`.{table}
+            WHERE coalesce(batch_id, '{SEED_BATCH_ID}') <> '{SEED_BATCH_ID}'
+               OR coalesce(_batch_id, '{SEED_BATCH_ID}') <> '{SEED_BATCH_ID}'
+               OR batch_id IN ({demo})
+               OR _batch_id IN ({demo})
+            """
+        )
+
+
 def reset_to_seed_sql(cursor, catalog: str) -> dict:
     before = grant_count(cursor, catalog)
     _ensure_app_tables(cursor, catalog)
-    cursor.execute(
-        f"""DELETE FROM `{catalog}`.`bronze`.grants
-            WHERE coalesce(batch_id, _batch_id, '{SEED_BATCH_ID}') <> '{SEED_BATCH_ID}'"""
-    )
-    cursor.execute(
-        f"""DELETE FROM `{catalog}`.`bronze`.financial
-            WHERE coalesce(batch_id, _batch_id, '{SEED_BATCH_ID}') <> '{SEED_BATCH_ID}'"""
-    )
+    delete_non_seed_bronze(cursor, catalog)
+    try:
+        from databricks.sdk import WorkspaceClient
+
+        w = WorkspaceClient()
+        stream_csv = f"/Volumes/{catalog}/bronze/landing/grants/batch_live_grants_stream.csv"
+        w.files.delete(stream_csv)
+    except Exception:
+        pass
     # Safety: leftover quarantine-class rows must not sit in bronze after restore.
     try:
         cursor.execute(

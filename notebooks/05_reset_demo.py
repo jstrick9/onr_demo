@@ -4,10 +4,11 @@
 # MAGIC
 # MAGIC # 05 — Reset demo to seed
 # MAGIC
-# MAGIC Deletes live/quality-fail bronze rows, rebuilds silver + gold with Spark SQL
-# MAGIC (no `notebook.run` dependency), clears `app.quarantine_log` /
-# MAGIC `app.quality_findings` / `app.ingestion_quality_log`, writes a baseline
-# MAGIC silver quality log, and clears Auto Loader checkpoints.
+# MAGIC Deletes live / quality-fail / **stream** bronze rows (`live-demo-2026`,
+# MAGIC `quality-fail-2026`, `stream-demo-2026` on either `batch_id` or `_batch_id`),
+# MAGIC rebuilds silver + gold with Spark SQL (no `notebook.run` dependency),
+# MAGIC clears `app.quarantine_log` / `app.quality_findings` / `app.ingestion_quality_log`,
+# MAGIC writes a baseline silver quality log, and clears Auto Loader checkpoints.
 
 # COMMAND ----------
 
@@ -20,14 +21,26 @@ SEED = "seed-initial-2026"
 from pyspark.sql import functions as F
 from pyspark.sql.window import Window
 
-spark.sql(f"""
-DELETE FROM `{catalog}`.`bronze`.grants
-WHERE coalesce(batch_id, _batch_id, '{SEED}') <> '{SEED}'
-""")
-spark.sql(f"""
-DELETE FROM `{catalog}`.`bronze`.financial
-WHERE coalesce(batch_id, _batch_id, '{SEED}') <> '{SEED}'
-""")
+DEMO_BATCHES = (
+    "live-demo-2026",
+    "quality-fail-2026",
+    "stream-demo-2026",
+    "sdp-stream-2026",
+)
+demo_sql = ", ".join(f"'{b}'" for b in DEMO_BATCHES)
+for table in ("grants", "financial"):
+    spark.sql(f"""
+    DELETE FROM `{catalog}`.`bronze`.{table}
+    WHERE coalesce(batch_id, '{SEED}') <> '{SEED}'
+       OR coalesce(_batch_id, '{SEED}') <> '{SEED}'
+       OR batch_id IN ({demo_sql})
+       OR _batch_id IN ({demo_sql})
+    """)
+try:
+    dbutils.fs.rm(f"/Volumes/{catalog}/bronze/landing/grants/batch_live_grants_stream.csv", True)
+    print("Removed stream landing file")
+except Exception as e:
+    print("Stream file rm:", e)
 spark.sql(f"""
 DELETE FROM `{catalog}`.`bronze`.grants
 WHERE grant_no IS NULL OR trim(grant_no) = ''

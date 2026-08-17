@@ -557,8 +557,9 @@ def render_file_picker_and_reset(cursor, catalog: str):
                     except Exception as e:
                         st.error(f"Restore failed: {e}")
         st.caption(
-            "Removes inbound batches, rebuilds silver and gold, and clears the "
-            "quarantine error log plus quality findings."
+            "Removes inbound and stream batches (live-demo-2026, quality-fail-2026, "
+            "stream-demo-2026), rebuilds silver and gold, and clears the quarantine "
+            "error log plus quality findings."
         )
 
 

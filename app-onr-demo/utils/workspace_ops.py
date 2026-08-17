@@ -675,6 +675,14 @@ def start_stream(catalog: str = "onr_demo") -> dict:
             if not cursor:
                 raise RuntimeError("SQL warehouse is not connected")
             warehouse = ingest_volume_csv_sql(cursor, catalog, landed["dst"], "stream-demo-2026")
+            try:
+                from utils.demo_actions import refresh_silver_gold_sql
+
+                refresh_silver_gold_sql(cursor, catalog, quality_pipeline="stream_warehouse")
+                warehouse["silver_published"] = True
+            except Exception as pub_e:
+                warehouse["silver_published"] = False
+                warehouse["publish_error"] = str(pub_e)
             via = "warehouse"
             # Bronze loaded. Cluster/serverless miss is an explanation, not a hard fail.
             error = None
