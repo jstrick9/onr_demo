@@ -146,12 +146,12 @@ def _persist_export(cursor, catalog: str, rec: dict) -> None:
 # -------------------------------
 def render_export_options():
     """Display export format options."""
-    st.markdown("### 📤 Export Format Selection")
+    st.markdown("### Formats")
 
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        st.markdown("#### 📄 CSV Format")
+        st.markdown("#### CSV")
         st.markdown(
             """
         - Universal compatibility
@@ -163,7 +163,7 @@ def render_export_options():
         csv_selected = st.checkbox("Include CSV", value=True, key="export_csv")
 
     with col2:
-        st.markdown("#### 📋 JSON Format")
+        st.markdown("#### JSON")
         st.markdown(
             """
         - Web/API friendly
@@ -175,7 +175,7 @@ def render_export_options():
         json_selected = st.checkbox("Include JSON", value=True, key="export_json")
 
     with col3:
-        st.markdown("#### 📊 Parquet Format")
+        st.markdown("#### Parquet")
         st.markdown(
             """
         - Columnar storage
@@ -202,7 +202,7 @@ def render_export_options():
 # -------------------------------
 def render_dataset_selection(cursor, catalog: str, schema: str):
     """Display dataset selection for export."""
-    st.markdown("### 📁 Dataset Selection")
+    st.markdown("### Dataset")
 
     datasets = {
         "Grants Summary": f"`{catalog}`.`gold`.grants_summary",
@@ -242,7 +242,7 @@ def render_dataset_selection(cursor, catalog: str, schema: str):
 # -------------------------------
 def render_export_filters():
     """Display filters to apply before export."""
-    st.markdown("### 🔍 Apply Filters (Optional)")
+    st.markdown("### Filters")
     st.caption(
         "Date range is applied to the dataset’s date column "
         "(`fiscal_year` on summaries, `created_at` / `scored_at` / `latest_grant_date` on detail tables). "
@@ -287,7 +287,7 @@ def render_export_filters():
 # -------------------------------
 def render_secure_export(cursor, catalog: str, schema: str, dataset_table: str, formats: list, filters: dict):
     """Execute secure data export."""
-    st.markdown("### 🔒 Secure Export")
+    st.markdown("### Export")
 
     where_sql, filter_label = _filter_clause(dataset_table, filters)
     col, _kind = _date_column_for_table(dataset_table)
@@ -298,8 +298,8 @@ def render_secure_export(cursor, catalog: str, schema: str, dataset_table: str, 
         "TLS to the warehouse · row written to `app.export_history` · mock data only."
     )
 
-    if st.button("🚀 Execute Export", type="primary", key="exec_export_btn"):
-        with st.spinner("Preparing secure export..."):
+    if st.button("Execute export", type="primary", key="exec_export_btn"):
+        with st.spinner("Preparing export..."):
             progress = st.progress(0)
             status = st.empty()
 
@@ -433,15 +433,9 @@ def render_secure_export(cursor, catalog: str, schema: str, dataset_table: str, 
 # -------------------------------
 def render_api_documentation():
     """Display API documentation for integration."""
-    st.markdown("### 🔌 API Integration Documentation")
-
-    st.markdown(
-        """
-The live integration surface is **Databricks Statement Execution REST**
-(`/api/2.0/sql/statements`) against the serverless SQL warehouse — the same
-endpoint Advana, Cloud One, or any JDBC client would call. Use the button
-above. Do not treat `api.onr-demo.com` as a real host.
-        """
+    st.markdown("### API")
+    st.caption(
+        "Statement Execution REST is the integration surface Advana, Cloud One, or any JDBC client would call."
     )
     with st.expander("Illustrative resource paths (not a public host)"):
         st.caption(
@@ -465,20 +459,18 @@ above. Do not treat `api.onr-demo.com` as a real host.
 # -------------------------------
 def render_interoperability():
     """Display interoperability capabilities."""
-    st.markdown("### 🔄 Platform Interoperability")
+    st.markdown("### Interoperability")
 
     col1, col2 = st.columns(2)
 
     with col1:
-        st.markdown("#### ✅ Supported Integrations")
+        st.markdown("#### Downstream systems")
 
         integrations = [
-            {"platform": "Advana", "status": "✅ Compatible", "method": "REST API / JDBC"},
-            {"platform": "Cloud One", "status": "✅ Compatible", "method": "S3 / REST API"},
-            {"platform": "Palantir Foundry", "status": "✅ Compatible", "method": "API / Bulk Export"},
-            {"platform": "Tableau", "status": "✅ Compatible", "method": "JDBC / ODBC"},
-            {"platform": "Power BI", "status": "✅ Compatible", "method": "ODBC / REST"},
-            {"platform": "Excel", "status": "✅ Compatible", "method": "CSV / XLSX Export"},
+            {"platform": "Advana", "method": "Statement REST / JDBC"},
+            {"platform": "Cloud One", "method": "Parquet / REST"},
+            {"platform": "Tableau / Power BI", "method": "JDBC / ODBC"},
+            {"platform": "Excel / Sheets", "method": "CSV"},
         ]
 
         st.dataframe(pd.DataFrame(integrations), use_container_width=True)
@@ -529,7 +521,7 @@ def render_export_history(cursor=None, catalog: str = "onr_demo"):
 
     st.markdown("#### Persisted audit (`app.export_history`)")
     if uc.empty:
-        st.caption("No persisted exports yet. Run an export on the Data Export tab.")
+        st.caption("No persisted exports yet.")
     else:
         st.dataframe(uc, use_container_width=True)
 

@@ -20,7 +20,7 @@ _REPO_MOCK = Path(__file__).resolve().parents[2] / "resources" / "mock_data"
 
 FILE_PACKS = {
     "live": {
-        "label": "Live 8 grants (good file)",
+        "label": "Inbound grants",
         "batch_id": LIVE_BATCH_ID,
         "files": [
             _APP_DATA / "batch_live_grants.csv",
@@ -28,7 +28,7 @@ FILE_PACKS = {
         ],
     },
     "quality_fail": {
-        "label": "Quality-fail sample (3 bad rows)",
+        "label": "Quarantine sample",
         "batch_id": QUALITY_FAIL_BATCH_ID,
         "files": [
             _APP_DATA / "batch_quality_fail.csv",
@@ -173,8 +173,7 @@ def reset_to_seed_sql(cursor, catalog: str) -> dict:
             "reloaded_fixture": False,
             "checkpoints": clear_autoloader_checkpoints(),
             "warning": (
-                f"bronze.grants is {bronze_n}, expected 400. "
-                "Run notebooks/00_bootstrap.py on **onr demo cluster** to full-reload the fixture."
+                f"bronze.grants is {bronze_n}, expected 400. Restore from the official snapshot on the cluster."
             ),
         }
     refresh_silver_gold_sql(cursor, catalog)

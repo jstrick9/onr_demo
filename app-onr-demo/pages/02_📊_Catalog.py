@@ -1,7 +1,4 @@
-"""
-ONR ITSS POC — Element 4: Governance Page
-Data Governance, Quality, and Cataloging
-"""
+"""Catalog."""
 
 import streamlit as st
 from pathlib import Path
@@ -16,53 +13,34 @@ from utils.governance_helpers import (
     render_governance_policies,
     render_lineage_tracking,
 )
+from utils.ui import page_header, render_how_it_works
 
-# -------------------------------
-# PAGE CONFIGURATION
-# -------------------------------
 set_page_config(page_title="Catalog | ONR Portfolio")
 setup_sidebar()
 
-# -------------------------------
-# HEADER
-# -------------------------------
-st.title("Catalog")
-st.caption(
-    "Unity Catalog is the system of record: tables, tags, quality scores, and lineage. "
-    "Open Catalog Explorer for the native lineage graph."
+page_header(
+    "Governance",
+    "Catalog",
+    "Unity Catalog is the system of record for tables, tags, health, and lineage.",
 )
 
-# -------------------------------
-# SESSION STATE
-# -------------------------------
-sso_user = init_user_session_state()
-dbx_env = get_runtime_env()
+init_user_session_state()
+get_runtime_env()
 
-# Load configuration
 app_root = Path(__file__).resolve().parent.parent
-config_file = app_root / "config" / "onr-conf.yaml"
-
 try:
-    configs = read_yaml(str(config_file))
+    configs = read_yaml(str(app_root / "config" / "onr-conf.yaml"))
     onr_catalog = configs["schema"]["catalog"]
-    onr_schema = "silver"  # medallion layer used by helpers that still accept schema arg
+    onr_schema = "silver"
 except Exception as e:
     st.error(f"Configuration error: {str(e)}")
     st.stop()
 
 conn, cursor = get_connection()
 
-
-# -------------------------------
-# TABS
-# -------------------------------
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
-    "📚 Catalog Registry",
-    "🏥 Quality Scores",
-    "🔗 Lineage",
-    "🏷️ Policies & Tags",
-    "📝 Tracking"
-])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(
+    ["Registry", "Quality", "Lineage", "Policies & tags", "Tracking"]
+)
 
 with tab1:
     render_catalog_registry(cursor, onr_catalog, onr_schema)
@@ -79,82 +57,12 @@ with tab4:
 with tab5:
     render_lineage_tracking(cursor, onr_catalog, onr_schema)
 
-# -------------------------------
-# UNITY CATALOG OVERVIEW
-# -------------------------------
-st.markdown("---")
-with st.expander("How it works"):
-    st.code(
-        """
-catalog onr_demo
-  bronze (grants, financial, grants_stream, volumes landing + checkpoints)
-  silver (quality gates, _is_active)
-  gold   (summaries, budget, predictions, forecast, trends, anomalies)
-  app    (quality, lineage, audit, briefs)
-
-Governance: tags | constraints | UC lineage | audit | least privilege
-Open Catalog Explorer -> onr_demo -> Lineage for the native graph.
-        """.strip(),
-        language="text",
-    )
-
-# -------------------------------
-# DDL EXAMPLES
-# -------------------------------
-st.markdown("---")
-st.markdown("### 📝 Unity Catalog DDL Examples")
-
-with st.expander("View Catalog & Schema Setup"):
-    st.code(f"""
--- Create Catalog
-CREATE CATALOG IF NOT EXISTS `{onr_catalog}`
-    COMMENT 'ONR ITSS POC';
-
-CREATE SCHEMA IF NOT EXISTS `{onr_catalog}`.bronze;
-CREATE SCHEMA IF NOT EXISTS `{onr_catalog}`.silver;
-CREATE SCHEMA IF NOT EXISTS `{onr_catalog}`.gold;
-CREATE SCHEMA IF NOT EXISTS `{onr_catalog}`.app;
-
-CREATE VOLUME IF NOT EXISTS `{onr_catalog}`.bronze.landing;
-
-GRANT USE CATALOG ON CATALOG `{onr_catalog}` TO `data-engineers`;
-GRANT USE SCHEMA ON SCHEMA `{onr_catalog}`.bronze TO `data-engineers`;
-GRANT SELECT ON SCHEMA `{onr_catalog}`.gold TO `analysts`;
-    """, language="sql")
-
-with st.expander("View Table DDL with Quality Constraints"):
-    st.code(f"""
--- Silver Table with Quality Constraints
-CREATE TABLE IF NOT EXISTS `{onr_catalog}`.`silver`.grants (
-    grant_no STRING NOT NULL,
-    title STRING,
-    abstract STRING,
-    program_area STRING,
-    fiscal_year INT,
-    amount_usd DOUBLE,
-    awardee STRING NOT NULL,
-    org_unit STRING,
-    classification_band STRING,
-    batch_id STRING,
-    created_at TIMESTAMP,
-    _ingest_time TIMESTAMP,
-    _source_file STRING,
-    _is_active BOOLEAN DEFAULT true,
-    CONSTRAINT valid_amount CHECK (amount_usd > 0)
-) USING DELTA
-CLUSTER BY (program_area, fiscal_year)
-TBLPROPERTIES (
-    'delta.feature.allowColumnDefaults' = 'supported',
-    'quality' = 'gold'
-);
-
--- Tags for Governance
-ALTER TABLE `{onr_catalog}`.`silver`.grants 
-SET TAGS (
-    'domain' = 'research',
-    'data_sensitivity' = 'public',
-    'data_source' = 'mock',
-    'owner' = 'data-engineers'
-);
-    """, language="sql")
-
+render_how_it_works(
+    "How the catalog governs the portfolio",
+    [
+        {"name": "Register", "detail": "Ingested tables appear in bronze, silver, gold, and app."},
+        {"name": "Score", "detail": "Completeness, accuracy, consistency, and timeliness."},
+        {"name": "Lineage", "detail": "Landing to gold is mapped in Unity Catalog."},
+        {"name": "Policy", "detail": "Tags and grants travel with the table, not a side spreadsheet."},
+    ],
+)

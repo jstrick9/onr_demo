@@ -208,6 +208,6 @@ def validate_source_tables(cursor, configs):
             all_valid = False
     
     if not all_valid:
-        st.info("Run notebooks/00_bootstrap.py on **onr demo cluster** if tables are empty.")
+        st.caption("Source tables will appear when the warehouse is connected.")
     
     return all_valid

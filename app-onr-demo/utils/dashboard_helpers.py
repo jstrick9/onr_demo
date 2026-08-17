@@ -110,7 +110,7 @@ def render_executive_kpis(cursor=None, catalog: str = "onr_demo"):
             k = None
     if not k:
         k = portfolio_kpis()
-    st.markdown("### 📊 Executive Key Performance Indicators")
+    st.markdown("### Portfolio pulse")
     
     col1, col2, col3, col4, col5 = st.columns(5)
     
@@ -131,7 +131,7 @@ def render_executive_kpis(cursor=None, catalog: str = "onr_demo"):
 # -------------------------------
 def render_dashboard_filters():
     """Render interactive dashboard filters."""
-    st.markdown("### 🔍 Filter Controls")
+    st.markdown("### Filters")
     
     col1, col2, col3, col4 = st.columns(4)
     
@@ -188,7 +188,7 @@ def render_dashboard_filters():
 # -------------------------------
 def render_grants_overview(cursor, catalog: str, schema: str, filters: dict):
     """Display grants overview visualization."""
-    st.markdown("### 📈 Grants Overview")
+    st.markdown("### Grants overview")
     
     try:
         # Build query with filters
@@ -242,7 +242,8 @@ def render_grants_overview(cursor, catalog: str, schema: str, filters: dict):
                     labels={"Total Funding": "Total Funding ($)", "Grant Count": "# Grants"},
                     color_continuous_scale="Viridis"
                 )
-                st.plotly_chart(fig, use_container_width=True)
+                from utils.ui import style_fig
+                st.plotly_chart(style_fig(fig), use_container_width=True)
             
             with tab2:
                 st.dataframe(
@@ -342,8 +343,9 @@ def render_budget_execution(cursor=None, catalog: str = "onr_demo"):
         height=400
     )
     
-    st.plotly_chart(fig, use_container_width=True)
-    
+    from utils.ui import style_fig
+    st.plotly_chart(style_fig(fig), use_container_width=True)
+
     # Execution rate gauge
     col1, col2, col3 = st.columns(3)
     
@@ -419,7 +421,7 @@ def render_process_automation(cursor=None, catalog: str = "onr_demo"):
         except Exception:
             q = pd.DataFrame()
     if q.empty:
-        st.info("No `app.ingestion_quality_log` rows yet. Process a file or run 00_bootstrap.")
+        st.caption("No pipeline health rows yet.")
     else:
         st.dataframe(q, use_container_width=True)
 
@@ -464,10 +466,10 @@ def render_process_automation(cursor=None, catalog: str = "onr_demo"):
             flags = pd.DataFrame()
     st.markdown("#### Flagged funding anomalies")
     if flags.empty:
-        st.caption("No `gold.grant_anomaly_scores` flags yet. Process files or run notebook 04b.")
+        st.caption("No flagged awards.")
     else:
         st.dataframe(flags, use_container_width=True)
-        st.caption("IsolationForest (04b) or heuristic rules — same queue the Anomalies tab shows.")
+        st.caption("Same review queue as Analytics → Anomalies.")
 
 
 # -------------------------------

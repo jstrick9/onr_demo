@@ -1,7 +1,4 @@
-"""
-ONR ITSS POC — Element 6: Dashboard Page
-Unified Dashboard, Visualizations, and Process Automation
-"""
+"""Portfolio."""
 
 import streamlit as st
 from pathlib import Path
@@ -19,78 +16,44 @@ from utils.dashboard_helpers import (
     render_activity_log,
 )
 from utils.brief_helpers import render_daily_brief
+from utils.ui import page_header, render_how_it_works
 
-# -------------------------------
-# PAGE CONFIGURATION
-# -------------------------------
 set_page_config(page_title="Portfolio | ONR Portfolio")
 setup_sidebar()
 
-# -------------------------------
-# HEADER
-# -------------------------------
-st.title("Portfolio")
-st.caption(
-    "Search, filter, and extract without SQL. Generate a daily brief. "
-    "Review budget AT_RISK rows and the anomaly queue."
+page_header(
+    "Executive view",
+    "Portfolio",
+    "Search, filter, and extract without SQL. Daily brief, AT_RISK rows, and the anomaly queue.",
 )
 
-# -------------------------------
-# SESSION STATE
-# -------------------------------
-sso_user = init_user_session_state()
-dbx_env = get_runtime_env()
+init_user_session_state()
+get_runtime_env()
 
-# Load configuration
 app_root = Path(__file__).resolve().parent.parent
-config_file = app_root / "config" / "onr-conf.yaml"
-
 try:
-    configs = read_yaml(str(config_file))
+    configs = read_yaml(str(app_root / "config" / "onr-conf.yaml"))
     onr_catalog = configs["schema"]["catalog"]
-    onr_schema = "silver"  # medallion layer used by helpers that still accept schema arg
+    onr_schema = "silver"
 except Exception as e:
     st.error(f"Configuration error: {str(e)}")
     st.stop()
 
 conn, cursor = get_connection()
 
-
-# -------------------------------
-# EXECUTIVE KPIs
-# -------------------------------
 render_executive_kpis(cursor, onr_catalog)
-
-# -------------------------------
-# FILTERS
-# -------------------------------
-st.markdown("---")
 filters = render_dashboard_filters()
-
-# -------------------------------
-# GRANTS OVERVIEW
-# -------------------------------
-st.markdown("---")
 render_grants_overview(cursor, onr_catalog, onr_schema, filters)
 
-# -------------------------------
-# TABS
-# -------------------------------
-st.markdown("---")
-
-tab1, tab2, tab3, tab4 = st.tabs([
-    "💰 Budget Execution",
-    "🤖 Process Automation",
-    "🔍 Search & Extract",
-    "📜 Activity Log"
-])
+tab1, tab2, tab3, tab4 = st.tabs(
+    ["Budget", "Automation", "Search", "Activity"]
+)
 
 with tab1:
     render_budget_execution(cursor, onr_catalog)
 
 with tab2:
     render_daily_brief(cursor, onr_catalog)
-    st.markdown("---")
     render_process_automation(cursor, onr_catalog)
 
 with tab3:
@@ -99,14 +62,12 @@ with tab3:
 with tab4:
     render_activity_log(cursor, onr_catalog)
 
-# -------------------------------
-# DASHBOARD ARCHITECTURE
-# -------------------------------
-st.markdown("---")
-with st.expander("How it works"):
-    st.caption(
-        "Non-technical leader: search, filter FY/area, extract, daily brief. "
-        "Automation writes `app.daily_briefs`, budget AT_RISK, anomaly queue, "
-        "and `app.search_history` / `app.export_history` from gold tables."
-    )
-
+render_how_it_works(
+    "How leadership uses the portfolio",
+    [
+        {"name": "See", "detail": "KPIs and program mix from gold, no warehouse login required."},
+        {"name": "Filter", "detail": "Fiscal year, program area, classification, award size."},
+        {"name": "Search", "detail": "Find an award; the lookup is written to the audit log."},
+        {"name": "Act", "detail": "Daily brief, AT_RISK rows, and the anomaly queue."},
+    ],
+)

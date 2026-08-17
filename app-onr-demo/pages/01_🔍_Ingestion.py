@@ -1,4 +1,4 @@
-"""Ingestion — land files, quality gates, stream heartbeat."""
+"""Ingestion."""
 
 import streamlit as st
 from pathlib import Path
@@ -14,24 +14,23 @@ from utils.ingestion_helpers import (
     render_ingestion_demo,
     render_file_picker_and_reset,
 )
+from utils.ui import page_header, render_how_it_works
 
 set_page_config(page_title="Ingestion | ONR Portfolio")
 setup_sidebar()
 
-st.title("Ingestion")
-st.caption(
-    "Land a grants file, apply quality gates, and rebuild silver / gold. "
-    "Process uses the SQL warehouse. Auto Loader notebooks run on the cluster."
+page_header(
+    "Data operations",
+    "Ingestion",
+    "Land grants files, apply quality gates, and refresh the serving layer.",
 )
 
-sso_user = init_user_session_state()
-dbx_env = get_runtime_env()
+init_user_session_state()
+get_runtime_env()
 
 app_root = Path(__file__).resolve().parent.parent
-config_file = app_root / "config" / "onr-conf.yaml"
-
 try:
-    configs = read_yaml(str(config_file))
+    configs = read_yaml(str(app_root / "config" / "onr-conf.yaml"))
     onr_catalog = configs["schema"]["catalog"]
     onr_schema = "silver"
 except Exception as e:
@@ -40,15 +39,11 @@ except Exception as e:
 
 conn, cursor = get_connection()
 
-st.markdown("---")
 render_file_picker_and_reset(cursor, onr_catalog)
 
-tab1, tab2, tab3, tab4 = st.tabs([
-    "Pipeline Status",
-    "Quality Checks",
-    "Schema & Streaming",
-    "Auto Loader (cluster)",
-])
+tab1, tab2, tab3, tab4 = st.tabs(
+    ["Pipeline", "Quality", "Schema & stream", "Auto Loader"]
+)
 
 with tab1:
     render_ingestion_status(cursor, onr_catalog, onr_schema)
@@ -66,27 +61,13 @@ with tab3:
 with tab4:
     render_ingestion_demo(onr_catalog, onr_schema)
 
-st.markdown("---")
-with st.expander("How it works"):
-    st.code(
-        """
-landing Volume          Auto Loader                 bronze.grants
-CSV / JSON         ->   cloudFiles addNewColumns -> Raw Delta + _ingest_time
-/landing/grants                                     + _source_file
-                                                          |
-                                                          v
-                                                   Quality gates
-                                                   grant_no NOT NULL
-                                                   amount_usd > 0
-                                                          |
-                     PASS -> silver then gold             REJECT / skip
-                                                          empty / dup / amt <= 0
-
-Triggers (same bronze table unless noted)
-  App Process button : warehouse SQL INSERT
-  Notebook 01 / job  : availableNow (batch, file-arrival)
-  Notebook 01b       : processingTime 30s (live stream)
-  SDP pipeline       : sibling bronze.grants_stream
-        """.strip(),
-        language="text",
-    )
+render_how_it_works(
+    "How ingestion lands in the lakehouse",
+    [
+        {"name": "Landing", "detail": "CSV or JSON arrives on the governed Volume."},
+        {"name": "Detect", "detail": "Auto Loader or warehouse ingest picks up new files."},
+        {"name": "Quality", "detail": "Empty keys, non-positive amounts, and duplicates stop here."},
+        {"name": "Silver / gold", "detail": "Passed rows refresh the serving tables leadership reads."},
+    ],
+    note="Same bronze table whether the file arrived through the app or a streaming job.",
+)

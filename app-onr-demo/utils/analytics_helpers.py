@@ -87,20 +87,13 @@ def render_decision_support(cursor=None, catalog: str = "onr_demo"):
             n = int(rec.get("n") or rec.get("N") or 0)
             lines.append("- **{}**: ${:,.0f} across {} grants".format(area, fund, n))
         st.markdown("Largest program areas in gold / fixture:\n" + "\n".join(lines))
-    st.caption(
-        "Refresh gold via Process selected files or notebook 03. "
-        "Forecast + trend IDs land in `gold.funding_forecast` / `gold.program_trends`. "
-        "Run `04c_score_registered_models.py` to apply the registered RF + IsolationForest."
-    )
+    st.caption("Forecast and trend IDs live in gold.funding_forecast and gold.program_trends.")
 
 
 def render_grant_predictions(cursor, catalog: str, schema: str = "silver"):
     """Scores from gold.grant_predictions (UC)."""
     st.markdown("### Grant scores")
-    st.caption(
-        "`gold.grant_predictions` — heuristic after Process; "
-        "`rf_large_award_v1` after notebook **04c** (or 04)."
-    )
+    st.caption("gold.grant_predictions — registered Random Forest when scored, heuristic otherwise.")
     df = _query_df(
         cursor,
         f"""
@@ -112,7 +105,7 @@ def render_grant_predictions(cursor, catalog: str, schema: str = "silver"):
         """,
     )
     if df.empty:
-        st.info("No `gold.grant_predictions` yet. Process files or run 00_bootstrap / 03 / 04.")
+        st.caption("No predictions yet.")
         return
     show = df.rename(columns={
         "grant_no": "Grant No", "title": "Title", "program_area": "Program Area",
@@ -130,14 +123,11 @@ def render_grant_predictions(cursor, catalog: str, schema: str = "silver"):
 
 
 def render_model_execution(cursor=None, catalog: str = "onr_demo"):
-    """Point at the score-from-registry notebook; do not fake a training run."""
-    st.markdown("### Score from registered models")
-    st.markdown(
-        "On camera run `notebooks/04c_score_registered_models.py` on **onr demo cluster**. "
-        "It **does not train**. It loads `onr_demo.gold.grant_large_award` and "
-        "`onr_demo.gold.funding_anomaly_detector@champion` and writes "
-        "`gold.grant_predictions` + `gold.grant_anomaly_scores` for the current silver portfolio "
-        "(400 → 408 after the live drop). Training is night-before: notebooks **04** and **04b**."
+    """Latest model metrics from Unity Catalog."""
+    st.markdown("### Registered models")
+    st.caption(
+        "grant_large_award and funding_anomaly_detector@champion in Unity Catalog. "
+        "This page reads the scored gold tables."
     )
     df = _query_df(
         cursor,
@@ -252,7 +242,7 @@ def render_forecast_visualization(cursor=None, catalog: str = "onr_demo"):
         )
 
     if fc.empty:
-        st.info("No forecast rows yet. Process files or run notebook 03.")
+        st.caption("No forecast rows yet.")
         return
     roll = (
         fc.groupby(["fiscal_year", "series"], as_index=False)
@@ -282,7 +272,8 @@ def render_forecast_visualization(cursor=None, catalog: str = "onr_demo"):
             name="95% band", hoverinfo="skip",
         ))
     fig.update_layout(yaxis_title="Funding ($M)", height=420, barmode="group")
-    st.plotly_chart(fig, use_container_width=True)
+    from utils.ui import style_fig
+    st.plotly_chart(style_fig(fig), use_container_width=True)
 
     st.markdown("#### Trend IDs")
     if trends.empty:
@@ -404,7 +395,7 @@ def render_model_metrics(cursor=None, catalog: str = "onr_demo"):
         """,
     )
     if df.empty and anom.empty:
-        st.info("No model metrics yet. Process files / bootstrap writes heuristic rows; run notebook 04 (RF) and 04b (IsolationForest).")
+        st.caption("No model metrics yet.")
         return
     if not df.empty:
         st.markdown("#### Large-award classifier / heuristic")
@@ -459,11 +450,7 @@ def compute_funding_features(grants_df: pd.DataFrame, financial_df: pd.DataFrame
 def render_anomaly_detection(cursor=None, catalog: str = "onr_demo"):
     """IsolationForest / heuristic flags from gold.grant_anomaly_scores."""
     st.markdown("### Funding anomalies")
-    st.caption(
-        "`gold.grant_anomaly_scores` — IsolationForest after notebook **04b**, "
-        "heuristic rules after Process/bootstrap. Complements the RF Fund/Review/Defer "
-        "scores and the OLS forecast. Model: `onr_demo.gold.funding_anomaly_detector` @ champion."
-    )
+    st.caption("Review queue from gold.grant_anomaly_scores.")
     df = _query_df(
         cursor,
         f"""
@@ -533,8 +520,4 @@ def render_anomaly_detection(cursor=None, catalog: str = "onr_demo"):
             st.dataframe(show, use_container_width=True)
     with st.expander("All scored rows"):
         st.dataframe(df, use_container_width=True)
-    st.markdown(
-        "On **onr demo cluster** run `notebooks/04b_funding_anomaly.py` to train the "
-        "IsolationForest, log four MLflow runs, register "
-        "`onr_demo.gold.funding_anomaly_detector` @ `champion`, and replace heuristic flags."
-    )
+    st.caption("Champion model: funding_anomaly_detector in Unity Catalog.")

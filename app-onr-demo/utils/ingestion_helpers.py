@@ -12,10 +12,10 @@ import pandas as pd
 # -------------------------------
 def render_ingestion_status(cursor, catalog: str, schema: str):
     """Display current ingestion pipeline status."""
-    st.markdown("### 📊 Pipeline Status")
+    st.markdown("### Pipeline")
     
     if not cursor:
-        st.info("📊 Pipeline metrics will appear once the warehouse is connected.")
+        st.caption("Pipeline metrics appear when the warehouse is connected.")
         return
     try:
         # Get ingestion metrics
@@ -50,7 +50,7 @@ def render_ingestion_status(cursor, catalog: str, schema: str):
                 st.caption(f"Last ingest: {last_ingest}")
                 st.caption(f"Source files: {files}")
     except Exception as e:
-        st.info("📊 Pipeline metrics will appear once data is ingested.")
+        st.caption("Pipeline metrics appear after the first ingest.")
 
 
 # -------------------------------
@@ -58,7 +58,7 @@ def render_ingestion_status(cursor, catalog: str, schema: str):
 # -------------------------------
 def render_quality_checks(cursor, catalog: str, schema: str):
     """Display data quality check results from ingestion."""
-    st.markdown("### ✅ Quality Checks")
+    st.markdown("### Quality checks")
     
     if not cursor:
         st.info("Quality check results will appear after pipeline execution.")
@@ -99,7 +99,7 @@ def render_quality_checks(cursor, catalog: str, schema: str):
                 sty = df.style.applymap(color_status, subset=["Status"])
             st.dataframe(sty, use_container_width=True)
         else:
-            st.info("No quality check results available yet.")
+            st.caption("No quality results yet.")
     except Exception as e:
         st.info("Quality check results will appear after pipeline execution.")
 
@@ -153,8 +153,8 @@ def render_schema_evolution(cursor, catalog: str, schema: str):
 # -------------------------------
 def render_streaming_metrics(cursor=None, catalog: str = "onr_demo"):
     """File-based ingest health from bronze (Auto Loader availableNow)."""
-    st.markdown("### 📡 Ingest health")
-    files, last, n = "—", "—", "—"
+    st.markdown("### Stream health")
+    files, last, n, last2 = "—", "—", "—", "—"
     if cursor:
         try:
             cursor.execute(
@@ -166,39 +166,48 @@ def render_streaming_metrics(cursor=None, catalog: str = "onr_demo"):
             files, last, n = cursor.fetchone()
         except Exception:
             pass
+        try:
+            cursor.execute(
+                f"""
+                SELECT COUNT(*)
+                FROM `{catalog}`.`bronze`.grants
+                WHERE _ingest_time >= CURRENT_TIMESTAMP() - INTERVAL 2 MINUTES
+                """
+            )
+            last2 = cursor.fetchone()[0]
+        except Exception:
+            last2 = "—"
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Bronze grants", f"{n}")
     c2.metric("Source files", f"{files}")
-    c3.metric("Last ingest", str(last)[:19] if last and last != "—" else "—")
-    c4.metric("Trigger", "availableNow")
-    st.caption("Notebooks 01–03 run on **onr demo cluster**. SQL in this app uses **onr demo warehouse**.")
+    c3.metric("Last 2 min", f"{last2}")
+    c4.metric("Last ingest", str(last)[:19] if last and last != "—" else "—")
 
 
 def render_file_picker_and_reset(cursor, catalog: str):
-    """Pick staged files to land, or reset tables back to the 400-grant seed."""
+    """Inbound files and baseline restore."""
     from utils.demo_actions import (
         FILE_PACKS,
         grant_count,
         process_selected_files,
         reset_to_seed_sql,
-        try_start_cluster_notebooks,
     )
     import pandas as pd
 
-    st.markdown("### Process files / reset demo")
+    st.markdown("### Inbound files")
     now = grant_count(cursor, catalog)
     if now is not None:
-        st.metric("silver.grants", f"{now:,}")
+        st.metric("Active grants", f"{now:,}")
 
     packs = st.multiselect(
-        "Staged files to process",
+        "Queued files",
         options=list(FILE_PACKS.keys()),
         format_func=lambda k: FILE_PACKS[k]["label"],
         default=["live", "quality_fail"],
         key="ingest_packs",
     )
     uploaded = st.file_uploader(
-        "Or upload your own grants CSV (same columns as the fixture)",
+        "Or upload a grants CSV",
         type=["csv"],
         key="ingest_multi_upload",
     )
@@ -207,17 +216,17 @@ def render_file_picker_and_reset(cursor, catalog: str):
     if uploaded:
         extra_rows = pd.read_csv(uploaded).to_dict(orient="records")
         extra_name = uploaded.name
-        st.caption(f"Upload loaded: {len(extra_rows)} rows")
+        st.caption(f"{len(extra_rows)} rows loaded")
 
     c1, c2 = st.columns(2)
     with c1:
-        if st.button("Process selected files", type="primary", key="process_files"):
+        if st.button("Ingest selected files", type="primary", key="process_files"):
             if not cursor:
-                st.error("Connect **onr demo warehouse** to write UC tables.")
+                st.error("Warehouse is not connected.")
             elif not packs and not extra_rows:
-                st.warning("Pick at least one staged file or upload a CSV.")
+                st.warning("Select a queued file or upload a CSV.")
             else:
-                with st.spinner("Landing files → bronze → silver → gold…"):
+                with st.spinner("Landing files…"):
                     try:
                         result = process_selected_files(
                             cursor, catalog, packs, extra_rows=extra_rows, extra_name=extra_name
@@ -240,58 +249,44 @@ def render_file_picker_and_reset(cursor, catalog: str):
                             int(f.get("rejected") or 0) + int(f.get("skipped") or 0)
                             for f in result["files"]
                         )
-                        m3.metric("Rejected / skipped", f"{rejected:,}")
-                        st.success(
-                            f"silver.grants: {before_n} → {after_n}  ·  landed {landed}"
-                        )
-                        show = pd.DataFrame(result["files"])
-                        st.dataframe(show, use_container_width=True)
+                        m3.metric("Held / skipped", f"{rejected:,}")
+                        st.success(f"Active grants {before_n} → {after_n} · landed {landed}")
+                        st.dataframe(pd.DataFrame(result["files"]), use_container_width=True)
                         for fsum in result["files"]:
                             if fsum.get("reasons"):
-                                with st.expander(f"Details: {fsum['file']}"):
+                                with st.expander(fsum["file"]):
                                     for r in fsum["reasons"]:
                                         st.write(f"- {r}")
-                        st.info(try_start_cluster_notebooks())
                     except Exception as e:
-                        st.error(f"Process failed: {e}")
-                        st.exception(e)
+                        st.error(f"Ingest failed: {e}")
     with c2:
-        confirm = st.checkbox("I want to reset to the 400-grant seed", key="confirm_reset")
-        if st.button("Reset demo to seed", key="reset_seed", disabled=not confirm):
+        confirm = st.checkbox("Confirm restore of the baseline snapshot", key="confirm_reset")
+        if st.button("Restore baseline snapshot", key="reset_seed", disabled=not confirm):
             if not cursor:
-                st.error("Connect **onr demo warehouse** to reset tables.")
+                st.error("Warehouse is not connected.")
             else:
-                with st.spinner("Removing live batches, restoring seed, clearing checkpoints…"):
+                with st.spinner("Restoring baseline…"):
                     try:
                         result = reset_to_seed_sql(cursor, catalog)
                         st.success(
-                            f"Reset complete. silver.grants {result['before_silver']} → {result['after_silver']} "
-                            f"(bronze={result['bronze_grants']})"
+                            f"Baseline restored. Active grants {result['before_silver']} → {result['after_silver']}"
                         )
                         if result.get("warning"):
                             st.warning(result["warning"])
-                        st.caption(result["checkpoints"])
                     except Exception as e:
-                        st.error(f"Reset failed: {e}")
-                        st.exception(e)
-        st.caption(
-            "Reset deletes non-seed bronze rows, rebuilds silver/gold, and tries to clear "
-            "`/Volumes/onr_demo/bronze/checkpoints` so Auto Loader can re-read the same files. "
-            "Cluster equivalent: `notebooks/05_reset_demo.py` on **onr demo cluster**."
-        )
+                        st.error(f"Restore failed: {e}")
+        st.caption("Removes inbound batches and rebuilds silver and gold from the official snapshot.")
 
 
 def render_ingestion_demo(catalog: str, schema: str):
-    """Auto Loader snippet — writes happen via Process selected files or notebook 01."""
-    st.markdown("### Auto Loader (cluster)")
+    """Auto Loader contract — no operator runbook."""
+    st.markdown("### Auto Loader")
     st.caption(
-        "Use **Process selected files** above to land CSVs through the warehouse. "
-        "For the *streaming* beat, run `notebooks/01b_streaming_autoloader.py` on **onr demo cluster** "
-        "(processingTime 30s). Notebook 01 is the availableNow / file-arrival path."
+        "cloudFiles on the landing Volume. Schema evolution is addNewColumns. "
+        "Micro-batches use processingTime 30 seconds; file-arrival jobs use availableNow."
     )
     st.code(
         f'''
-# 01 — availableNow (file-arrival job). 01b — processingTime (live stream).
 spark.readStream.format("cloudFiles")
     .option("cloudFiles.format", "csv")
     .option("cloudFiles.schemaLocation", "/Volumes/{catalog}/bronze/landing/_schemas/grants")
@@ -300,8 +295,7 @@ spark.readStream.format("cloudFiles")
     .load("/Volumes/{catalog}/bronze/landing/grants/")
     .writeStream.format("delta")
     .option("checkpointLocation", "/Volumes/{catalog}/bronze/checkpoints/grants_stream")
-    .trigger(processingTime="30 seconds")   # 01b
-    # .trigger(availableNow=True)           # 01 / job
+    .trigger(processingTime="30 seconds")
     .toTable("`{catalog}`.`bronze`.grants")
         '''.strip(),
         language="python",

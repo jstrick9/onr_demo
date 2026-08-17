@@ -24,7 +24,7 @@
 | Clock | Tab | Live action | Must say |
 |------:|-----|-------------|----------|
 | 0:00–1:00 | App · Home | Point at **400** | Mock data; catalog |
-| 1:00–5:00 | App · Ingestion | Process **Live 8 + Quality-fail** | **Element 3**; 400→408; rejects; **(a)** |
+| 1:00–5:00 | App · Ingestion | Ingest **Inbound grants + Quarantine sample** | **Element 3**; 400→408; rejects; **(a)** |
 | 5:00–10:00 | 01b + Volume + App | **Run all** 01b; copy `batch_live_grants_stream.csv` | `processingTime` 30s; **(d)** |
 | 10:00–13:00 | Catalog + Catalog Explorer | Native **Lineage** | **Element 4**; **(e)** |
 | 13:00–18:00 | 04c + App · Analytics | **Run all** 04c; Predictions / Anomalies / Forecast | **Element 5**; **(b)** |
@@ -88,7 +88,7 @@ This recording is the data-and-analytics path — Elements three through seven. 
 
 A new grants file has arrived. I am not recoding a pipeline. The staged files are already on the Unity Catalog Volume. Live eight grants is the good file. Quality-fail sample is three bad rows — empty grant number, negative amount, and a duplicate.
 
-`[DO THIS]` Confirm both **Live 8 grants** and **Quality-fail sample** are selected. Click **Process selected files**. Keep talking while it spins.
+`[DO THIS]` Confirm both **Inbound grants** and **Quarantine sample** are selected. Click **Ingest selected files**. Keep talking while it spins.
 
 While that lands, here is how we sustain the legacy footprint — strategic prompt (a).
 
@@ -98,7 +98,7 @@ We do not cut over the D-and-A Portal, the reporting stack, or the existing ETL 
 
 There it is. Silver grants: four hundred to four hundred and eight. Eight rows landed. Empty `grant_no` never entered bronze. Negative amount is called out and will not pass silver. The duplicate was skipped. Automated quality at the gate — no manual recode.
 
-`[DO THIS]` Click the **Quality Checks** tab. Two seconds. Then go to tab **01b**. Do **not** Reset.
+`[DO THIS]` Click the **Quality** tab. Two seconds. Then go to tab **01b**. Do **not** restore the baseline.
 
 ---
 
@@ -118,7 +118,7 @@ Strategic prompt (d), resilience, while it finishes.
 
 Contract targets: RPO fifteen minutes for gold, essentially zero for bronze landing — the file is still sitting in the Volume. Delta time-travel is the row-level RPO. RTO thirty minutes to serving gold, about five minutes to serving the app. The warehouse is serverless; the app is already deployed. The all-purpose cluster is **not** on the serving path. Annual DR is non-disruptive: pause file-arrival, restore yesterday’s gold into a `onr_demo_dr` catalog, point a clone of the app at it, validate, tear down. We are **not** resetting on camera.
 
-`[DO THIS]` Optional two seconds: App → Ingestion → **Schema & Streaming** → **Last 2 min**. Then **Catalog Explorer** tab.
+`[DO THIS]` Optional two seconds: App → Ingestion → **Schema & stream** → **Last 2 min**. Then **Catalog Explorer** tab.
 
 ---
 
@@ -130,7 +130,7 @@ Contract targets: RPO fifteen minutes for gold, essentially zero for bronze land
 
 This is Unity Catalog’s native lineage — landing Volume, to bronze, to silver, to gold, to the app. That graph is the Element four visual. The Streamlit page is the operator console, not the system of record.
 
-`[DO THIS]` App tab → **Catalog** → **Catalog Registry**. Scroll just enough to show bronze, silver, gold, app.
+`[DO THIS]` App tab → **Catalog** → **Registry**. Scroll just enough to show bronze, silver, gold, app.
 
 Four schemas. The eight grants we just ingested are already registered. Metadata — source file, ingest time, tags — is on the table, not in a spreadsheet.
 
@@ -186,11 +186,11 @@ Two-year OLS forecast with a ninety-five percent band. That declining program is
 
 A non-technical leader does not need SQL. Sidebar still shows four hundred and eight.
 
-`[DO THIS]` Change one filter — fiscal year or a program area — then clear it or leave it. Click **Search & Extract**. Type `quantum`. Press enter / search.
+`[DO THIS]` Change one filter — fiscal year or a program area — then clear it or leave it. Click **Search**. Type `quantum`. Press enter / search.
 
 Search is live against gold. It is also written to `app.search_history`. That is the audit Zero Trust asked for, and it is the usage meter for prompt (e).
 
-`[DO THIS]` **Process Automation** → **Generate daily brief**. Wait for the text.
+`[DO THIS]` **Automation** → **Generate daily brief**. Wait for the text.
 
 Automated summary. If Foundation Model serving is on, this is `ai_query`. If not, it is the structured template. Either way a row lands in `app.daily_briefs`. That is process automation — not a staffer writing the morning book.
 
@@ -206,7 +206,7 @@ Same gold the forecast used. `AT_RISK` plus `TREND-DECLINE` is the reallocation 
 
 **Element seven: interoperability, data portability, and secure export.**
 
-`[DO THIS]` **Data Export**. Date range is already **2025 to 2026**. Leave **CSV** and **Parquet** on. Dataset **Grants Summary**. Click **Execute Export**. Click **Download Parquet** or **Download CSV** once.
+`[DO THIS]` **Export**. Date range is already **2025 to 2026**. Leave **CSV** and **Parquet** on. Dataset **Grants Summary**. Click **Execute export**. Download Parquet or CSV once.
 
 Filtered bulk extract — not `SELECT *`. Open formats: CSV, JSON, Parquet. Schema travels with the file: `grant_no`, `program_area`, `amount_usd`, `awardee`.
 

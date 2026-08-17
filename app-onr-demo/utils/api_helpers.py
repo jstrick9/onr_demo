@@ -39,14 +39,9 @@ def _resolve_warehouse():
 
 def render_live_statement_api(cursor=None, catalog: str = "onr_demo"):
     """Show a real Statement Execution REST call + live response."""
-    st.markdown("### Live API — Databricks Statement Execution REST")
-    st.markdown(
-        """
-        This is the **real, open, documented API** — not a fictional `api.onr-demo.com`.
-        Advana, Cloud One, or any enterprise client authenticates with OAuth and POSTs SQL
-        at `/api/2.0/sql/statements`. Same warehouse the dashboard already uses.
-        The token below is **redacted**; the live call uses the app service principal.
-        """
+    st.markdown("### Statement Execution API")
+    st.caption(
+        "POST /api/2.0/sql/statements — OAuth, same warehouse as this console. Token redacted."
     )
 
     statement = DEMO_STATEMENT.format(catalog=catalog)

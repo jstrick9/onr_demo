@@ -85,14 +85,9 @@ def render_quality_scores(cursor, catalog: str, schema: str):
                     
                     st.caption(f"Last assessed: {assessed}")
         else:
-            st.info(
-                "No `app.data_quality_scores` yet. "
-                "Process a file (or Reset) on the Ingestion page, or run `02_silver_quality.py` on **onr demo cluster**."
-            )
+            st.caption("No quality scores yet.")
     except Exception:
-        st.info(
-            "Quality scores appear after Process/Reset or notebook 02 writes `app.data_quality_scores`."
-        )
+        st.caption("Quality scores appear after the next ingest.")
 
 
 # -------------------------------
@@ -101,10 +96,9 @@ def render_quality_scores(cursor, catalog: str, schema: str):
 def render_lineage_visualization():
     """Display end-to-end data lineage visualization."""
     st.markdown("### End-to-end lineage")
-    st.info(
-        "**Camera beat:** open **Catalog Explorer → `onr_demo` → a table → Lineage**. "
-        "That native Unity Catalog graph is the lineage visual — landing Volume → "
-        "bronze → silver → gold → this app. The sketch below is a map, not the system of record."
+    st.caption(
+        "Unity Catalog lineage is the system of record — landing through gold. "
+        "Open Catalog Explorer on a table to see the native graph."
     )
 
     with st.expander("Sketch and hop list (not the native graph)"):
@@ -142,7 +136,7 @@ def render_lineage_visualization():
                     },
                     {
                         "Source": "onr_demo.gold.*",
-                        "Pipeline": "04c score / OLS",
+                        "Pipeline": "Registered models / OLS",
                         "Target": "predictions, anomalies, forecast",
                         "Quality": "registered model + trend IDs",
                     },
