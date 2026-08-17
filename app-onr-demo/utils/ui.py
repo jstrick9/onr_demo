@@ -48,7 +48,64 @@ html, body, [class*="css"] {{
   border: 1px solid {NAVY_EDGE};
 }}
 [data-testid="stSidebar"] [data-testid="stMetricValue"] {{ color: #e8d5a3 !important; }}
-[data-testid="stSidebar"] [data-testid="stMetric"] label {{ color: #8b9bb4 !important; }}
+[data-testid="stSidebarNav"] {{
+  padding-top: 4px;
+}}
+[data-testid="stSidebarNav"] a {{
+  border-radius: 8px;
+  border-left: 2px solid transparent;
+  letter-spacing: 0.04em;
+}}
+[data-testid="stSidebarNav"] a:hover {{
+  background: rgba(197,165,114,0.10) !important;
+}}
+[data-testid="stSidebarNav"] [aria-current="page"] {{
+  border-left: 2px solid {GOLD} !important;
+  background: rgba(197,165,114,0.14) !important;
+}}
+.hud {{
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(180deg, #123152, #0b1f3a);
+  border: 1px solid #2a4a70;
+  border-radius: 12px;
+  padding: 12px 12px 10px 12px;
+  margin-bottom: 10px;
+  box-shadow: 0 0 24px rgba(74,144,164,0.18);
+}}
+.hud-scan {{
+  position: absolute; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, #7ec8e3, transparent);
+  animation: scan 2.8s linear infinite;
+}}
+@keyframes scan {{
+  0% {{ top: 0; opacity: 0; }}
+  15% {{ opacity: 1; }}
+  100% {{ top: 100%; opacity: 0; }}
+}}
+.hud-row {{
+  display: flex; align-items: center; gap: 8px;
+  color: #cfe6f2; font-size: 0.72rem; font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  margin: 4px 0;
+}}
+.hud-orb {{
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #3d9b6e;
+  box-shadow: 0 0 8px #3d9b6e;
+  animation: pulse 1.6s infinite;
+}}
+.hud-orb.gold {{
+  background: {GOLD};
+  box-shadow: 0 0 8px {GOLD};
+}}
+.hud-user {{
+  color: #e8d5a3; font-size: 0.82rem; margin-top: 6px;
+}}
+.hud-foot {{
+  color: #8b9bb4; font-size: 0.68rem; letter-spacing: 0.12em;
+  margin-top: 8px;
+}}
 
 h1, h2, h3 {{ letter-spacing: 0.01em; color: {NAVY} !important; }}
 .stCaption, [data-testid="stCaption"] {{ color: {MUTED} !important; }}
@@ -293,14 +350,21 @@ def _lane(x, y, w, h, label, fill="#eef3f8") -> str:
     """
 
 
-def _box(x, y, w, h, title, line1="", line2="", head=NAVY) -> str:
-    t2 = f'<text x="{x+10}" y="{y+56}" fill="{MUTED}" font-size="11" font-family="Segoe UI, sans-serif">{_e(line2)}</text>' if line2 else ""
+def _box(x, y, w, h, title, line1="", line2="", head=NAVY, fs=11) -> str:
+    title_fs = max(fs, 10)
+    body_fs = max(fs - 1, 9)
+    t2 = (
+        f'<text x="{x+8}" y="{y+54}" fill="{MUTED}" font-size="{body_fs}" '
+        f'font-family="Segoe UI, sans-serif">{_e(line2)}</text>'
+        if line2
+        else ""
+    )
     return f"""
     <g>
       <rect x="{x}" y="{y}" width="{w}" height="{h}" rx="8" fill="#ffffff" stroke="{NAVY}" stroke-width="1.4"/>
       <path d="M {x} {y+22} L {x} {y+8} Q {x} {y} {x+8} {y} L {x+w-8} {y} Q {x+w} {y} {x+w} {y+8} L {x+w} {y+22} Z" fill="{head}"/>
-      <text x="{x+10}" y="{y+15}" fill="#f7f1e6" font-size="12" font-weight="700" font-family="Segoe UI, sans-serif">{_e(title)}</text>
-      <text x="{x+10}" y="{y+40}" fill="{INK}" font-size="11" font-family="Segoe UI, sans-serif">{_e(line1)}</text>
+      <text x="{x+8}" y="{y+15}" fill="#f7f1e6" font-size="{title_fs}" font-weight="700" font-family="Segoe UI, sans-serif">{_e(title)}</text>
+      <text x="{x+8}" y="{y+38}" fill="{INK}" font-size="{body_fs}" font-family="Segoe UI, sans-serif">{_e(line1)}</text>
       {t2}
     </g>
     """
@@ -355,7 +419,7 @@ def _wrap(title: str, svg_body: str, w: int, h: int, note: str = "") -> None:
     font-weight: 700;
     margin: 2px 0 10px 0;
   }}
-  svg {{ width: 100%; height: auto; display: block; }}
+  svg {{ width: 100%; height: {h}px; display: block; }}
   .note {{
     color: #5b6b80;
     font-size: 12px;
@@ -369,7 +433,7 @@ def _wrap(title: str, svg_body: str, w: int, h: int, note: str = "") -> None:
   <div class="board">
     <div class="kicker">Architecture</div>
     <div class="title">{html.escape(title)}</div>
-    <svg viewBox="0 0 {w} {h}" xmlns="http://www.w3.org/2000/svg">
+    <svg viewBox="0 0 {w} {h}" width="100%" height="{h}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
       {_defs()}
       <rect width="{w}" height="{h}" fill="url(#grid)"/>
       {svg_body}
@@ -378,7 +442,7 @@ def _wrap(title: str, svg_body: str, w: int, h: int, note: str = "") -> None:
   </div>
 </body>
 </html>"""
-    components.html(doc, height=int(h * 0.72) + 92, scrolling=False)
+    components.html(doc, height=h + 136, scrolling=False)
 
 
 def _diagram_ingestion() -> tuple[str, int, int, str, str]:
@@ -392,7 +456,7 @@ def _diagram_ingestion() -> tuple[str, int, int, str, str]:
             _box(24, 150, 168, 78, "Checkpoints", "Auto Loader offsets", "resumable", SILVER),
             _box(236, 48, 218, 78, "Detect", "cloudFiles / warehouse", "addNewColumns", TEAL),
             _box(236, 150, 218, 78, "bronze.grants", "Raw Delta + metadata", "_ingest_time", BRONZE),
-            _box(498, 48, 198, 78, "Quality gates", "grant_no · amount > 0", "dedupe", "#a15c4a"),
+            _box(498, 48, 198, 78, "Quality gates", "grant_no, amount positive", "dedupe", "#a15c4a"),
             _box(498, 160, 90, 70, "Pass", "to silver", "", OK),
             _box(600, 160, 90, 70, "Hold", "empty / dup / ≤0", "", "#a15c4a"),
             _box(740, 48, 216, 78, "silver.grants", "Cleansed, _is_active", "leadership-ready", SILVER),
@@ -547,8 +611,8 @@ def _diagram_infrastructure() -> tuple[str, int, int, str, str]:
             _lane(260, 8, 300, 250, "Bundle", "#f7f3ea"),
             _lane(572, 8, 200, 250, "Catalog", "#eef4ea"),
             _lane(784, 8, 188, 250, "Identity", "#f8f1ee"),
-            _box(24, 48, 208, 86, "SQL warehouse", "onr demo warehouse", "serverless", TEAL),
-            _box(24, 154, 208, 78, "Cluster", "onr demo cluster", "jobs · stream", NAVY),
+            _box(24, 48, 208, 90, "Warehouse", "onr demo warehouse", "serverless SQL", TEAL, fs=9),
+            _box(24, 154, 208, 82, "Cluster", "onr demo cluster", "jobs / stream", NAVY, fs=9),
             _box(276, 44, 130, 78, "Volumes", "landing", "checkpoints", BRONZE),
             _box(416, 44, 128, 78, "App", "onr-demo-poc", "", APP_LANE),
             _box(276, 140, 130, 78, "File-arrival", "paused job", "", SILVER),
