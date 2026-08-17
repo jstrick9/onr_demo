@@ -482,22 +482,37 @@ def _lane(x, y, w, h, label, fill="#eef3f8") -> str:
     """
 
 
-def _box(x, y, w, h, title, line1="", line2="", head=NAVY, fs=14) -> str:
+def _box(x, y, w, h, title, line1="", line2="", head=NAVY, fs=14, bullets=None) -> str:
     title_fs = max(fs, 13)
     body_fs = max(fs - 1, 12)
-    t2 = (
-        f'<text x="{x+10}" y="{y+70}" fill="{MUTED}" font-size="{body_fs}" '
-        f'font-weight="600" font-family="Segoe UI, sans-serif">{_e(line2)}</text>'
-        if line2
-        else ""
-    )
+    body = []
+    if bullets:
+        gap = 20 if len(bullets) <= 3 else 16
+        start = y + 48
+        for i, item in enumerate(bullets):
+            cy = start + i * gap
+            body.append(
+                f'<circle cx="{x + 16}" cy="{cy - 4}" r="2.6" fill="{GOLD}"/>'
+                f'<text x="{x + 26}" y="{cy}" fill="{INK}" font-size="{body_fs}" '
+                f'font-weight="600" font-family="Segoe UI, sans-serif">{_e(item)}</text>'
+            )
+    else:
+        if line1:
+            body.append(
+                f'<text x="{x+10}" y="{y+50}" fill="{INK}" font-size="{body_fs}" '
+                f'font-weight="600" font-family="Segoe UI, sans-serif">{_e(line1)}</text>'
+            )
+        if line2:
+            body.append(
+                f'<text x="{x+10}" y="{y+70}" fill="{MUTED}" font-size="{body_fs}" '
+                f'font-weight="600" font-family="Segoe UI, sans-serif">{_e(line2)}</text>'
+            )
     return f"""
     <g>
       <rect x="{x}" y="{y}" width="{w}" height="{h}" rx="8" fill="#ffffff" stroke="{NAVY}" stroke-width="1.4"/>
       <path d="M {x} {y+26} L {x} {y+8} Q {x} {y} {x+8} {y} L {x+w-8} {y} Q {x+w} {y} {x+w} {y+8} L {x+w} {y+26} Z" fill="{head}"/>
       <text x="{x+10}" y="{y+18}" fill="#fff7ed" font-size="{title_fs}" font-weight="800" font-family="Segoe UI, sans-serif">{_e(title)}</text>
-      <text x="{x+10}" y="{y+50}" fill="{INK}" font-size="{body_fs}" font-weight="600" font-family="Segoe UI, sans-serif">{_e(line1)}</text>
-      {t2}
+      {''.join(body)}
     </g>
     """
 
@@ -595,7 +610,7 @@ def _diagram_ingestion() -> tuple[str, int, int, str, str]:
             _box(330, 202, 238, 128, "bronze.grants", "Raw Delta + metadata", "_ingest_time", BRONZE),
             _box(632, 48, 238, 110, "Quality gates", "grant_no, amount positive", "dedupe", "#a15c4a"),
             _box(632, 186, 110, 144, "Pass", "to silver", "", OK),
-            _box(760, 186, 110, 144, "Hold", "empty / dup / amt", "", "#a15c4a"),
+            _box(760, 186, 110, 144, "Hold", head="#a15c4a", bullets=["empty", "dup", "amt"]),
             _box(934, 48, 238, 130, "silver.grants", "Cleansed, _is_active", "leadership-ready", SILVER),
             _box(934, 202, 238, 128, "gold.*", "KPIs, forecast, scores", "app reads here", GOLD_LANE),
             _arrow(266, 113, 330, 113, "arrive"),
