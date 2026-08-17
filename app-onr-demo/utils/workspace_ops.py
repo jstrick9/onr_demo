@@ -456,6 +456,8 @@ PAGE_LINKS = {
         {"kind": "volume", "volume": "landing", "label": "landing Volume"},
         {"kind": "table", "schema": "bronze", "table": "grants", "label": "bronze.grants"},
         {"kind": "table", "schema": "silver", "table": "grants", "label": "silver.grants"},
+        {"kind": "table", "schema": "app", "table": "quarantine_log", "label": "quarantine_log"},
+        {"kind": "table", "schema": "app", "table": "quality_findings", "label": "quality_findings"},
     ],
     "catalog": [
         {"kind": "table", "schema": "silver", "table": "grants", "tab": "lineage", "label": "Lineage"},

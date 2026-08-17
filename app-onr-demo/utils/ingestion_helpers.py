@@ -57,25 +57,69 @@ def render_ingestion_status(cursor, catalog: str, schema: str):
 # QUALITY CHECK RESULTS
 # -------------------------------
 def render_quality_checks(cursor, catalog: str, schema: str):
-    """Display data quality check results from ingestion."""
-    from utils.demo_actions import load_hold_queue
-    from utils.ui import hold_tray
+    """DQ console: scoreboard, quarantine error log, published warnings, gate history."""
+    from utils.demo_actions import load_hold_queue, load_quality_findings, grant_count, bronze_count
+    from utils.ui import hold_tray, provenance_note
 
-    st.markdown("### Quality checks")
-    st.caption("Gates from the last ingest: empty grant_no · duplicate · amount not positive.")
+    st.markdown("### Data quality")
+    st.caption(
+        "Quarantine (empty / dup / amt) never enters bronze — it is written to `app.quarantine_log`. "
+        "Warnings (missing abstract, unknown area, amount over $5M) still publish."
+    )
 
-    holds = load_hold_queue(cursor, catalog) if cursor else []
     last = st.session_state.get("last_ingest") or {}
-    if not holds:
-        holds = last.get("holds") or []
+    holds = (load_hold_queue(cursor, catalog) if cursor else []) or last.get("holds") or []
+    warns = (load_quality_findings(cursor, catalog) if cursor else []) or last.get("warnings") or []
+    silver_n = grant_count(cursor, catalog) if cursor else last.get("after")
+    bronze_n = None
+    if cursor:
+        try:
+            bronze_n = bronze_count(cursor, catalog)
+        except Exception:
+            bronze_n = last.get("bronze")
+    q_n = len(holds)
+    w_n = len(warns)
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Published (silver)", f"{silver_n:,}" if silver_n is not None else "—")
+    c2.metric("Bronze", f"{bronze_n:,}" if bronze_n is not None else "—")
+    c3.metric("Quarantined", f"{q_n:,}", delta=f"+{q_n}" if q_n else None)
+    c4.metric("Warnings (published)", f"{w_n:,}", delta=f"+{w_n}" if w_n else None)
+    provenance_note("app.quarantine_log", catalog)
+
+    st.markdown("#### Quarantine — error log")
     if holds:
         hold_tray(holds)
+        st.dataframe(
+            pd.DataFrame(
+                [
+                    {
+                        "grant_no": h.get("grant_no"),
+                        "reason": h.get("code"),
+                        "detail": h.get("detail"),
+                        "amount": h.get("amount_usd"),
+                        "title": h.get("title"),
+                    }
+                    for h in holds
+                ]
+            ),
+            use_container_width=True,
+            hide_index=True,
+        )
     else:
-        st.caption("Hold queue is empty — no rows were quarantined this session.")
+        st.caption("No quarantined rows.")
+
+    st.markdown("#### Warnings — published with a finding")
+    if warns:
+        show = pd.DataFrame(warns)
+        keep = [c for c in ("grant_no", "check_name", "detail", "program_area", "amount_usd", "severity", "published") if c in show.columns]
+        st.dataframe(show[keep] if keep else show, use_container_width=True, hide_index=True)
+    else:
+        st.caption("No warning findings on published rows.")
 
     if not cursor:
-        st.info("Warehouse is not connected — gate log is unavailable.")
+        st.info("Warehouse is not connected — gate history is unavailable.")
         return
+    st.markdown("#### Gate history")
     try:
         query = f"""
         SELECT
@@ -114,7 +158,7 @@ def render_quality_checks(cursor, catalog: str, schema: str):
         else:
             st.caption("No quality log rows yet. Ingest inbound grants and the quarantine sample.")
     except Exception as e:
-        st.caption(f"Quality log not readable ({e}). Hold tray above is the live gate.")
+        st.caption(f"Quality log not readable ({e}).")
 
 
 # -------------------------------
@@ -380,11 +424,14 @@ def _show_ingest_pulse(cursor, catalog: str) -> None:
             delta = None
     with c1:
         c1.metric("Active grants", f"{now:,}" if now is not None else "—", delta=delta)
+    warns = last.get("warnings") or []
     with c2:
         if held:
-            c2.metric("Held / skipped", f"{int(held):,}", delta=f"+{int(held)}")
+            c2.metric("Quarantined", f"{int(held):,}", delta=f"+{int(held)}")
         else:
-            c2.metric("Held / skipped", "0")
+            c2.metric("Quarantined", "0")
+    if warns:
+        st.caption(f"{len(warns)} warning(s) published with a finding — see Quality.")
     provenance_note("silver.grants", catalog)
     if last.get("before") is not None and last.get("after") is not None:
         st.caption(f"Active grants {last['before']} → {last['after']}")

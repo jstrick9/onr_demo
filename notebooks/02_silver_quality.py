@@ -38,8 +38,149 @@ import pyspark.sql.functions as F
 
 # COMMAND ----------
 
-# Read bronze grants
+# Known areas — keep in sync with app-onr-demo/utils/quality_rules.py
+KNOWN_AREAS = [
+    "AI/ML", "Autonomy", "Biotech", "Cyber",
+    "Directed Energy", "Materials", "Quantum", "Undersea",
+]
+LARGE_AMOUNT_USD = 5000000
+
 bronze_grants = spark.table(f"`{catalog}`.`bronze`.grants")
+
+# Quarantine never stays in bronze: log then delete.
+spark.sql(f"""
+CREATE TABLE IF NOT EXISTS `{catalog}`.`app`.quarantine_log (
+    event_id STRING NOT NULL,
+    grant_no STRING,
+    title STRING,
+    abstract STRING,
+    program_area STRING,
+    fiscal_year INT,
+    amount_usd DOUBLE,
+    awardee STRING,
+    org_unit STRING,
+    classification_band STRING,
+    batch_id STRING,
+    reason_code STRING,
+    reason_detail STRING,
+    source_file STRING,
+    pipeline_name STRING,
+    quarantined_at TIMESTAMP
+) USING DELTA
+""")
+spark.sql(f"""
+CREATE TABLE IF NOT EXISTS `{catalog}`.`app`.quality_findings (
+    finding_id STRING NOT NULL,
+    grant_no STRING,
+    title STRING,
+    program_area STRING,
+    amount_usd DOUBLE,
+    severity STRING,
+    check_name STRING,
+    detail STRING,
+    published BOOLEAN,
+    source_file STRING,
+    pipeline_name STRING,
+    found_at TIMESTAMP
+) USING DELTA
+""")
+
+q_empty = bronze_grants.filter(
+    col("grant_no").isNull() | (trim(col("grant_no")) == "")
+).withColumn("reason_code", lit("empty")).withColumn("reason_detail", lit("Empty grant_no"))
+q_amt = bronze_grants.filter(
+    col("amount_usd").isNull() | (col("amount_usd") <= 0)
+).withColumn("reason_code", lit("amt")).withColumn("reason_detail", lit("Amount not positive"))
+win = Window.partitionBy("grant_no").orderBy(col("_ingest_time").desc())
+q_dup = (
+    bronze_grants.filter(col("grant_no").isNotNull() & (trim(col("grant_no")) != ""))
+    .withColumn("_rn", F.row_number().over(win))
+    .filter(col("_rn") > 1)
+    .drop("_rn")
+    .withColumn("reason_code", lit("dup"))
+    .withColumn("reason_detail", lit("Duplicate grant_no"))
+)
+q_all = q_empty.unionByName(q_amt, allowMissingColumns=True).unionByName(q_dup, allowMissingColumns=True)
+q_n = q_all.count()
+if q_n:
+    from pyspark.sql.functions import monotonically_increasing_id
+    logged = (
+        q_all.select(
+            "grant_no", "title", "abstract", "program_area", "fiscal_year", "amount_usd",
+            "awardee", "org_unit", "classification_band", "batch_id",
+            "reason_code", "reason_detail",
+        )
+        .withColumn("source_file", lit("02_silver_quality"))
+        .withColumn("pipeline_name", lit("02_silver_quality"))
+        .withColumn("quarantined_at", F.current_timestamp())
+        .withColumn("event_id", F.concat(lit("q-02-"), monotonically_increasing_id().cast("string")))
+    )
+    logged.write.mode("append").saveAsTable(f"`{catalog}`.`app`.quarantine_log")
+# Keep one good row per grant_no; drop empty / non-positive.
+bronze_grants = (
+    bronze_grants.filter(
+        col("grant_no").isNotNull() & (trim(col("grant_no")) != "") & (col("amount_usd") > 0)
+    )
+    .withColumn("_rn", F.row_number().over(win))
+    .filter(col("_rn") == 1)
+    .drop("_rn")
+)
+bronze_grants.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(
+    f"`{catalog}`.`bronze`.grants"
+)
+bronze_grants = spark.table(f"`{catalog}`.`bronze`.grants")
+print(f"Quarantined {q_n} row(s) to app.quarantine_log. Bronze now {bronze_grants.count():,} clean rows.")
+
+# Warnings on rows that will publish
+warn_rows = (
+    bronze_grants
+    .withColumn(
+        "missing_abstract",
+        (col("abstract").isNull()) | (trim(col("abstract")) == ""),
+    )
+    .withColumn(
+        "unknown_area",
+        ~col("program_area").isin(KNOWN_AREAS) | col("program_area").isNull(),
+    )
+    .withColumn("large_amount", col("amount_usd") > LARGE_AMOUNT_USD)
+)
+from pyspark.sql.functions import explode, array, struct
+warn_long = (
+    warn_rows.select(
+        "grant_no", "title", "program_area", "amount_usd",
+        F.when(col("missing_abstract"), lit("missing_abstract")).otherwise(lit(None)).alias("w1"),
+        F.when(col("unknown_area"), lit("unknown_program_area")).otherwise(lit(None)).alias("w2"),
+        F.when(col("large_amount"), lit("large_amount")).otherwise(lit(None)).alias("w3"),
+    )
+)
+# Build findings via SQL for portability
+spark.sql(f"""
+CREATE OR REPLACE TABLE `{catalog}`.`app`.quality_findings AS
+SELECT
+  concat('w-02-', grant_no, '-', check_name) AS finding_id,
+  grant_no, title, program_area, amount_usd,
+  'WARN' AS severity,
+  check_name,
+  CASE check_name
+    WHEN 'missing_abstract' THEN 'Missing abstract'
+    WHEN 'unknown_program_area' THEN concat('Unknown program area: ', coalesce(program_area, ''))
+    WHEN 'large_amount' THEN concat('Amount over $5M ($', cast(round(amount_usd,0) as string), ')')
+  END AS detail,
+  true AS published,
+  '02_silver_quality' AS source_file,
+  '02_silver_quality' AS pipeline_name,
+  current_timestamp() AS found_at
+FROM `{catalog}`.`bronze`.grants
+LATERAL VIEW explode(filter(array(
+  CASE WHEN abstract IS NULL OR trim(abstract) = '' THEN 'missing_abstract' END,
+  CASE WHEN program_area IS NULL OR program_area NOT IN
+    ('AI/ML','Autonomy','Biotech','Cyber','Directed Energy','Materials','Quantum','Undersea')
+    THEN 'unknown_program_area' END,
+  CASE WHEN amount_usd > 5000000 THEN 'large_amount' END
+), x -> x IS NOT NULL)) t AS check_name
+""")
+print("Wrote app.quality_findings for published warnings.")
+
 
 # Cleanse and transform
 silver_grants = (

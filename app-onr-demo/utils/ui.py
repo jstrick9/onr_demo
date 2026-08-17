@@ -756,7 +756,7 @@ def hold_tray(rows: list[dict]) -> None:
     bits = [
         '<div class="hold-tray">',
         '<div class="hold-kicker">Hold</div>',
-        '<div class="hold-title">Quality gate — not in silver</div>',
+        '<div class="hold-title">Quarantine — error log, not bronze</div>',
     ]
     for rec in rows:
         code = str(rec.get("code") or "hold").lower()

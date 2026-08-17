@@ -90,7 +90,7 @@ We do not cut over the D-and-A Portal, the reporting stack, or the existing ETL 
 
 `[DO THIS]` Point at **Active grants 400 → 408** and **Held / skipped +3**. Point at the **Hold** tray — chips **empty**, **dup**, **amt**.
 
-There it is. Silver grants: four hundred to four hundred and eight. Eight rows landed. Empty `grant_no` never entered bronze. Negative amount is called out and will not pass silver. The duplicate was skipped. Automated quality at the gate — no manual recode. The Hold tray is the same three words as the architecture board.
+There it is. Silver and bronze: four hundred to four hundred and eight. Eight rows published. The three quarantine rows never entered bronze — they are in `app.quarantine_log` (empty, dup, amt). One live grant published with a warning (missing abstract) in `app.quality_findings`. Open **Quality** to see the scoreboard, error log, and warnings.
 
 Same Element three. That button was the warehouse SQL path. Next is the near-real-time path. I am not leaving this console.
 

@@ -80,49 +80,48 @@ def _hold_row(code: str, rec: dict, gn: str, amount=None, detail: str = "") -> d
 
 
 def ingest_grant_rows(cursor, catalog: str, rows: list[dict], source_file: str, skip_existing: bool = True) -> dict:
+    from utils.quality_rules import quarantine_reason, warn_findings
+
     landed = skipped = rejected = held = 0
     reasons: list[str] = []
     holds: list[dict] = []
+    warnings: list[dict] = []
     for rec in rows:
-        raw_gn = rec.get("grant_no")
-        try:
-            import math
-            if raw_gn is None or (isinstance(raw_gn, float) and math.isnan(raw_gn)):
-                raw_gn = ""
-        except Exception:
-            pass
-        gn = str(raw_gn).strip()
-        if not gn or gn.lower() in {"nan", "none", "null"}:
-            rejected += 1
+        gn_raw = rec.get("grant_no")
+        exists = False
+        gn = "" if gn_raw is None else str(gn_raw).strip()
+        if skip_existing and gn and gn.lower() not in {"nan", "none", "null"}:
+            cursor.execute(
+                f"SELECT COUNT(*) FROM `{catalog}`.`bronze`.grants WHERE grant_no = {_sql_str(gn)}"
+            )
+            exists = int(cursor.fetchone()[0]) > 0
+        q = quarantine_reason(rec, exists)
+        if q:
+            code, detail = q
             held += 1
-            reasons.append("empty grant_no (bronze NOT NULL)")
-            holds.append(_hold_row("empty", rec, "—", rec.get("amount_usd"), "empty grant_no"))
+            if code == "dup":
+                skipped += 1
+            else:
+                rejected += 1
+            reasons.append(f"{gn or '—'}: {detail}")
+            holds.append({**_hold_row(code, rec, gn or "—", rec.get("amount_usd"), detail), "source_file": source_file, "record": rec})
             continue
         try:
             amount = float(rec.get("amount_usd") or 0)
         except (TypeError, ValueError):
-            rejected += 1
-            held += 1
-            reasons.append(f"{gn}: amount not numeric")
-            holds.append(_hold_row("amt", rec, gn, rec.get("amount_usd"), "amount not numeric"))
-            continue
-        row_held = False
-        if amount <= 0:
-            held += 1
-            row_held = True
-            reasons.append(f"{gn}: amount {amount} will fail silver (amount_usd > 0)")
-            holds.append(_hold_row("amt", rec, gn, amount, "amount not positive"))
-        if skip_existing:
-            cursor.execute(
-                f"SELECT COUNT(*) FROM `{catalog}`.`bronze`.grants WHERE grant_no = {_sql_str(gn)}"
+            amount = 0.0
+        for check_name, detail in warn_findings(rec):
+            warnings.append(
+                {
+                    "grant_no": gn,
+                    "check_name": check_name,
+                    "detail": detail,
+                    "source_file": source_file,
+                    "title": rec.get("title"),
+                    "amount_usd": rec.get("amount_usd"),
+                    "program_area": rec.get("program_area"),
+                }
             )
-            if int(cursor.fetchone()[0]) > 0:
-                skipped += 1
-                if not row_held:
-                    held += 1
-                reasons.append(f"{gn}: duplicate")
-                holds.append(_hold_row("dup", rec, gn, amount, "duplicate"))
-                continue
         try:
             awardee = rec.get("awardee")
             cursor.execute(
@@ -154,7 +153,7 @@ def ingest_grant_rows(cursor, catalog: str, rows: list[dict], source_file: str, 
             rejected += 1
             held += 1
             reasons.append(f"{gn}: {e}")
-            holds.append(_hold_row("empty", rec, gn, amount, str(e)))
+            holds.append({**_hold_row("empty", rec, gn, amount, str(e)), "source_file": source_file, "record": rec})
     return {
         "landed": landed,
         "skipped": skipped,
@@ -162,6 +161,7 @@ def ingest_grant_rows(cursor, catalog: str, rows: list[dict], source_file: str, 
         "held": held,
         "reasons": reasons[:20],
         "holds": holds,
+        "warnings": warnings,
         "input_rows": len(rows),
     }
 
@@ -180,9 +180,18 @@ def process_selected_files(cursor, catalog: str, pack_keys: list[str], extra_row
         summaries.append({"file": extra_name, **ingest_grant_rows(cursor, catalog, extra_rows, extra_name, True)})
     refresh_silver_gold_sql(cursor, catalog)
     holds = [h for s in summaries for h in (s.get("holds") or [])]
+    warnings = [w for s in summaries for w in (s.get("warnings") or [])]
     held = sum(int(s.get("held") or 0) for s in summaries)
     try:
+        _write_quarantine_log(cursor, catalog, holds)
+    except Exception:
+        pass
+    try:
         _write_hold_queue(cursor, catalog, holds)
+    except Exception:
+        pass
+    try:
+        _write_quality_findings(cursor, catalog, warnings)
     except Exception:
         pass
     after = grant_count(cursor, catalog)
@@ -199,6 +208,7 @@ def process_selected_files(cursor, catalog: str, pack_keys: list[str], extra_row
             before=before,
             after=after,
             bronze_n=bronze_n,
+            warn_n=len(warnings),
         )
     except Exception:
         pass
@@ -209,6 +219,7 @@ def process_selected_files(cursor, catalog: str, pack_keys: list[str], extra_row
         "files": summaries,
         "holds": holds,
         "held": held,
+        "warnings": warnings,
     }
 
 
@@ -220,6 +231,7 @@ def _write_ingest_quality_log(
     before,
     after,
     bronze_n,
+    warn_n: int = 0,
 ) -> None:
     """One row per quality gate so the Quality tab matches the Hold tray."""
     if not cursor:
@@ -244,6 +256,7 @@ def _write_ingest_quality_log(
             after if after is not None else 0,
             held_n,
         ),
+        ("warn_published", True, checked, landed, int(warn_n or 0)),
     ]
     stamp = "date_format(current_timestamp(), 'yyyyMMddHHmmss')"
     for name, ok, n_checked, n_pass, n_fail in rows:
@@ -265,6 +278,137 @@ def _write_ingest_quality_log(
             )
             """
         )
+
+
+def _write_quarantine_log(cursor, catalog: str, holds: list[dict]) -> None:
+    if not cursor:
+        return
+    _ensure_app_tables(cursor, catalog)
+    cursor.execute(f"DELETE FROM `{catalog}`.`app`.quarantine_log")
+    for i, rec in enumerate(holds or []):
+        src = rec.get("record") or {}
+        try:
+            amt = rec.get("amount_usd", src.get("amount_usd"))
+            amt_sql = "NULL"
+            if amt is not None and str(amt) not in {"", "nan", "None"}:
+                amt_sql = str(float(amt))
+        except (TypeError, ValueError):
+            amt_sql = "NULL"
+        fy = src.get("fiscal_year")
+        try:
+            fy_sql = str(int(float(fy))) if fy not in (None, "") else "NULL"
+        except (TypeError, ValueError):
+            fy_sql = "NULL"
+        cursor.execute(
+            f"""
+            INSERT INTO `{catalog}`.`app`.quarantine_log
+            (event_id, grant_no, title, abstract, program_area, fiscal_year, amount_usd,
+             awardee, org_unit, classification_band, batch_id, reason_code, reason_detail,
+             source_file, pipeline_name, quarantined_at)
+            VALUES (
+                concat('q-', date_format(current_timestamp(), 'yyyyMMddHHmmss'), '-{i}'),
+                {_sql_str(rec.get("grant_no"))},
+                {_sql_str(rec.get("title") or src.get("title"))},
+                {_sql_str(src.get("abstract"))},
+                {_sql_str(src.get("program_area"))},
+                {fy_sql},
+                {amt_sql},
+                {_sql_str(src.get("awardee"))},
+                {_sql_str(src.get("org_unit"))},
+                {_sql_str(src.get("classification_band"))},
+                {_sql_str(src.get("batch_id"))},
+                {_sql_str(rec.get("code"))},
+                {_sql_str(rec.get("detail"))},
+                {_sql_str(rec.get("source_file") or "ingest")},
+                'ingest_selected_files',
+                CURRENT_TIMESTAMP()
+            )
+            """
+        )
+
+
+def _write_quality_findings(cursor, catalog: str, warnings: list[dict]) -> None:
+    if not cursor:
+        return
+    _ensure_app_tables(cursor, catalog)
+    cursor.execute(f"DELETE FROM `{catalog}`.`app`.quality_findings")
+    for i, rec in enumerate(warnings or []):
+        try:
+            amt = rec.get("amount_usd")
+            amt_sql = "NULL"
+            if amt is not None and str(amt) not in {"", "nan", "None"}:
+                amt_sql = str(float(amt))
+        except (TypeError, ValueError):
+            amt_sql = "NULL"
+        cursor.execute(
+            f"""
+            INSERT INTO `{catalog}`.`app`.quality_findings
+            (finding_id, grant_no, title, program_area, amount_usd, severity,
+             check_name, detail, published, source_file, pipeline_name, found_at)
+            VALUES (
+                concat('w-', date_format(current_timestamp(), 'yyyyMMddHHmmss'), '-{i}'),
+                {_sql_str(rec.get("grant_no"))},
+                {_sql_str(rec.get("title"))},
+                {_sql_str(rec.get("program_area"))},
+                {amt_sql},
+                'WARN',
+                {_sql_str(rec.get("check_name"))},
+                {_sql_str(rec.get("detail"))},
+                true,
+                {_sql_str(rec.get("source_file") or "ingest")},
+                'ingest_selected_files',
+                CURRENT_TIMESTAMP()
+            )
+            """
+        )
+
+
+def load_quarantine_log(cursor, catalog: str) -> list[dict]:
+    if not cursor:
+        return []
+    try:
+        cursor.execute(
+            f"""
+            SELECT grant_no, title, amount_usd, reason_code, reason_detail, source_file, quarantined_at
+            FROM `{catalog}`.`app`.quarantine_log
+            ORDER BY quarantined_at DESC
+            """
+        )
+        cols = [str(d[0]).lower() for d in cursor.description]
+        out = []
+        for row in cursor.fetchall():
+            rec = dict(zip(cols, row))
+            out.append(
+                {
+                    "grant_no": rec.get("grant_no"),
+                    "title": rec.get("title"),
+                    "amount_usd": rec.get("amount_usd"),
+                    "code": rec.get("reason_code"),
+                    "detail": rec.get("reason_detail"),
+                    "source_file": rec.get("source_file"),
+                }
+            )
+        return out
+    except Exception:
+        return []
+
+
+def load_quality_findings(cursor, catalog: str) -> list[dict]:
+    if not cursor:
+        return []
+    try:
+        cursor.execute(
+            f"""
+            SELECT grant_no, title, program_area, amount_usd, severity, check_name,
+                   detail, published, source_file, found_at
+            FROM `{catalog}`.`app`.quality_findings
+            ORDER BY found_at DESC
+            """
+        )
+        cols = [str(d[0]).lower() for d in cursor.description]
+        return [dict(zip(cols, row)) for row in cursor.fetchall()]
+    except Exception:
+        return []
 
 
 def _write_hold_queue(cursor, catalog: str, holds: list[dict]) -> None:
@@ -299,6 +443,9 @@ def _write_hold_queue(cursor, catalog: str, holds: list[dict]) -> None:
 
 
 def load_hold_queue(cursor, catalog: str) -> list[dict]:
+    q = load_quarantine_log(cursor, catalog)
+    if q:
+        return q
     if not cursor:
         return []
     try:
@@ -314,9 +461,7 @@ def load_hold_queue(cursor, catalog: str) -> list[dict]:
         for row in cursor.fetchall():
             rec = dict(zip(cols, row))
             out.append(
-                {
-                    "grant_no": rec.get("grant_no"),
-                    "title": rec.get("title"),
+                {  "title": rec.get("title"),
                     "amount_usd": rec.get("amount_usd"),
                     "code": rec.get("reason_code"),
                     "detail": rec.get("detail"),
@@ -337,10 +482,11 @@ def reset_to_seed_sql(cursor, catalog: str) -> dict:
         f"""DELETE FROM `{catalog}`.`bronze`.financial
             WHERE coalesce(batch_id, _batch_id, '{SEED_BATCH_ID}') <> '{SEED_BATCH_ID}'"""
     )
-    try:
-        cursor.execute(f"DELETE FROM `{catalog}`.`app`.hold_queue")
-    except Exception:
-        pass
+    for table in ("hold_queue", "quarantine_log", "quality_findings"):
+        try:
+            cursor.execute(f"DELETE FROM `{catalog}`.`app`.{table}")
+        except Exception:
+            pass
     bronze_n = bronze_count(cursor, catalog)
     reloaded = False
     if bronze_n != 400:
@@ -508,6 +654,48 @@ def _ensure_app_tables(cursor, catalog: str) -> None:
             held_at TIMESTAMP
         ) USING DELTA
         COMMENT 'Quality-gate Hold inbox (empty / dup / amt)'
+        """
+    )
+    cursor.execute(
+        f"""
+        CREATE TABLE IF NOT EXISTS `{catalog}`.`app`.quarantine_log (
+            event_id STRING NOT NULL,
+            grant_no STRING,
+            title STRING,
+            abstract STRING,
+            program_area STRING,
+            fiscal_year INT,
+            amount_usd DOUBLE,
+            awardee STRING,
+            org_unit STRING,
+            classification_band STRING,
+            batch_id STRING,
+            reason_code STRING,
+            reason_detail STRING,
+            source_file STRING,
+            pipeline_name STRING,
+            quarantined_at TIMESTAMP
+        ) USING DELTA
+        COMMENT 'Quarantined grants — never landed in bronze'
+        """
+    )
+    cursor.execute(
+        f"""
+        CREATE TABLE IF NOT EXISTS `{catalog}`.`app`.quality_findings (
+            finding_id STRING NOT NULL,
+            grant_no STRING,
+            title STRING,
+            program_area STRING,
+            amount_usd DOUBLE,
+            severity STRING,
+            check_name STRING,
+            detail STRING,
+            published BOOLEAN,
+            source_file STRING,
+            pipeline_name STRING,
+            found_at TIMESTAMP
+        ) USING DELTA
+        COMMENT 'WARN findings on rows that still published'
         """
     )
 
