@@ -16,7 +16,7 @@ from utils.dashboard_helpers import (
     render_activity_log,
 )
 from utils.brief_helpers import render_daily_brief
-from utils.ui import page_header, render_how_it_works
+from utils.ui import page_header, render_architecture
 
 set_page_config(page_title="Portfolio | ONR Portfolio")
 setup_sidebar()
@@ -62,12 +62,4 @@ with tab3:
 with tab4:
     render_activity_log(cursor, onr_catalog)
 
-render_how_it_works(
-    "How leadership uses the portfolio",
-    [
-        {"name": "See", "detail": "KPIs and program mix from gold, no warehouse login required."},
-        {"name": "Filter", "detail": "Fiscal year, program area, classification, award size."},
-        {"name": "Search", "detail": "Find an award; the lookup is written to the audit log."},
-        {"name": "Act", "detail": "Daily brief, AT_RISK rows, and the anomaly queue."},
-    ],
-)
+render_architecture("portfolio")

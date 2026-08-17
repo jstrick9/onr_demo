@@ -17,7 +17,7 @@ from utils.export_helpers import (
     render_schema_documentation,
 )
 from utils.api_helpers import render_live_statement_api
-from utils.ui import page_header, render_how_it_works
+from utils.ui import page_header, render_architecture
 
 set_page_config(page_title="Export | ONR Portfolio")
 setup_sidebar()
@@ -68,13 +68,4 @@ with tab4:
 with tab5:
     render_export_history(cursor, onr_catalog)
 
-render_how_it_works(
-    "How data leaves the platform",
-    [
-        {"name": "Filter", "detail": "Fiscal year or date range — never an unscoped dump."},
-        {"name": "Package", "detail": "CSV, JSON, or Parquet with a self-describing schema."},
-        {"name": "Audit", "detail": "Who, what, filter, and row count land in export history."},
-        {"name": "Integrate", "detail": "Statement Execution REST on the same warehouse, OAuth."},
-    ],
-    note="Open standards: Delta, CSV, JSON, Parquet, SQL, JDBC/ODBC, REST.",
-)
+render_architecture("export")

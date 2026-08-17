@@ -13,7 +13,7 @@ from utils.governance_helpers import (
     render_governance_policies,
     render_lineage_tracking,
 )
-from utils.ui import page_header, render_how_it_works
+from utils.ui import page_header, render_architecture
 
 set_page_config(page_title="Catalog | ONR Portfolio")
 setup_sidebar()
@@ -57,12 +57,4 @@ with tab4:
 with tab5:
     render_lineage_tracking(cursor, onr_catalog, onr_schema)
 
-render_how_it_works(
-    "How the catalog governs the portfolio",
-    [
-        {"name": "Register", "detail": "Ingested tables appear in bronze, silver, gold, and app."},
-        {"name": "Score", "detail": "Completeness, accuracy, consistency, and timeliness."},
-        {"name": "Lineage", "detail": "Landing to gold is mapped in Unity Catalog."},
-        {"name": "Policy", "detail": "Tags and grants travel with the table, not a side spreadsheet."},
-    ],
-)
+render_architecture("catalog")

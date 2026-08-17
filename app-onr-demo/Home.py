@@ -6,7 +6,7 @@ from utils.page_config_helpers import setup_sidebar, set_page_config
 from utils.runtime_env import get_runtime_env
 from utils.db_helpers import get_connection, read_yaml, validate_source_tables
 from utils.user_helpers import init_user_session_state
-from utils.ui import page_header, capability_cards
+from utils.ui import page_header, capability_cards, render_architecture
 
 set_page_config(page_title="Home | ONR Portfolio")
 setup_sidebar()
@@ -73,6 +73,8 @@ except Exception:
     st.caption("Showing the packaged portfolio while the warehouse is unavailable.")
 
 st.markdown("")
+render_architecture("home")
+
 capability_cards(
     [
         {"title": "Ingestion", "body": "Land files, apply quality gates, refresh silver and gold."},

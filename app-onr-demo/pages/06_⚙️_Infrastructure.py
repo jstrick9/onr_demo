@@ -8,7 +8,7 @@ from utils.runtime_env import get_runtime_env
 from utils.db_helpers import get_connection, read_yaml
 from utils.user_helpers import init_user_session_state
 from utils.workspace_names import SQL_WAREHOUSE_NAME, ALL_PURPOSE_CLUSTER_NAME
-from utils.ui import page_header, render_how_it_works
+from utils.ui import page_header, render_architecture
 
 set_page_config(page_title="Infrastructure | ONR Portfolio")
 setup_sidebar()
@@ -117,12 +117,4 @@ with tab2:
     else:
         st.caption("Bundle definition is not packaged next to the app.")
 
-render_how_it_works(
-    "How this workspace is assembled",
-    [
-        {"name": "Compute", "detail": "Existing warehouse and cluster — not created by the bundle."},
-        {"name": "Bundle", "detail": "Volumes, this app, paused file-arrival, SDP pipeline."},
-        {"name": "Catalog", "detail": "onr_demo bronze → silver → gold → app."},
-        {"name": "Identity", "detail": "App service principal, short-lived OAuth, least privilege."},
-    ],
-)
+render_architecture("infrastructure")

@@ -14,7 +14,7 @@ from utils.ingestion_helpers import (
     render_ingestion_demo,
     render_file_picker_and_reset,
 )
-from utils.ui import page_header, render_how_it_works
+from utils.ui import page_header, render_architecture, live_chip
 
 set_page_config(page_title="Ingestion | ONR Portfolio")
 setup_sidebar()
@@ -39,6 +39,19 @@ except Exception as e:
 
 conn, cursor = get_connection()
 
+if cursor:
+    try:
+        cursor.execute(
+            f"""
+            SELECT COUNT(*) FROM `{onr_catalog}`.`bronze`.grants
+            WHERE _ingest_time >= CURRENT_TIMESTAMP() - INTERVAL 2 MINUTES
+            """
+        )
+        if int(cursor.fetchone()[0] or 0) > 0:
+            live_chip("Ingest active · last 2 minutes")
+    except Exception:
+        pass
+
 render_file_picker_and_reset(cursor, onr_catalog)
 
 tab1, tab2, tab3, tab4 = st.tabs(
@@ -61,13 +74,4 @@ with tab3:
 with tab4:
     render_ingestion_demo(onr_catalog, onr_schema)
 
-render_how_it_works(
-    "How ingestion lands in the lakehouse",
-    [
-        {"name": "Landing", "detail": "CSV or JSON arrives on the governed Volume."},
-        {"name": "Detect", "detail": "Auto Loader or warehouse ingest picks up new files."},
-        {"name": "Quality", "detail": "Empty keys, non-positive amounts, and duplicates stop here."},
-        {"name": "Silver / gold", "detail": "Passed rows refresh the serving tables leadership reads."},
-    ],
-    note="Same bronze table whether the file arrived through the app or a streaming job.",
-)
+render_architecture("ingestion")

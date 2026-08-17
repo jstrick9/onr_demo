@@ -15,7 +15,7 @@ from utils.analytics_helpers import (
     render_model_metrics,
     render_anomaly_detection,
 )
-from utils.ui import page_header, render_how_it_works
+from utils.ui import page_header, render_architecture
 
 set_page_config(page_title="Analytics | ONR Portfolio")
 setup_sidebar()
@@ -62,13 +62,4 @@ with tab4:
 with tab5:
     render_model_metrics(cursor, onr_catalog)
 
-render_how_it_works(
-    "How models inform resourcing",
-    [
-        {"name": "Features", "detail": "The ingested grants and ERP become gold.funding_features."},
-        {"name": "Score", "detail": "Random Forest Fund / Review / Defer on large awards."},
-        {"name": "Flag", "detail": "IsolationForest queues spike, collapse, and low-return awards."},
-        {"name": "Forecast", "detail": "OLS two-year horizon with TREND-ACCEL / STEADY / DECLINE."},
-    ],
-    note="All three models read the same portfolio. Leadership sees a recommendation, not a black box.",
-)
+render_architecture("analytics")
