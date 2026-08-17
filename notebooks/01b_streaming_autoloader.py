@@ -55,7 +55,7 @@ print(f"catalog={catalog}  trigger={trigger_mode}  interval={processing_seconds}
 
 # COMMAND ----------
 
-from pyspark.sql.functions import current_timestamp, input_file_name, lit
+from pyspark.sql.functions import col, current_timestamp, lit
 import time
 
 QUERY_NAME = "onr_grants_processingTime"
@@ -80,7 +80,7 @@ src = (
     .option("cloudFiles.schemaEvolutionMode", "addNewColumns")
     .load(f"{landing}grants/")
     .withColumn("_ingest_time", current_timestamp())
-    .withColumn("_source_file", input_file_name())
+    .withColumn("_source_file", col("_metadata.file_path"))
     .withColumn("_batch_id", lit("stream-demo-2026"))
     .withColumn("batch_id", lit("stream-demo-2026"))
 )

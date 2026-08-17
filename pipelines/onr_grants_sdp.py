@@ -11,7 +11,7 @@
 # then drop a CSV into /Volumes/onr_demo/bronze/landing/grants/.
 
 from pyspark import pipelines as dp
-from pyspark.sql.functions import current_timestamp, input_file_name, lit
+from pyspark.sql.functions import col, current_timestamp, lit
 
 
 LANDING = "/Volumes/onr_demo/bronze/landing/grants/"
@@ -34,6 +34,6 @@ def grants_stream():
         .option("cloudFiles.schemaEvolutionMode", "addNewColumns")
         .load(LANDING)
         .withColumn("_ingest_time", current_timestamp())
-        .withColumn("_source_file", input_file_name())
+        .withColumn("_source_file", col("_metadata.file_path"))
         .withColumn("_batch_id", lit("sdp-stream-2026"))
     )

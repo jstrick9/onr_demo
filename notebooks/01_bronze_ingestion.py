@@ -29,7 +29,7 @@ for sub in ("grants", "financial", "_schemas/grants", "_schemas/financial"):
 
 # COMMAND ----------
 
-from pyspark.sql.functions import col, current_timestamp, input_file_name, lit
+from pyspark.sql.functions import col, current_timestamp, lit
 
 # Set catalog context
 spark.sql(f"USE CATALOG `{catalog}`")
@@ -63,7 +63,7 @@ grants_bronze_df = (
     .option("header", "true")
     .load(f"{landing_path}grants/")
     .withColumn("_ingest_time", current_timestamp())
-    .withColumn("_source_file", input_file_name())
+    .withColumn("_source_file", col("_metadata.file_path"))
     .withColumn("_batch_id", lit(None).cast("string"))
 )
 
@@ -106,7 +106,7 @@ financial_bronze_df = (
     .option("header", "true")
     .load(f"{landing_path}financial/")
     .withColumn("_ingest_time", current_timestamp())
-    .withColumn("_source_file", input_file_name())
+    .withColumn("_source_file", col("_metadata.file_path"))
     .withColumn("_batch_id", lit(None).cast("string"))
 )
 
