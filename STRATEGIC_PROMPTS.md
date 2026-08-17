@@ -1,8 +1,9 @@
 # Strategic Prompt Talking Points (11.4)
 
-**Audience:** Key Personnel narration during the 50-minute recording.
+**Audience:** Key Personnel narration.
+**This tape:** 25 minutes — use the **20–30 second woven lines in [DEMO_SCRIPT.md](DEMO_SCRIPT.md)**. Do not read the 60–90 second versions below on that take.
 **Rule:** All five prompts must be spoken. Business development may introduce; Key Personnel lead every technical answer.
-**Budget:** ~60–90 seconds per prompt. Weave into the matching element (preferred) or close as a dedicated 6-minute block at minute 44–50.
+**Budget (if a longer take is restored):** ~60–90 seconds per prompt.
 **Data constraint:** Everything on screen is mock / synthetic. Say that once, then do not linger.
 
 Full prompt text is quoted from Volume IV §11.4. Show a live artifact while you talk — never a slide.
