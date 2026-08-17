@@ -122,7 +122,7 @@ The Streamlit app authenticates as a **different** service principal. Without gr
 | Integration → Execute live Statement API | `statement_id` + JSON from `/api/2.0/sql/statements` |
 | Optional: run `04` then `04b` on the cluster (night-before) | RF + IsolationForest registered |
 | Ingestion → **Start stream** | Lands `batch_live_grants_stream.csv` and submits `01b` (or **Open stream notebook**) |
-| Analytics → **Score registered models** | Submits `04c` against current silver (or **Open scoring notebook**) |
+| Analytics → **Score registered models** | Scores UC models on the SQL warehouse (no cluster). Needs EXECUTE on the two models. |
 | Ingestion → Restore baseline snapshot | Back to 400; silver rebuilt; `app.quarantine_log` empty |
 
 ---
