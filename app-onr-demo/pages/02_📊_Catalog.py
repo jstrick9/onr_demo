@@ -12,6 +12,7 @@ from utils.governance_helpers import (
     render_lineage_visualization,
     render_governance_policies,
     render_lineage_tracking,
+    render_lineage_launch,
 )
 from utils.ui import page_header, render_architecture
 
@@ -37,6 +38,8 @@ except Exception as e:
     st.stop()
 
 conn, cursor = get_connection()
+
+render_lineage_launch(onr_catalog)
 
 tab1, tab2, tab3, tab4, tab5 = st.tabs(
     ["Registry", "Quality", "Lineage", "Policies & tags", "Tracking"]

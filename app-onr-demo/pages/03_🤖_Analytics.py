@@ -14,6 +14,7 @@ from utils.analytics_helpers import (
     render_decision_support,
     render_model_metrics,
     render_anomaly_detection,
+    render_score_controls,
 )
 from utils.ui import page_header, render_architecture
 
@@ -40,6 +41,7 @@ except Exception as e:
 
 conn, cursor = get_connection()
 
+render_score_controls(onr_catalog)
 render_decision_support(cursor, onr_catalog)
 
 tab1, tab2, tab3, tab4, tab5 = st.tabs(

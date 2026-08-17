@@ -119,8 +119,8 @@ The Streamlit app authenticates as a **different** service principal. Without gr
 | Dashboard → Generate daily brief | Row in `app.daily_briefs` (ai_query or template) |
 | Integration → Execute live Statement API | `statement_id` + JSON from `/api/2.0/sql/statements` |
 | Optional: run `04` then `04b` on the cluster (night-before) | RF + IsolationForest registered |
-| Optional: `04c_score_registered_models.py` | Scores current silver from those models (camera beat) |
-| Optional: `01b_streaming_autoloader.py` | processingTime stream; drop `batch_live_grants_stream.csv`; last-2-min ticks |
+| Ingestion → **Start stream** | Lands `batch_live_grants_stream.csv` and submits `01b` (or **Open stream notebook**) |
+| Analytics → **Score registered models** | Submits `04c` against current silver (or **Open scoring notebook**) |
 | Ingestion → Reset (checkbox) | Back to 400 |
 
 ---

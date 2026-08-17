@@ -358,7 +358,40 @@ def _show_ingest_pulse(cursor, catalog: str) -> None:
         hold_tray(holds)
 
 
-def render_file_picker_and_reset(cursor, catalog: str):
+def render_stream_controls(catalog: str = "onr_demo") -> None:
+    """Start the Auto Loader stream and land a new file — stay on this page."""
+    from utils.ui import provenance_note
+    from utils.workspace_ops import (
+        STREAM_NOTEBOOK,
+        notebook_url,
+        render_run_status,
+        resolve_notebook,
+        start_stream,
+        workspace_action_row,
+    )
+
+    st.markdown("### Stream")
+    st.caption(
+        "Same bronze table as Ingest selected files. Auto Loader on the landing Volume, "
+        "thirty-second micro-batches, auto-stops after ninety seconds."
+    )
+    c1, c2 = st.columns([2, 1])
+    with c1:
+        if st.button("Start stream", type="primary", key="start_stream"):
+            try:
+                result = start_stream(catalog)
+                st.session_state["last_stream"] = result
+                if result.get("error") and not result.get("file"):
+                    st.error(result["error"])
+                else:
+                    st.success("Stream file is on the Volume.")
+            except Exception as e:
+                st.error(f"Stream did not start: {e}")
+    with c2:
+        path = resolve_notebook(STREAM_NOTEBOOK)
+        workspace_action_row("Open stream notebook", notebook_url(path))
+    render_run_status("Stream", st.session_state.get("last_stream"))
+    provenance_note("bronze.grants", catalog)
     """Inbound files and baseline restore."""
     from utils.demo_actions import (
         FILE_PACKS,

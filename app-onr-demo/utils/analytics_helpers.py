@@ -20,6 +20,38 @@ def _query_df(cursor, sql: str) -> pd.DataFrame:
         return pd.DataFrame()
 
 
+def render_score_controls(catalog: str = "onr_demo") -> None:
+    """Score the current portfolio from registered models without leaving Analytics."""
+    from utils.workspace_ops import (
+        SCORE_NOTEBOOK,
+        notebook_url,
+        render_run_status,
+        resolve_notebook,
+        start_score,
+        workspace_action_row,
+    )
+
+    st.markdown("### Registered model score")
+    st.caption(
+        "Applies the night-before Random Forest and IsolationForest to the current silver portfolio. "
+        "Does not train."
+    )
+    c1, c2 = st.columns([2, 1])
+    with c1:
+        if st.button("Score registered models", type="primary", key="start_score"):
+            try:
+                result = start_score(catalog)
+                st.session_state["last_score"] = result
+                st.success("Scoring run submitted.")
+            except Exception as e:
+                st.session_state["last_score"] = {"error": str(e), "notebook": resolve_notebook(SCORE_NOTEBOOK)}
+                st.error(f"Scoring did not start: {e}")
+    with c2:
+        path = resolve_notebook(SCORE_NOTEBOOK)
+        workspace_action_row("Open scoring notebook", notebook_url(path))
+    render_run_status("Score", st.session_state.get("last_score"))
+
+
 def render_resource_action(cursor=None, catalog: str = "onr_demo"):
     """One officer sentence from Fund/Review/Defer + AT_RISK + TREND-DECLINE."""
     from utils.ui import action_card

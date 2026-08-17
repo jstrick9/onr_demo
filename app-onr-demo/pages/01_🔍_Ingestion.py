@@ -14,6 +14,7 @@ from utils.ingestion_helpers import (
     render_ingestion_demo,
     render_file_picker_and_reset,
     render_time_travel_compare,
+    render_stream_controls,
 )
 from utils.ui import page_header, render_architecture, live_chip
 
@@ -54,6 +55,9 @@ if cursor:
         pass
 
 render_file_picker_and_reset(cursor, onr_catalog)
+render_stream_controls(onr_catalog)
+render_streaming_metrics(cursor, onr_catalog)
+render_time_travel_compare(cursor, onr_catalog)
 
 tab1, tab2, tab3, tab4 = st.tabs(
     ["Pipeline", "Quality", "Schema & stream", "Auto Loader"]

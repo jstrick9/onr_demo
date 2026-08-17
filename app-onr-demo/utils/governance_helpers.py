@@ -93,6 +93,19 @@ def render_quality_scores(cursor, catalog: str, schema: str):
 # -------------------------------
 # DATA LINEAGE VISUALIZATION
 # -------------------------------
+def render_lineage_launch(catalog: str = "onr_demo") -> None:
+    """One workspace jump: native Catalog Explorer lineage for silver.grants."""
+    from utils.workspace_ops import catalog_table_url, workspace_action_row
+
+    st.markdown("### Lineage")
+    st.caption(
+        "Unity Catalog lineage is the system of record. This opens Catalog Explorer "
+        "on silver.grants — the native graph, not a drawing in this console."
+    )
+    url = catalog_table_url(catalog, "silver", "grants", tab="lineage")
+    workspace_action_row("Open lineage", url)
+
+
 def render_lineage_visualization():
     """Display end-to-end data lineage visualization."""
     st.markdown("### End-to-end lineage")
