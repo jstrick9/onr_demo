@@ -394,13 +394,9 @@ def start_named_cluster() -> tuple[str | None, str]:
     return c.cluster_id, f"{c.cluster_name} is running"
 
 
-def submit_notebook(path: str, run_name: str, params: dict | None = None) -> dict:
+def _notebook_task_kwargs(path: str, params: dict | None) -> dict:
     from databricks.sdk.service import jobs
 
-    cluster_id, cluster_msg = start_named_cluster()
-    if not cluster_id:
-        raise RuntimeError(cluster_msg)
-    w = _client()
     nb_kwargs = {
         "notebook_path": path,
         "base_parameters": {k: str(v) for k, v in (params or {}).items()},
@@ -408,12 +404,10 @@ def submit_notebook(path: str, run_name: str, params: dict | None = None) -> dic
     source = getattr(jobs, "Source", None)
     if source is not None and hasattr(source, "WORKSPACE"):
         nb_kwargs["source"] = source.WORKSPACE
-    task = jobs.SubmitTask(
-        task_key="run",
-        existing_cluster_id=cluster_id,
-        notebook_task=jobs.NotebookTask(**nb_kwargs),
-    )
-    waiter = w.jobs.submit(run_name=run_name, tasks=[task])
+    return nb_kwargs
+
+
+def _finish_submit(w, waiter, path: str, compute: str) -> dict:
     run_id = (
         getattr(waiter, "run_id", None)
         or getattr(getattr(waiter, "response", None), "run_id", None)
@@ -433,8 +427,76 @@ def submit_notebook(path: str, run_name: str, params: dict | None = None) -> dic
         "state": state,
         "page_url": page,
         "notebook": path,
-        "cluster": cluster_msg,
+        "cluster": compute,
+        "via": "serverless" if "serverless" in compute.lower() else "cluster",
     }
+
+
+def submit_notebook_serverless(path: str, run_name: str, params: dict | None = None) -> dict:
+    """Submit 01b / 04c on Jobs serverless — no classic cluster required."""
+    from databricks.sdk.service import jobs
+
+    w = _client()
+    nb = jobs.NotebookTask(**_notebook_task_kwargs(path, params))
+    JobEnvironment = getattr(jobs, "JobEnvironment", None)
+    Environment = getattr(jobs, "Environment", None)
+    errors: list[str] = []
+    if JobEnvironment and Environment:
+        for version in ("3", "2", "1"):
+            try:
+                spec = Environment(environment_version=version)
+                waiter = w.jobs.submit(
+                    run_name=run_name,
+                    tasks=[
+                        jobs.SubmitTask(
+                            task_key="run",
+                            notebook_task=nb,
+                            environment_key="default",
+                        )
+                    ],
+                    environments=[JobEnvironment(environment_key="default", spec=spec)],
+                )
+                return _finish_submit(w, waiter, path, f"serverless jobs env {version}")
+            except TypeError as e:
+                errors.append(f"env {version} type: {e}")
+            except Exception as e:
+                errors.append(f"env {version}: {e}")
+    try:
+        waiter = w.jobs.submit(
+            run_name=run_name,
+            tasks=[jobs.SubmitTask(task_key="run", notebook_task=nb)],
+        )
+        return _finish_submit(w, waiter, path, "serverless jobs default")
+    except Exception as e:
+        errors.append(str(e))
+    raise RuntimeError("Serverless job submit failed: " + " | ".join(errors[:4]))
+
+
+def submit_notebook(path: str, run_name: str, params: dict | None = None) -> dict:
+    """Prefer Jobs serverless, then the named all-purpose cluster."""
+    from databricks.sdk.service import jobs
+
+    serverless_error = None
+    try:
+        return submit_notebook_serverless(path, run_name, params)
+    except Exception as e:
+        serverless_error = e
+
+    cluster_id, cluster_msg = start_named_cluster()
+    if not cluster_id:
+        raise RuntimeError(
+            f"{cluster_msg} Serverless job also failed ({serverless_error})."
+        )
+    w = _client()
+    task = jobs.SubmitTask(
+        task_key="run",
+        existing_cluster_id=cluster_id,
+        notebook_task=jobs.NotebookTask(**_notebook_task_kwargs(path, params)),
+    )
+    waiter = w.jobs.submit(run_name=run_name, tasks=[task])
+    rec = _finish_submit(w, waiter, path, cluster_msg)
+    rec["serverless_error"] = str(serverless_error)
+    return rec
 
 
 def get_run_state(run_id: int | None) -> dict:
@@ -479,11 +541,17 @@ def copy_stream_file(catalog: str = "onr_demo") -> dict:
 
 
 def start_stream(catalog: str = "onr_demo") -> dict:
-    """Copy the live CSV and submit 01b. File drop still happens if the run cannot start."""
+    """Land the stream CSV, try Auto Loader on serverless/cluster, else warehouse load.
+
+    SQL warehouses cannot run spark.readStream / cloudFiles. They can still
+    INSERT the same Volume file into bronze.grants so the heartbeat ticks.
+    """
     landed = copy_stream_file(catalog)
     path = resolve_notebook(STREAM_NOTEBOOK)
     run = None
     error = None
+    via = None
+    warehouse = None
     if path:
         try:
             run = submit_notebook(
@@ -491,11 +559,38 @@ def start_stream(catalog: str = "onr_demo") -> dict:
                 run_name="onr-demo-stream",
                 params={"catalog": catalog, "processing_seconds": "30", "run_for_seconds": "90"},
             )
+            via = (run or {}).get("via") or "cluster"
         except Exception as e:
             error = str(e)
     else:
         error = "Stream notebook was not found in the workspace"
-    return {"file": landed, "run": run, "error": error, "notebook": path}
+
+    if run is None:
+        try:
+            from utils.db_helpers import get_connection
+            from utils.demo_actions import ingest_volume_csv_sql
+
+            _conn, cursor = get_connection()
+            if not cursor:
+                raise RuntimeError("SQL warehouse is not connected")
+            warehouse = ingest_volume_csv_sql(cursor, catalog, landed["dst"], "stream-demo-2026")
+            via = "warehouse"
+            # Bronze loaded. Cluster/serverless miss is an explanation, not a hard fail.
+            error = None
+        except Exception as e:
+            extra = str(e)
+            error = f"{error} Warehouse file load also failed ({extra})." if error else extra
+
+    return {
+        "file": landed,
+        "run": run,
+        "error": error,
+        "notebook": path,
+        "via": via,
+        "warehouse": warehouse,
+        "bronze": (warehouse or {}).get("after"),
+        "inserted": (warehouse or {}).get("inserted"),
+    }
 
 
 def start_score(catalog: str = "onr_demo") -> dict:
@@ -656,7 +751,7 @@ def render_run_status(kind: str, payload: dict | None) -> None:
     if not payload:
         return
     scored = payload.get("scored") or {}
-    if payload.get("via") == "warehouse" or scored:
+    if scored:
         bits = (
             f"{kind} · warehouse · "
             f"RF {scored.get('n_rf', '—')} · IF {scored.get('n_if', '—')} · "
@@ -665,6 +760,24 @@ def render_run_status(kind: str, payload: dict | None) -> None:
         st.caption(bits)
         if scored.get("rf_uri"):
             st.caption(f"{scored.get('rf_uri')} · {scored.get('if_uri')}")
+        if payload.get("error"):
+            st.caption(payload["error"])
+        return
+    if payload.get("via") == "warehouse" and payload.get("file"):
+        inserted = payload.get("inserted")
+        bronze = payload.get("bronze")
+        st.caption(
+            f"{kind} · warehouse file load · bronze {bronze if bronze is not None else '—'} · "
+            f"+{inserted if inserted is not None else '—'}"
+        )
+        st.caption(
+            "SQL warehouses cannot run Auto Loader (cloudFiles). "
+            "The same Volume file was appended to bronze.grants so the landing heartbeat ticks. "
+            "Open the stream notebook for the 30-second Spark micro-batch."
+        )
+        landed = (payload.get("file") or {}).get("dst")
+        if landed:
+            st.caption(f"Landed {landed}")
         if payload.get("error"):
             st.caption(payload["error"])
         return

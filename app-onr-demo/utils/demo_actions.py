@@ -69,6 +69,51 @@ def bronze_count(cursor, catalog: str) -> int:
     return int(cursor.fetchone()[0])
 
 
+def ingest_volume_csv_sql(cursor, catalog: str, volume_path: str, batch_id: str = "stream-demo-2026") -> dict:
+    """Append a Volume CSV into bronze.grants via the SQL warehouse.
+
+    SQL warehouses cannot run Auto Loader (spark.readStream / cloudFiles).
+    They can read the same file with read_files() so bronze still ticks.
+    Appends even if grant_no already exists — that is the stream proof;
+    silver dedupes later.
+    """
+    if not cursor:
+        raise RuntimeError("SQL warehouse is not connected")
+    before = bronze_count(cursor, catalog)
+    src = (volume_path or "").replace("'", "")
+    name = src.rsplit("/", 1)[-1] if src else "stream.csv"
+    bid = (batch_id or "stream-demo-2026").replace("'", "")
+    try:
+        cursor.execute(
+            f"""
+            INSERT INTO `{catalog}`.`bronze`.grants (
+                grant_no, title, abstract, program_area, fiscal_year, amount_usd,
+                awardee, org_unit, classification_band, batch_id, created_at,
+                _ingest_time, _source_file, _batch_id
+            )
+            SELECT
+                grant_no, title, abstract, program_area,
+                TRY_CAST(fiscal_year AS INT), TRY_CAST(amount_usd AS DOUBLE),
+                awardee, org_unit, classification_band, batch_id, created_at,
+                CURRENT_TIMESTAMP(),
+                '{name}',
+                '{bid}'
+            FROM read_files(
+                '{src}',
+                format => 'csv',
+                header => true,
+                inferSchema => true
+            )
+            WHERE grant_no IS NOT NULL AND trim(grant_no) <> ''
+              AND TRY_CAST(amount_usd AS DOUBLE) > 0
+            """
+        )
+    except Exception as e:
+        raise RuntimeError(f"Warehouse could not read {src}: {e}") from e
+    after = bronze_count(cursor, catalog)
+    return {"before": before, "after": after, "inserted": after - before, "path": src, "batch_id": bid}
+
+
 def _hold_row(code: str, rec: dict, gn: str, amount=None, detail: str = "") -> dict:
     return {
         "code": code,

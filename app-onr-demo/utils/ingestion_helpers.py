@@ -452,8 +452,9 @@ def render_stream_controls(catalog: str = "onr_demo") -> None:
 
     st.markdown("### Stream")
     st.caption(
-        "Same bronze table as Ingest selected files. Auto Loader on the landing Volume, "
-        "thirty-second micro-batches, auto-stops after ninety seconds."
+        "Drops a new file on the landing Volume. Prefers a serverless Auto Loader job; "
+        "if Jobs cannot start, the SQL warehouse appends the same file to bronze.grants. "
+        "Warehouses cannot run spark.readStream / cloudFiles."
     )
     c1, c2 = st.columns([2, 1])
     with c1:
@@ -461,8 +462,18 @@ def render_stream_controls(catalog: str = "onr_demo") -> None:
             try:
                 result = start_stream(catalog)
                 st.session_state["last_stream"] = result
-                if result.get("error") and not result.get("file"):
+                if result.get("error") and not result.get("file") and not result.get("warehouse"):
                     st.error(result["error"])
+                elif result.get("via") == "warehouse":
+                    ins = result.get("inserted")
+                    bronze = result.get("bronze")
+                    st.success(
+                        f"File landed and loaded on the SQL warehouse. "
+                        f"Bronze {bronze} · +{ins}."
+                    )
+                    st.rerun()
+                elif result.get("run"):
+                    st.success("Stream file is on the Volume. Auto Loader job submitted.")
                 else:
                     st.success("Stream file is on the Volume.")
             except Exception as e:
