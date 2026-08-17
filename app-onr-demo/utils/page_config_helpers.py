@@ -44,3 +44,17 @@ def setup_sidebar():
         logo = load_sidebar_logo()
         if logo:
             st.image(logo, use_container_width=True)
+
+
+def set_page_config(page_title=None, page_icon=None):
+    if page_icon is None:
+        page_icon = "⚓"
+    st.set_page_config(
+        page_title=page_title,
+        page_icon=page_icon,
+        layout="wide",
+        initial_sidebar_state="expanded",
+        menu_items={
+            "About": "ONR Portfolio — grants and ERP on Databricks.",
+        },
+    )
