@@ -8,7 +8,7 @@ from utils.runtime_env import get_runtime_env
 from utils.db_helpers import get_connection, read_yaml
 from utils.user_helpers import init_user_session_state
 from utils.workspace_names import SQL_WAREHOUSE_NAME, ALL_PURPOSE_CLUSTER_NAME
-from utils.ui import page_header, render_architecture
+from utils.ui import page_header, render_architecture, fit_metrics
 
 set_page_config(page_title="Infrastructure | ONR Portfolio")
 setup_sidebar()
@@ -48,11 +48,14 @@ if cursor:
     except Exception:
         uc_ok = False
 
-c1, c2, c3, c4 = st.columns(4)
-c1.metric("Catalog", onr_catalog)
-c2.metric("UC tables", f"{n_tables}" if n_tables is not None else "—")
-c3.metric("Warehouse", SQL_WAREHOUSE_NAME)
-c4.metric("Cluster", ALL_PURPOSE_CLUSTER_NAME)
+fit_metrics(
+    [
+        ("Catalog", onr_catalog),
+        ("UC tables", f"{n_tables}" if n_tables is not None else "—"),
+        ("Warehouse", SQL_WAREHOUSE_NAME),
+        ("Cluster", ALL_PURPOSE_CLUSTER_NAME),
+    ]
+)
 if cursor and not uc_ok:
     st.caption("Warehouse is up but information_schema was not readable.")
 elif not cursor:

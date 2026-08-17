@@ -111,6 +111,10 @@ html, body, [class*="css"] {{
 h1, h2, h3 {{ letter-spacing: 0.01em; color: {NAVY} !important; }}
 .stCaption, [data-testid="stCaption"] {{ color: {MUTED} !important; }}
 
+div[data-testid="stHorizontalBlock"] > div,
+div[data-testid="column"] {{
+  min-width: 0 !important;
+}}
 [data-testid="stMetric"] {{
   background: #ffffff;
   border: 1.5px solid #475569;
@@ -118,6 +122,8 @@ h1, h2, h3 {{ letter-spacing: 0.01em; color: {NAVY} !important; }}
   padding: 14px 16px;
   box-shadow: 0 8px 22px rgba(15,23,42,0.12);
   transition: transform 0.18s ease, box-shadow 0.18s ease;
+  min-width: 0;
+  overflow: visible;
 }}
 [data-testid="stMetric"]:hover {{
   transform: translateY(-2px);
@@ -129,8 +135,60 @@ h1, h2, h3 {{ letter-spacing: 0.01em; color: {NAVY} !important; }}
   font-size: 0.72rem;
   letter-spacing: 0.06em;
 }}
-[data-testid="stMetricValue"] {{ color: {NAVY} !important; }}
+[data-testid="stMetricValue"] {{
+  color: {NAVY} !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
+  line-height: 1.2 !important;
+}}
 [data-testid="stMetricDelta"] {{ font-weight: 700; }}
+
+.inv-grid {{
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr));
+  gap: 12px;
+  margin: 2px 0 14px 0;
+}}
+.inv-metric {{
+  container-type: inline-size;
+  container-name: inv;
+  background: #ffffff;
+  border: 1.5px solid #475569;
+  border-radius: 12px;
+  padding: 14px 14px 12px 14px;
+  box-shadow: 0 8px 22px rgba(15,23,42,0.12);
+  min-width: 0;
+  min-height: 96px;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}}
+.inv-metric:hover {{
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(15,23,42,0.16);
+}}
+.inv-label {{
+  color: {MUTED};
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  margin-bottom: 8px;
+}}
+.inv-value {{
+  color: {NAVY};
+  font-weight: 800;
+  line-height: 1.22;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: normal;
+  font-size: clamp(0.86rem, calc(1.72rem - 0.034rem * var(--n, 12)), 1.55rem);
+}}
+@container inv (max-width: 168px) {{
+  .inv-value {{ font-size: 0.9rem !important; }}
+}}
+@media (max-width: 900px) {{
+  .inv-grid {{ grid-template-columns: repeat(2, minmax(0, 1fr)); }}
+}}
 
 @keyframes metricFlash {{
   0% {{ box-shadow: 0 0 0 0 rgba(180,83,9,0.55); }}
@@ -348,6 +406,37 @@ def page_header(kicker: str, title: str, caption: str) -> None:
         st.caption(caption)
 
 
+def _fit_font_ch(value: str) -> int:
+    """Character count used by CSS to scale a name into its tile."""
+    return max(len((value or "").strip()), 1)
+
+
+def fit_metrics(items: list[tuple[str, str]], columns: int | None = None) -> None:
+    """KPI tiles that wrap and shrink so long workspace names stay fully visible.
+
+    Streamlit ``st.metric`` is sized for short numbers and clips strings such as
+    warehouse / cluster names. These cards keep the same chrome, then scale
+    type from the value length and the live column width.
+    """
+    cols = columns or max(len(items), 1)
+    bits = [f'<div class="inv-grid" style="--cols:{cols}">']
+    for label, value in items:
+        text = "" if value is None else str(value)
+        bits.append(
+            '<div class="inv-metric" style="--n:{n}" title="{tip}">'
+            '<div class="inv-label">{lab}</div>'
+            '<div class="inv-value">{val}</div>'
+            "</div>".format(
+                n=_fit_font_ch(text),
+                tip=html.escape(text, quote=True),
+                lab=html.escape(str(label)),
+                val=html.escape(text),
+            )
+        )
+    bits.append("</div>")
+    st.markdown("".join(bits), unsafe_allow_html=True)
+
+
 def capability_cards(cards: list[dict]) -> None:
     bits = ['<div class="cap-grid">']
     for card in cards:
@@ -490,7 +579,7 @@ def _wrap(title: str, svg_body: str, w: int, h: int, note: str = "") -> None:
   </div>
 </body>
 </html>"""
-    components.html(doc, height=h + 92, scrolling=False)
+    components.html(doc, height=h + 108, scrolling=False)
 
 
 def _diagram_ingestion() -> tuple[str, int, int, str, str]:
