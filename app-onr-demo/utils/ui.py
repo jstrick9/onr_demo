@@ -371,6 +371,215 @@ div.stButton > button:hover {{
   font-size: 0.84rem;
   line-height: 1.4;
 }}
+
+.hold-tray, .action-card, .brief-sheet, .receipt-card, .hb-strip, .tt-strip {{
+  background: #ffffff;
+  border: 1.5px solid #475569;
+  border-radius: 12px;
+  box-shadow: 0 8px 22px rgba(15,23,42,0.10);
+  padding: 14px 16px;
+  margin: 8px 0 16px 0;
+}}
+.hold-kicker, .action-kicker, .brief-kicker, .receipt-kicker, .hb-kicker, .tt-kicker {{
+  color: {GOLD};
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}}
+.hold-title, .action-title, .receipt-title, .tt-title {{
+  color: {NAVY};
+  font-size: 1.05rem;
+  font-weight: 800;
+  margin: 2px 0 10px 0;
+}}
+.hold-row {{
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1.1fr) minmax(0, 1.6fr) 110px;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 0;
+  border-top: 1px solid #e2e8f0;
+}}
+.hold-id {{
+  color: {NAVY};
+  font-weight: 700;
+  font-size: 0.86rem;
+  overflow-wrap: anywhere;
+}}
+.hold-name {{
+  color: {MUTED};
+  font-size: 0.86rem;
+  overflow-wrap: anywhere;
+}}
+.hold-amt {{
+  color: {NAVY};
+  font-weight: 700;
+  text-align: right;
+  font-size: 0.86rem;
+}}
+.chip {{
+  display: inline-block;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: center;
+}}
+.chip-empty {{ background: #f1f5f9; color: #334155; border: 1px solid #94a3b8; }}
+.chip-dup {{ background: #fff7ed; color: #9a3412; border: 1px solid {GOLD}; }}
+.chip-amt {{ background: #fef2f2; color: #991b1b; border: 1px solid #dc2626; }}
+
+.action-card {{
+  border-left: 4px solid {GOLD};
+  background: #fffbeb;
+}}
+.action-line {{
+  color: {NAVY};
+  font-size: 1.12rem;
+  font-weight: 800;
+  line-height: 1.35;
+  margin: 8px 0 10px 0;
+}}
+.action-foot, .prov, .receipt-foot, .tt-note {{
+  color: {MUTED};
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+}}
+.prov {{
+  margin: -6px 0 14px 2px;
+  cursor: help;
+}}
+
+.brief-sheet {{
+  padding: 0;
+  overflow: hidden;
+}}
+.brief-banner {{
+  background: {NAVY};
+  color: #fff7ed;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 8px 16px;
+}}
+.brief-head {{
+  padding: 14px 16px 8px 16px;
+  border-bottom: 3px solid {GOLD};
+}}
+.brief-office {{
+  color: {MUTED};
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}}
+.brief-name {{
+  color: {NAVY};
+  font-size: 1.28rem;
+  font-weight: 800;
+  margin: 2px 0 0 0;
+}}
+.brief-body {{ padding: 12px 16px 8px 16px; }}
+.brief-body ul {{
+  margin: 0 0 8px 0;
+  padding-left: 18px;
+  color: {INK};
+}}
+.brief-body li {{
+  margin: 6px 0;
+  line-height: 1.4;
+}}
+.brief-action {{
+  margin: 10px 16px 14px 16px;
+  background: #fffbeb;
+  border: 1px solid {GOLD};
+  border-radius: 10px;
+  padding: 10px 12px;
+}}
+.brief-action-label {{
+  color: {GOLD};
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}}
+.brief-action p {{
+  margin: 4px 0 0 0;
+  color: {NAVY};
+  font-weight: 700;
+  line-height: 1.35;
+}}
+.brief-foot {{
+  background: #f8fafc;
+  color: {MUTED};
+  font-size: 0.75rem;
+  padding: 8px 16px 10px 16px;
+  border-top: 1px solid #e2e8f0;
+}}
+
+.receipt-grid {{
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px 14px;
+  margin-top: 8px;
+}}
+.receipt-grid label {{
+  display: block;
+  color: {MUTED};
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+}}
+.receipt-grid div.value {{
+  color: {NAVY};
+  font-weight: 800;
+  font-size: 0.95rem;
+  overflow-wrap: anywhere;
+}}
+.receipt-ok {{ color: {OK} !important; }}
+
+.hb-strip {{
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px 18px;
+}}
+.hb-count {{
+  color: {NAVY};
+  font-size: 1.7rem;
+  font-weight: 800;
+  line-height: 1;
+}}
+.hb-meta {{ color: {MUTED}; font-size: 0.88rem; font-weight: 600; }}
+
+.tt-cols {{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 8px;
+}}
+.tt-col {{
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 12px;
+}}
+.tt-col .lbl {{
+  color: {MUTED};
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 700;
+}}
+.tt-col .num {{
+  color: {NAVY};
+  font-size: 1.45rem;
+  font-weight: 800;
+}}
 </style>
 """
 
@@ -452,6 +661,170 @@ def capability_cards(cards: list[dict]) -> None:
 def live_chip(label: str = "Pipeline active") -> None:
     st.markdown(
         f'<div class="live-chip"><span class="live-dot"></span>{html.escape(label)}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def provenance_note(table: str, catalog: str = "onr_demo", when=None, via: str | None = None) -> None:
+    """Muted lineage line under a KPI row. Hover repeats the full path."""
+    from utils.workspace_names import SQL_WAREHOUSE_NAME
+
+    via = via or SQL_WAREHOUSE_NAME
+    when_s = ""
+    if when is not None:
+        raw = str(when)
+        when_s = raw[11:16] if len(raw) >= 16 and raw[10:11] in {"T", " "} else raw[:16]
+    bits = [f"{catalog}.{table}"]
+    if when_s:
+        bits.append(when_s)
+    bits.append(via)
+    text = " · ".join(bits)
+    st.markdown(
+        f'<div class="prov" title="{html.escape(text)}">{html.escape(text)}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def hold_tray(rows: list[dict]) -> None:
+    """Quality-gate Hold inbox. Chips use the architecture words: empty · dup · amt."""
+    if not rows:
+        return
+    bits = [
+        '<div class="hold-tray">',
+        '<div class="hold-kicker">Hold</div>',
+        '<div class="hold-title">Quality gate — not in silver</div>',
+    ]
+    for rec in rows:
+        code = str(rec.get("code") or "hold").lower()
+        if code not in {"empty", "dup", "amt"}:
+            code = "empty"
+        gn = rec.get("grant_no") or "—"
+        title = rec.get("title") or rec.get("detail") or ""
+        amt = rec.get("amount_usd")
+        try:
+            amt_s = f"${float(amt):,.0f}" if amt is not None and str(amt) != "" else ""
+        except (TypeError, ValueError):
+            amt_s = ""
+        bits.append(
+            '<div class="hold-row">'
+            f'<span class="chip chip-{code}">{html.escape(code)}</span>'
+            f'<span class="hold-id">{html.escape(str(gn))}</span>'
+            f'<span class="hold-name">{html.escape(str(title))}</span>'
+            f'<span class="hold-amt">{html.escape(amt_s)}</span>'
+            "</div>"
+        )
+    bits.append("</div>")
+    st.markdown("".join(bits), unsafe_allow_html=True)
+
+
+def action_card(line: str, source: str) -> None:
+    st.markdown(
+        '<div class="action-card">'
+        '<div class="action-kicker">Resource action</div>'
+        f'<p class="action-line">{html.escape(line)}</p>'
+        f'<div class="action-foot" title="{html.escape(source)}">{html.escape(source)}</div>'
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+
+def brief_sheet(rec: dict) -> None:
+    """Leadership letterhead: banner, three bullets, one action, audit footer."""
+    bullets = rec.get("bullets") or []
+    action = rec.get("action") or ""
+    body = rec.get("brief_text") or ""
+    if not bullets and body:
+        for raw in str(body).splitlines():
+            line = raw.strip().lstrip("-•* ").strip()
+            if line.upper().startswith("ACTION:"):
+                action = action or line.split(":", 1)[-1].strip()
+            elif line:
+                bullets.append(line)
+        bullets = bullets[:3]
+    lis = "".join(f"<li>{html.escape(str(b))}</li>" for b in bullets[:3])
+    action_html = (
+        '<div class="brief-action"><div class="brief-action-label">Recommended action</div>'
+        f"<p>{html.escape(str(action))}</p></div>"
+        if action
+        else ""
+    )
+    model = rec.get("model_name") or ""
+    short = (
+        str(model)
+        .replace("databricks-", "")
+        .replace("meta-", "")
+        .replace("-instruct", "")
+        if model
+        else ""
+    )
+    when = rec.get("generated_at") or rec.get("time") or ""
+    clock = str(when)[11:16] if len(str(when)) >= 16 else str(when)
+    foot = " · ".join(
+        p for p in (rec.get("brief_id"), rec.get("source"), short or None, clock or None) if p
+    )
+    st.markdown(
+        '<div class="brief-sheet">'
+        '<div class="brief-banner">Unclassified // mock data</div>'
+        '<div class="brief-head">'
+        '<div class="brief-office">Office of Naval Research · Code 08</div>'
+        '<div class="brief-name">Daily Portfolio Brief</div>'
+        "</div>"
+        f'<div class="brief-body"><ul>{lis}</ul></div>'
+        f"{action_html}"
+        f'<div class="brief-foot">{html.escape(foot)}</div>'
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+
+def receipt_card(fields: dict) -> None:
+    cells = []
+    for label, value in fields.items():
+        klass = "value receipt-ok" if str(value).upper() == "SUCCEEDED" else "value"
+        cells.append(
+            f"<div><label>{html.escape(str(label))}</label>"
+            f'<div class="{klass}">{html.escape("" if value is None else str(value))}</div></div>'
+        )
+    st.markdown(
+        '<div class="receipt-card">'
+        '<div class="receipt-kicker">Statement receipt</div>'
+        '<div class="receipt-title">Databricks Statement Execution REST</div>'
+        f'<div class="receipt-grid">{"".join(cells)}</div>'
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+
+def heartbeat_strip(bronze: str, last2: str, ago: str) -> None:
+    st.markdown(
+        '<div class="hb-strip">'
+        '<div><div class="hb-kicker">Stream</div>'
+        f'<div class="hb-count">{html.escape(str(bronze))}</div></div>'
+        f'<div class="hb-meta">bronze grants</div>'
+        f'<div class="hb-meta">last 2 min · {html.escape(str(last2))}</div>'
+        f'<div class="hb-meta">last file · {html.escape(str(ago))}</div>'
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
+
+def time_travel_strip(baseline: dict, current: dict, note: str) -> None:
+    def _col(rec: dict) -> str:
+        return (
+            '<div class="tt-col">'
+            f'<div class="lbl">{html.escape(str(rec.get("label") or ""))}</div>'
+            f'<div class="num">{html.escape(str(rec.get("value") or "—"))}</div>'
+            f'<div class="tt-note">{html.escape(str(rec.get("detail") or ""))}</div>'
+            "</div>"
+        )
+
+    st.markdown(
+        '<div class="tt-strip">'
+        '<div class="tt-kicker">Delta time travel</div>'
+        '<div class="tt-title">Baseline snapshot vs now</div>'
+        f'<div class="tt-cols">{_col(baseline)}{_col(current)}</div>'
+        f'<div class="tt-note" style="margin-top:10px">{html.escape(note)}</div>'
+        "</div>",
         unsafe_allow_html=True,
     )
 

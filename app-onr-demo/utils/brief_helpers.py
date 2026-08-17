@@ -143,56 +143,72 @@ def _context_from_fixture() -> dict:
     }
 
 
-def _template_brief(ctx: dict) -> str:
+def _template_parts(ctx: dict) -> tuple[list[str], str]:
     n = ctx.get("n") or 0
     total = ctx.get("total") or 0
     exe = ctx.get("exe") or 0
     top = ctx.get("top")
     risk = ctx.get("risk")
     trends = ctx.get("trends")
-    today = datetime.utcnow().strftime("%Y-%m-%d")
-    lines = [
-        f"DAILY PORTFOLIO BRIEF — {today} (UNCLASSIFIED // MOCK DATA)",
-        "",
-        f"The ONR S&T portfolio holds {n:,} active grants totaling ${total/1e6:.1f}M "
-        f"(avg ${ (total/n)/1e6 if n else 0:.2f}M). ERP execution is {exe:.1f}% of plan.",
-    ]
+    b1 = (
+        f"Portfolio holds {n:,} active grants totaling ${total/1e6:.1f}M "
+        f"(avg ${(total/n)/1e6 if n else 0:.2f}M). ERP execution is {exe:.1f}% of plan."
+    )
     if isinstance(top, pd.DataFrame) and not top.empty:
         bits = []
         for rec in top.to_dict(orient="records"):
             area = rec.get("program_area")
             fund = float(rec.get("funding") or 0)
             bits.append(f"{area} ${fund/1e6:.1f}M")
-        lines.append("Largest program areas: " + "; ".join(bits) + ".")
+        b2 = "Largest program areas: " + "; ".join(bits) + "."
+    else:
+        b2 = "Program-area mix is unchanged from the last gold refresh."
+    decl = "none"
+    accel = "none"
     if isinstance(trends, pd.DataFrame) and not trends.empty:
-        accel = trends[trends.get("trend_id", pd.Series(dtype=str)).astype(str).str.contains("ACCEL", na=False)]
-        decl = trends[trends.get("trend_id", pd.Series(dtype=str)).str.contains("DECLINE", na=False)]
-        def _names(df):
-            return ", ".join(df["program_area"].astype(str).tolist()) or "none"
-        lines.append(
-            f"Trend IDs — Accelerating: {_names(accel)}. Declining: {_names(decl)}. "
-            "Steady programs hold last-year run-rate."
-        )
+        tid = trends.get("trend_id", pd.Series(dtype=str)).astype(str)
+        accel = ", ".join(trends[tid.str.contains("ACCEL", na=False)]["program_area"].astype(str)) or "none"
+        decl = ", ".join(trends[tid.str.contains("DECLINE", na=False)]["program_area"].astype(str)) or "none"
     if isinstance(risk, pd.DataFrame) and not risk.empty:
         rows = []
-        for rec in risk.head(4).to_dict(orient="records"):
+        for rec in risk.head(3).to_dict(orient="records"):
             rows.append(
                 f"{rec.get('category')} FY{rec.get('fiscal_year')} {rec.get('quarter')} "
                 f"{rec.get('status')} ({float(rec.get('execution_rate') or 0):.0f}%)"
             )
-        lines.append("Budget rows not ON_TARGET: " + "; ".join(rows) + ".")
-        lines.append(
-            "Prescriptive action: protect ON_TARGET categories, route AT_RISK rows "
-            "for reallocation review, and hold large-award Fund recommendations "
-            "until the next resource board."
+        b3 = f"Trend IDs — accelerating {accel}; declining {decl}. Not ON_TARGET: " + "; ".join(rows) + "."
+        action = (
+            "Protect ON_TARGET categories, route AT_RISK and TREND-DECLINE to the next "
+            "resource board, and hold large-award Fund recommendations until that review."
         )
     else:
-        lines.append("All budget-execution rows are ON_TARGET this cycle.")
-    lines.append(
-        "This brief is generated automatically from gold tables on a scheduled "
-        "or on-demand cadence — no analyst copy-paste."
-    )
+        b3 = f"Trend IDs — accelerating {accel}; declining {decl}. All budget-execution rows are ON_TARGET this cycle."
+        action = "Hold the current allocation. Revisit after the next gold refresh."
+    return [b1, b2, b3], action
+
+
+def _template_brief(ctx: dict) -> str:
+    bullets, action = _template_parts(ctx)
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+    lines = [f"DAILY PORTFOLIO BRIEF — {today} (UNCLASSIFIED // MOCK DATA)", ""]
+    lines.extend(f"- {b}" for b in bullets)
+    lines.append(f"ACTION: {action}")
     return "\n".join(lines)
+
+
+def _parse_brief(text: str) -> tuple[list[str], str]:
+    bullets, action = [], ""
+    for raw in (text or "").splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        if line.upper().startswith("ACTION:"):
+            action = line.split(":", 1)[-1].strip()
+            continue
+        if line.startswith(("#", "DAILY ")):
+            continue
+        bullets.append(line.lstrip("-•* ").strip())
+    return bullets[:3], action
 
 
 def _prompt_from_ctx(ctx: dict) -> str:
@@ -206,9 +222,9 @@ def _prompt_from_ctx(ctx: dict) -> str:
     if isinstance(ctx.get("top"), pd.DataFrame) and not ctx["top"].empty:
         top_txt = ctx["top"].to_csv(index=False)
     return (
-        "You are a Code 08 resource officer writing a 150-word daily portfolio brief "
-        "for ONR leadership. Use ONLY the numbers given. Mock/synthetic data. "
-        "Be prescriptive (what to fund, review, or defer). No markdown headings.\n"
+        "You are a Code 08 resource officer. Use ONLY the numbers given. Mock data. "
+        "Return EXACTLY three lines starting with '- ' and one line starting with 'ACTION:'. "
+        "No headings. Be prescriptive.\n"
         f"Grants={ctx.get('n')} total_usd={ctx.get('total')} execution_pct={ctx.get('exe')}\n"
         f"TOP_AREAS:\n{top_txt}\nTRENDS:\n{trends_txt}\nAT_RISK:\n{risk_txt}"
     )
@@ -282,11 +298,20 @@ def render_daily_brief(cursor=None, catalog: str = "onr_demo"):
                 "`ai_query` not available in this workspace — showing the structured "
                 "template brief (same gold inputs). Enable Foundation Model APIs to switch."
             )
+        bullets, action = _parse_brief(text)
+        if len(bullets) < 3 or not action:
+            tb, ta = _template_parts(ctx)
+            if len(bullets) < 3:
+                bullets = (bullets + tb)[:3]
+            action = action or ta
         rec = {
             "brief_id": f"brief-{uuid.uuid4().hex[:12]}",
             "source": source,
             "model_name": model,
             "brief_text": text,
+            "bullets": bullets,
+            "action": action,
+            "generated_at": datetime.utcnow().strftime("%Y-%m-%d %H:%M"),
             "prompt_chars": len(prompt),
             "user": st.session_state.get("email") or "unknown",
         }
@@ -295,11 +320,9 @@ def render_daily_brief(cursor=None, catalog: str = "onr_demo"):
 
     rec = st.session_state.get("last_brief")
     if rec:
-        st.markdown(rec["brief_text"])
-        st.caption(
-            f"{rec['brief_id']} · {rec['source']}"
-            + (f" · {rec['model_name']}" if rec.get("model_name") else "")
-        )
+        from utils.ui import brief_sheet
+
+        brief_sheet(rec)
 
     hist = _q(
         cursor,

@@ -69,9 +69,20 @@ def bronze_count(cursor, catalog: str) -> int:
     return int(cursor.fetchone()[0])
 
 
+def _hold_row(code: str, rec: dict, gn: str, amount=None, detail: str = "") -> dict:
+    return {
+        "code": code,
+        "grant_no": gn or "—",
+        "title": rec.get("title") or detail or "",
+        "amount_usd": amount if amount is not None else rec.get("amount_usd"),
+        "detail": detail,
+    }
+
+
 def ingest_grant_rows(cursor, catalog: str, rows: list[dict], source_file: str, skip_existing: bool = True) -> dict:
-    landed = skipped = rejected = 0
+    landed = skipped = rejected = held = 0
     reasons: list[str] = []
+    holds: list[dict] = []
     for rec in rows:
         raw_gn = rec.get("grant_no")
         try:
@@ -83,23 +94,34 @@ def ingest_grant_rows(cursor, catalog: str, rows: list[dict], source_file: str, 
         gn = str(raw_gn).strip()
         if not gn or gn.lower() in {"nan", "none", "null"}:
             rejected += 1
+            held += 1
             reasons.append("empty grant_no (bronze NOT NULL)")
+            holds.append(_hold_row("empty", rec, "—", rec.get("amount_usd"), "empty grant_no"))
             continue
         try:
             amount = float(rec.get("amount_usd") or 0)
         except (TypeError, ValueError):
             rejected += 1
+            held += 1
             reasons.append(f"{gn}: amount not numeric")
+            holds.append(_hold_row("amt", rec, gn, rec.get("amount_usd"), "amount not numeric"))
             continue
+        row_held = False
         if amount <= 0:
+            held += 1
+            row_held = True
             reasons.append(f"{gn}: amount {amount} will fail silver (amount_usd > 0)")
+            holds.append(_hold_row("amt", rec, gn, amount, "amount not positive"))
         if skip_existing:
             cursor.execute(
                 f"SELECT COUNT(*) FROM `{catalog}`.`bronze`.grants WHERE grant_no = {_sql_str(gn)}"
             )
             if int(cursor.fetchone()[0]) > 0:
                 skipped += 1
+                if not row_held:
+                    held += 1
                 reasons.append(f"{gn}: duplicate")
+                holds.append(_hold_row("dup", rec, gn, amount, "duplicate"))
                 continue
         try:
             awardee = rec.get("awardee")
@@ -130,8 +152,18 @@ def ingest_grant_rows(cursor, catalog: str, rows: list[dict], source_file: str, 
             landed += 1
         except Exception as e:
             rejected += 1
+            held += 1
             reasons.append(f"{gn}: {e}")
-    return {"landed": landed, "skipped": skipped, "rejected": rejected, "reasons": reasons[:20], "input_rows": len(rows)}
+            holds.append(_hold_row("empty", rec, gn, amount, str(e)))
+    return {
+        "landed": landed,
+        "skipped": skipped,
+        "rejected": rejected,
+        "held": held,
+        "reasons": reasons[:20],
+        "holds": holds,
+        "input_rows": len(rows),
+    }
 
 
 def process_selected_files(cursor, catalog: str, pack_keys: list[str], extra_rows=None, extra_name="upload.csv") -> dict:
@@ -147,7 +179,79 @@ def process_selected_files(cursor, catalog: str, pack_keys: list[str], extra_row
     if extra_rows:
         summaries.append({"file": extra_name, **ingest_grant_rows(cursor, catalog, extra_rows, extra_name, True)})
     refresh_silver_gold_sql(cursor, catalog)
-    return {"before": before, "after": grant_count(cursor, catalog), "files": summaries}
+    holds = [h for s in summaries for h in (s.get("holds") or [])]
+    held = sum(int(s.get("held") or 0) for s in summaries)
+    try:
+        _write_hold_queue(cursor, catalog, holds)
+    except Exception:
+        pass
+    return {
+        "before": before,
+        "after": grant_count(cursor, catalog),
+        "files": summaries,
+        "holds": holds,
+        "held": held,
+    }
+
+
+def _write_hold_queue(cursor, catalog: str, holds: list[dict]) -> None:
+    if not cursor:
+        return
+    _ensure_app_tables(cursor, catalog)
+    cursor.execute(f"DELETE FROM `{catalog}`.`app`.hold_queue")
+    for i, rec in enumerate(holds or []):
+        try:
+            amt = rec.get("amount_usd")
+            amt_sql = "NULL"
+            if amt is not None and str(amt) not in {"", "nan", "None"}:
+                amt_sql = str(float(amt))
+        except (TypeError, ValueError):
+            amt_sql = "NULL"
+        cursor.execute(
+            f"""
+            INSERT INTO `{catalog}`.`app`.hold_queue
+            (hold_id, grant_no, title, amount_usd, reason_code, detail, source_file, held_at)
+            VALUES (
+                concat('hold-', date_format(current_timestamp(), 'yyyyMMddHHmmss'), '-{i}'),
+                {_sql_str(rec.get("grant_no"))},
+                {_sql_str(rec.get("title"))},
+                {amt_sql},
+                {_sql_str(rec.get("code"))},
+                {_sql_str(rec.get("detail"))},
+                {_sql_str(rec.get("source_file") or "ingest")},
+                CURRENT_TIMESTAMP()
+            )
+            """
+        )
+
+
+def load_hold_queue(cursor, catalog: str) -> list[dict]:
+    if not cursor:
+        return []
+    try:
+        cursor.execute(
+            f"""
+            SELECT grant_no, title, amount_usd, reason_code, detail
+            FROM `{catalog}`.`app`.hold_queue
+            ORDER BY held_at DESC
+            """
+        )
+        cols = [str(d[0]).lower() for d in cursor.description]
+        out = []
+        for row in cursor.fetchall():
+            rec = dict(zip(cols, row))
+            out.append(
+                {
+                    "grant_no": rec.get("grant_no"),
+                    "title": rec.get("title"),
+                    "amount_usd": rec.get("amount_usd"),
+                    "code": rec.get("reason_code"),
+                    "detail": rec.get("detail"),
+                }
+            )
+        return out
+    except Exception:
+        return []
 
 
 def reset_to_seed_sql(cursor, catalog: str) -> dict:
@@ -160,6 +264,10 @@ def reset_to_seed_sql(cursor, catalog: str) -> dict:
         f"""DELETE FROM `{catalog}`.`bronze`.financial
             WHERE coalesce(batch_id, _batch_id, '{SEED_BATCH_ID}') <> '{SEED_BATCH_ID}'"""
     )
+    try:
+        cursor.execute(f"DELETE FROM `{catalog}`.`app`.hold_queue")
+    except Exception:
+        pass
     bronze_n = bronze_count(cursor, catalog)
     reloaded = False
     if bronze_n != 400:
@@ -312,6 +420,21 @@ def _ensure_app_tables(cursor, catalog: str) -> None:
             prompt_chars INT
         ) USING DELTA
         COMMENT 'Automated daily portfolio briefs (ai_query or template)'
+        """
+    )
+    cursor.execute(
+        f"""
+        CREATE TABLE IF NOT EXISTS `{catalog}`.`app`.hold_queue (
+            hold_id STRING NOT NULL,
+            grant_no STRING,
+            title STRING,
+            amount_usd DOUBLE,
+            reason_code STRING,
+            detail STRING,
+            source_file STRING,
+            held_at TIMESTAMP
+        ) USING DELTA
+        COMMENT 'Quality-gate Hold inbox (empty / dup / amt)'
         """
     )
 

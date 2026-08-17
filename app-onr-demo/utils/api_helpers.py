@@ -72,7 +72,12 @@ def render_live_statement_api(cursor=None, catalog: str = "onr_demo"):
 
     if st.button("Execute live Statement API call", type="primary", key="live_stmt_api"):
         try:
-            w, host, warehouse_id, _name = _resolve_warehouse()
+            import time
+            from utils.ui import receipt_card
+            from utils.workspace_names import SQL_WAREHOUSE_NAME
+
+            w, host, warehouse_id, wname = _resolve_warehouse()
+            t0 = time.perf_counter()
             resp = w.statement_execution.execute_statement(
                 warehouse_id=warehouse_id,
                 statement=statement,
@@ -81,6 +86,7 @@ def render_live_statement_api(cursor=None, catalog: str = "onr_demo"):
                 wait_timeout="30s",
                 disposition="INLINE",
             )
+            elapsed_ms = int((time.perf_counter() - t0) * 1000)
             # SDK object → json-friendly dict
             dumped = resp.as_dict() if hasattr(resp, "as_dict") else None
             if dumped is None:
@@ -91,10 +97,40 @@ def render_live_statement_api(cursor=None, catalog: str = "onr_demo"):
                 }
             # Never render secrets if the SDK echoed auth
             dumped.pop("access_token", None)
-            st.success(
-                f"statement_id = `{dumped.get('statement_id') or getattr(resp, 'statement_id', '?')}`"
+            sid = dumped.get("statement_id") or getattr(resp, "statement_id", "?")
+            status = dumped.get("status") or {}
+            if isinstance(status, dict):
+                state = status.get("state") or status.get("status") or "SUCCEEDED"
+            else:
+                state = str(status or "SUCCEEDED")
+            manifest = dumped.get("manifest") or {}
+            row_count = None
+            if isinstance(manifest, dict):
+                row_count = manifest.get("total_row_count")
+                if row_count is None:
+                    row_count = (manifest.get("schema") or {}).get("total_row_count")
+            result = dumped.get("result") or {}
+            if row_count is None and isinstance(result, dict) and result.get("data_array") is not None:
+                row_count = len(result.get("data_array") or [])
+            receipt_card(
+                {
+                    "statement_id": sid,
+                    "status": state,
+                    "row_count": row_count if row_count is not None else "—",
+                    "warehouse": wname or SQL_WAREHOUSE_NAME,
+                    "elapsed": f"{elapsed_ms} ms",
+                }
             )
-            st.json(dumped)
+            st.session_state["last_statement_receipt"] = {
+                "statement_id": sid,
+                "status": state,
+                "row_count": row_count,
+                "warehouse": wname or SQL_WAREHOUSE_NAME,
+                "elapsed": f"{elapsed_ms} ms",
+            }
+            st.success(f"statement_id = `{sid}`")
+            with st.expander("Full response"):
+                st.json(dumped)
 
             # Tabular view of data_array when present
             result = dumped.get("result") or {}
@@ -114,9 +150,24 @@ def render_live_statement_api(cursor=None, catalog: str = "onr_demo"):
                 st.error("No warehouse cursor either — start **onr demo warehouse**.")
                 return
             try:
+                import time
+                from utils.ui import receipt_card
+                from utils.workspace_names import SQL_WAREHOUSE_NAME
+
+                t0 = time.perf_counter()
                 cursor.execute(statement)
                 cols = [d[0] for d in cursor.description]
                 rows = cursor.fetchall()
+                elapsed_ms = int((time.perf_counter() - t0) * 1000)
+                rcpt = {
+                    "statement_id": "cursor-fallback",
+                    "status": "SUCCEEDED",
+                    "row_count": len(rows),
+                    "warehouse": SQL_WAREHOUSE_NAME,
+                    "elapsed": f"{elapsed_ms} ms",
+                }
+                st.session_state["last_statement_receipt"] = rcpt
+                receipt_card(rcpt)
                 st.dataframe(pd.DataFrame(rows, columns=cols), use_container_width=True)
                 st.caption(
                     "Result came from the SQL warehouse (same compute the REST API would use). "
@@ -124,3 +175,7 @@ def render_live_statement_api(cursor=None, catalog: str = "onr_demo"):
                 )
             except Exception as e2:
                 st.error(f"Cursor fallback failed: {e2}")
+    elif st.session_state.get("last_statement_receipt"):
+        from utils.ui import receipt_card
+
+        receipt_card(st.session_state["last_statement_receipt"])

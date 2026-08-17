@@ -20,8 +20,104 @@ def _query_df(cursor, sql: str) -> pd.DataFrame:
         return pd.DataFrame()
 
 
+def render_resource_action(cursor=None, catalog: str = "onr_demo"):
+    """One officer sentence from Fund/Review/Defer + AT_RISK + TREND-DECLINE."""
+    from utils.ui import action_card
+
+    defer = _query_df(
+        cursor,
+        f"""
+        SELECT program_area, COUNT(*) AS n, SUM(amount_usd) AS dollars
+        FROM `{catalog}`.`gold`.grant_predictions
+        WHERE recommendation = 'Defer'
+        GROUP BY program_area
+        ORDER BY dollars DESC
+        LIMIT 1
+        """,
+    )
+    decline = _query_df(
+        cursor,
+        f"""
+        SELECT program_area FROM `{catalog}`.`gold`.program_trends
+        WHERE trend_id = 'TREND-DECLINE'
+        ORDER BY program_area
+        """,
+    )
+    risk = _query_df(
+        cursor,
+        f"""
+        SELECT category, fiscal_year, quarter, execution_rate
+        FROM `{catalog}`.`gold`.budget_execution
+        WHERE status = 'AT_RISK'
+        ORDER BY execution_rate
+        """,
+    )
+    target = _query_df(
+        cursor,
+        f"""
+        SELECT g.program_area, COUNT(*) AS n
+        FROM `{catalog}`.`gold`.grant_predictions g
+        LEFT JOIN `{catalog}`.`gold`.grant_anomaly_scores a ON g.grant_no = a.grant_no
+        WHERE (
+            lower(g.program_area) LIKE '%quantum%'
+            OR g.program_area IN (
+                SELECT program_area FROM `{catalog}`.`gold`.program_trends
+                WHERE trend_id = 'TREND-DECLINE'
+            )
+        )
+        AND (
+            a.is_flagged = true
+            OR g.recommendation IN ('Fund', 'Review')
+        )
+        GROUP BY g.program_area
+        ORDER BY n DESC
+        LIMIT 1
+        """,
+    )
+    if defer.empty:
+        from utils.portfolio_data import grants_dataframe
+
+        g = grants_dataframe()
+        d = g[pd.to_numeric(g["amount_usd"], errors="coerce") < 400000]
+        if not d.empty:
+            top = (
+                d.groupby("program_area", as_index=False)
+                .agg(n=("grant_no", "count"), dollars=("amount_usd", "sum"))
+                .sort_values("dollars", ascending=False)
+                .head(1)
+            )
+            defer = top
+        q = g[g["program_area"].astype(str).str.contains("Quantum", case=False, na=False)]
+        if target.empty and not q.empty:
+            target = pd.DataFrame([{"program_area": "Quantum", "n": int(len(q.head(3)))}])
+
+    if defer.empty:
+        return
+    area = str(defer.iloc[0].get("program_area") or "portfolio")
+    n = int(defer.iloc[0].get("n") or 0)
+    dollars = float(defer.iloc[0].get("dollars") or 0)
+    dest = "Quantum"
+    dest_n = 3
+    if not target.empty:
+        dest = str(target.iloc[0].get("program_area") or dest)
+        dest_n = int(target.iloc[0].get("n") or dest_n)
+    elif not decline.empty:
+        dest = str(decline.iloc[0].get("program_area") or dest)
+        dest_n = max(dest_n, len(decline))
+    line = (
+        f"Defer {n:,} {area} awards · ${dollars/1e6:.1f}M. "
+        f"{dest_n} {dest} grants are AT_RISK + TREND-DECLINE. "
+        f"Shift the ${dollars/1e6:.1f}M there before the next board."
+    )
+    action_card(
+        line,
+        f"{catalog}.gold.grant_predictions · {catalog}.gold.program_trends · {catalog}.gold.budget_execution",
+    )
+
+
 def render_decision_support(cursor=None, catalog: str = "onr_demo"):
     """Leadership cards from silver/gold, not invented totals."""
+    render_resource_action(cursor, catalog)
     st.markdown("### Executive decision support")
     k = None
     if cursor:
@@ -54,11 +150,14 @@ def render_decision_support(cursor=None, catalog: str = "onr_demo"):
         from utils.portfolio_data import portfolio_kpis
         k = portfolio_kpis()
 
+    from utils.ui import provenance_note
+
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Portfolio", f"${k['total_funding']/1e6:.1f}M")
     c2.metric("Grants", f"{k['grant_count']:,}")
     c3.metric("Awardees", f"{k.get('awardee_count', 0):,}")
     c4.metric("ERP execution", f"{k['execution_rate']:.1f}%")
+    provenance_note("silver.grants", catalog)
 
     top = _query_df(
         cursor,
@@ -490,12 +589,15 @@ def render_anomaly_detection(cursor=None, catalog: str = "onr_demo"):
         ].sort_values("anomaly_score", ascending=False).head(40)
         st.caption("Warehouse / gold.grant_anomaly_scores unavailable — rule flags from the Compass fixture.")
 
+    from utils.ui import provenance_note
+
     n_flag = int(df["is_flagged"].astype(bool).sum()) if "is_flagged" in df.columns else 0
     c1, c2, c3 = st.columns(3)
     c1.metric("Rows scored", f"{len(df):,}")
     c2.metric("Flagged", f"{n_flag:,}")
     model = df["model_name"].iloc[0] if not df.empty and "model_name" in df.columns else "—"
     c3.metric("Scorer", str(model))
+    provenance_note("gold.grant_anomaly_scores", catalog)
 
     if not metrics.empty:
         st.dataframe(metrics, use_container_width=True)

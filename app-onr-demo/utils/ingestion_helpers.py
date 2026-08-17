@@ -151,10 +151,32 @@ def render_schema_evolution(cursor, catalog: str, schema: str):
 # -------------------------------
 # STREAMING METRICS
 # -------------------------------
-def render_streaming_metrics(cursor=None, catalog: str = "onr_demo"):
-    """File-based ingest health from bronze (Auto Loader availableNow)."""
-    st.markdown("### Stream health")
-    files, last, n, last2 = "—", "—", "—", "—"
+def _human_ago(ts) -> str:
+    if ts is None or ts == "—":
+        return "—"
+    try:
+        import datetime as dt
+
+        parsed = pd.to_datetime(ts, utc=True)
+        if parsed is None or pd.isna(parsed):
+            return "—"
+        now = dt.datetime.now(dt.timezone.utc)
+        if getattr(parsed, "tzinfo", None) is None:
+            parsed = parsed.replace(tzinfo=dt.timezone.utc)
+        sec = int((now - parsed.to_pydatetime()).total_seconds())
+        if sec < 0:
+            sec = 0
+        if sec < 60:
+            return f"{sec}s ago"
+        if sec < 3600:
+            return f"{sec // 60}m ago"
+        return f"{sec // 3600}h ago"
+    except Exception:
+        return str(ts)[:19]
+
+
+def _bronze_pulse(cursor, catalog: str) -> dict:
+    files, last, n, last2 = "—", None, "—", "—"
     if cursor:
         try:
             cursor.execute(
@@ -177,27 +199,176 @@ def render_streaming_metrics(cursor=None, catalog: str = "onr_demo"):
             last2 = cursor.fetchone()[0]
         except Exception:
             last2 = "—"
+    return {"files": files, "last": last, "n": n, "last2": last2, "ago": _human_ago(last)}
+
+
+def _heartbeat_body(cursor, catalog: str) -> None:
+    from utils.ui import heartbeat_strip, provenance_note
+
+    pulse = _bronze_pulse(cursor, catalog)
+    last2 = pulse["last2"]
+    n = pulse["n"]
+    heartbeat_strip(
+        f"{n:,}" if isinstance(n, int) else str(n),
+        f"{last2}" if last2 != "—" else "—",
+        pulse["ago"],
+    )
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Bronze grants", f"{n}")
-    c2.metric("Source files", f"{files}")
-    c3.metric("Last 2 min", f"{last2}")
-    c4.metric("Last ingest", str(last)[:19] if last and last != "—" else "—")
+    delta = None
+    try:
+        if last2 not in {None, "—"} and int(last2) > 0:
+            delta = f"+{int(last2)}"
+    except (TypeError, ValueError):
+        delta = None
+    c1.metric("Bronze grants", f"{n}", delta=delta)
+    c2.metric("Source files", f"{pulse['files']}")
+    c3.metric("Last 2 min", f"{last2}", delta=delta)
+    c4.metric("Last file", pulse["ago"])
+    provenance_note("bronze.grants", catalog, when=pulse["last"])
+
+
+def render_streaming_metrics(cursor=None, catalog: str = "onr_demo"):
+    """File-based ingest health from bronze (Auto Loader processingTime)."""
+    st.markdown("### Stream health")
+    st.session_state["_onr_hb_catalog"] = catalog
+    rendered = False
+    if hasattr(st, "fragment"):
+        try:
+            _streaming_heartbeat_fragment()
+            rendered = True
+        except Exception:
+            rendered = False
+    if not rendered:
+        _heartbeat_body(cursor, catalog)
+
+
+def _streaming_heartbeat_fragment():
+    from utils.db_helpers import get_connection
+
+    catalog = st.session_state.get("_onr_hb_catalog", "onr_demo")
+    _conn, cur = get_connection()
+    _heartbeat_body(cur, catalog)
+
+
+if hasattr(st, "fragment"):
+    try:
+        from datetime import timedelta
+
+        _streaming_heartbeat_fragment = st.fragment(run_every=timedelta(seconds=8))(
+            _streaming_heartbeat_fragment
+        )
+    except Exception:
+        pass
+
+
+def render_time_travel_compare(cursor=None, catalog: str = "onr_demo"):
+    """Gold/silver as of the previous Delta version vs now. No reset."""
+    from utils.ui import time_travel_strip
+
+    if not cursor:
+        return
+    try:
+        cursor.execute(f"DESCRIBE HISTORY `{catalog}`.`silver`.grants")
+        hist = cursor.fetchall()
+        colnames = [str(d[0]).lower() for d in (cursor.description or [])]
+    except Exception:
+        return
+    if not hist:
+        return
+
+    def _col(entry, *names, idx=0):
+        for name in names:
+            if name in colnames:
+                return entry[colnames.index(name)]
+        return entry[idx] if entry and len(entry) > idx else None
+
+    versions = []
+    for entry in hist[:8]:
+        versions.append(
+            {
+                "version": _col(entry, "version", idx=0),
+                "ts": _col(entry, "timestamp", idx=1),
+            }
+        )
+    if not versions:
+        return
+    current = versions[0]
+    baseline = versions[1] if len(versions) > 1 else versions[0]
+
+    def _count_at(version) -> int | None:
+        try:
+            cursor.execute(
+                f"""
+                SELECT COUNT(*) FROM `{catalog}`.`silver`.grants
+                VERSION AS OF {int(version)}
+                WHERE _is_active = true
+                """
+            )
+            return int(cursor.fetchone()[0])
+        except Exception:
+            return None
+
+    now_n = _count_at(current["version"])
+    base_n = _count_at(baseline["version"]) if baseline["version"] != current["version"] else now_n
+    if now_n is None:
+        return
+    time_travel_strip(
+        {
+            "label": "Baseline snapshot",
+            "value": f"{base_n:,}" if base_n is not None else "—",
+            "detail": f"silver.grants · version {baseline['version']} · {str(baseline['ts'])[:19]}",
+        },
+        {
+            "label": "Now",
+            "value": f"{now_n:,}",
+            "detail": f"silver.grants · version {current['version']} · {str(current['ts'])[:19]}",
+        },
+        "RPO is the previous Delta version, not a backup truck.",
+    )
+
+
+def _show_ingest_pulse(cursor, catalog: str) -> None:
+    from utils.demo_actions import grant_count, load_hold_queue
+    from utils.ui import hold_tray, provenance_note
+
+    now = grant_count(cursor, catalog)
+    last = st.session_state.get("last_ingest") or {}
+    holds = last.get("holds") or load_hold_queue(cursor, catalog)
+    held = last.get("held")
+    if held is None:
+        held = len(holds) if holds else None
+    c1, c2 = st.columns(2)
+    delta = None
+    if now is not None and last.get("before") is not None:
+        try:
+            delta = f"{int(now) - int(last['before']):+d}"
+        except (TypeError, ValueError):
+            delta = None
+    with c1:
+        c1.metric("Active grants", f"{now:,}" if now is not None else "—", delta=delta)
+    with c2:
+        if held:
+            c2.metric("Held / skipped", f"{int(held):,}", delta=f"+{int(held)}")
+        else:
+            c2.metric("Held / skipped", "0")
+    provenance_note("silver.grants", catalog)
+    if last.get("before") is not None and last.get("after") is not None:
+        st.caption(f"Active grants {last['before']} → {last['after']}")
+    if holds:
+        hold_tray(holds)
 
 
 def render_file_picker_and_reset(cursor, catalog: str):
     """Inbound files and baseline restore."""
     from utils.demo_actions import (
         FILE_PACKS,
-        grant_count,
         process_selected_files,
         reset_to_seed_sql,
     )
     import pandas as pd
 
     st.markdown("### Inbound files")
-    now = grant_count(cursor, catalog)
-    if now is not None:
-        st.metric("Active grants", f"{now:,}")
+    _show_ingest_pulse(cursor, catalog)
 
     packs = st.multiselect(
         "Queued files",
@@ -231,32 +402,12 @@ def render_file_picker_and_reset(cursor, catalog: str):
                         result = process_selected_files(
                             cursor, catalog, packs, extra_rows=extra_rows, extra_name=extra_name
                         )
+                        st.session_state["last_ingest"] = result
                         before_n = result.get("before")
                         after_n = result.get("after")
-                        m1, m2, m3 = st.columns(3)
-                        m1.metric("Before", f"{before_n:,}" if before_n is not None else "—")
-                        m2.metric(
-                            "After",
-                            f"{after_n:,}" if after_n is not None else "—",
-                            delta=(
-                                f"{after_n - before_n:+d}"
-                                if before_n is not None and after_n is not None
-                                else None
-                            ),
-                        )
                         landed = sum(int(f.get("landed") or 0) for f in result["files"])
-                        rejected = sum(
-                            int(f.get("rejected") or 0) + int(f.get("skipped") or 0)
-                            for f in result["files"]
-                        )
-                        m3.metric("Held / skipped", f"{rejected:,}")
                         st.success(f"Active grants {before_n} → {after_n} · landed {landed}")
-                        st.dataframe(pd.DataFrame(result["files"]), use_container_width=True)
-                        for fsum in result["files"]:
-                            if fsum.get("reasons"):
-                                with st.expander(fsum["file"]):
-                                    for r in fsum["reasons"]:
-                                        st.write(f"- {r}")
+                        st.rerun()
                     except Exception as e:
                         st.error(f"Ingest failed: {e}")
     with c2:
@@ -268,11 +419,13 @@ def render_file_picker_and_reset(cursor, catalog: str):
                 with st.spinner("Restoring baseline…"):
                     try:
                         result = reset_to_seed_sql(cursor, catalog)
+                        st.session_state.pop("last_ingest", None)
                         st.success(
                             f"Baseline restored. Active grants {result['before_silver']} → {result['after_silver']}"
                         )
                         if result.get("warning"):
                             st.warning(result["warning"])
+                        st.rerun()
                     except Exception as e:
                         st.error(f"Restore failed: {e}")
         st.caption("Removes inbound batches and rebuilds silver and gold from the official snapshot.")

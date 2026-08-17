@@ -56,20 +56,33 @@ try:
         """
     )
     n_fin, exe = cursor.fetchone()
+    from utils.ui import provenance_note
+
+    last = st.session_state.get("last_ingest") or {}
+    grant_delta = None
+    if last.get("before") is not None and n_grants is not None:
+        try:
+            grant_delta = f"{int(n_grants) - int(last['before']):+d}"
+        except (TypeError, ValueError):
+            grant_delta = None
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Active grants", f"{int(n_grants or 0):,}")
+    c1.metric("Active grants", f"{int(n_grants or 0):,}", delta=grant_delta)
     c2.metric("Portfolio", f"${float(total or 0)/1e6:.1f}M")
     c3.metric("ERP lines", f"{int(n_fin or 0):,}")
     c4.metric("Execution", f"{float(exe or 0):.1f}%")
+    provenance_note("silver.grants", onr_catalog)
 except Exception:
     from utils.portfolio_data import portfolio_kpis
 
     k = portfolio_kpis()
+    from utils.ui import provenance_note
+
     a, b, c, d = st.columns(4)
     a.metric("Active grants", f"{k['grant_count']:,}")
     b.metric("Portfolio", f"${k['total_funding']/1e6:.1f}M")
     c.metric("ERP lines", f"{k['transaction_count']:,}")
     d.metric("Execution", f"{k['execution_rate']:.1f}%")
+    provenance_note("silver.grants", onr_catalog, via="fixture")
     st.caption("Showing the packaged portfolio while the warehouse is unavailable.")
 
 st.markdown("")

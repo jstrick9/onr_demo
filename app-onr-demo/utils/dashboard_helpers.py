@@ -110,6 +110,8 @@ def render_executive_kpis(cursor=None, catalog: str = "onr_demo"):
             k = None
     if not k:
         k = portfolio_kpis()
+    from utils.ui import provenance_note
+
     st.markdown("### Portfolio pulse")
     
     col1, col2, col3, col4, col5 = st.columns(5)
@@ -124,6 +126,7 @@ def render_executive_kpis(cursor=None, catalog: str = "onr_demo"):
         st.metric(label="Avg Award Size", value=f"${k['avg_award']/1e6:.2f}M")
     with col5:
         st.metric(label="Awardees", value=f"{k['awardee_count']:,}")
+    provenance_note("gold.budget_execution", catalog)
 
 
 # -------------------------------

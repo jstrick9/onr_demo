@@ -39,7 +39,7 @@
 
 ## Night before (not recorded)
 
-1. Workspace Git folder: `git pull` `main` (recording pack **`38ac3c9`** or later). Redeploy / restart `onr-demo-poc`.
+1. Workspace Git folder: `git pull` `main` (this pack or later). Redeploy / restart `onr-demo-poc`.
 2. Start **`onr demo warehouse`** and **`onr demo cluster`**. Leave them running.
 3. Home = live **400**, not “fixture.” If fixture: `sql/grant_app_principal.sql` + warehouse **CAN USE** for the **app service principal**.
 4. If silver ≠ 400: `05_reset_demo.py` on the cluster.
@@ -94,9 +94,9 @@ While that lands, here is how we sustain the legacy footprint — strategic prom
 
 We do not cut over the D-and-A Portal, the reporting stack, or the existing ETL in a weekend. The pattern is strangler-fig coexistence. New files land in `/Volumes/onr_demo/bronze/landing/grants/` — governed object storage, not a DBFS mount. The warehouse path this button just used, and the Auto Loader path I will start next, write the **same** bronze Delta table. Legacy reports keep reading gold over JDBC. When a report is ready to retire, we point it at the table this app already uses. Rollback is delete-the-batch, not rewrite-the-estate.
 
-`[DO THIS]` When the metrics appear, point at **Before 400 → After 408**. Open the file summary. Point at landed / rejected / skipped.
+`[DO THIS]` When the metrics appear, point at **Active grants 400 → 408** and **Held / skipped +3**. Point at the **Hold** tray — chips **empty**, **dup**, **amt**.
 
-There it is. Silver grants: four hundred to four hundred and eight. Eight rows landed. Empty `grant_no` never entered bronze. Negative amount is called out and will not pass silver. The duplicate was skipped. Automated quality at the gate — no manual recode.
+There it is. Silver grants: four hundred to four hundred and eight. Eight rows landed. Empty `grant_no` never entered bronze. Negative amount is called out and will not pass silver. The duplicate was skipped. Automated quality at the gate — no manual recode. The Hold tray is the same three words as the architecture board.
 
 `[DO THIS]` Click the **Quality** tab. Two seconds. Then go to tab **01b**. Do **not** restore the baseline.
 
@@ -118,7 +118,7 @@ Strategic prompt (d), resilience, while it finishes.
 
 Contract targets: RPO fifteen minutes for gold, essentially zero for bronze landing — the file is still sitting in the Volume. Delta time-travel is the row-level RPO. RTO thirty minutes to serving gold, about five minutes to serving the app. The warehouse is serverless; the app is already deployed. The all-purpose cluster is **not** on the serving path. Annual DR is non-disruptive: pause file-arrival, restore yesterday’s gold into a `onr_demo_dr` catalog, point a clone of the app at it, validate, tear down. We are **not** resetting on camera.
 
-`[DO THIS]` Optional two seconds: App → Ingestion → **Schema & stream** → **Last 2 min**. Then **Catalog Explorer** tab.
+`[DO THIS]` Optional two seconds: App → Ingestion → **Schema & stream**. Point at the bronze count, **last file … ago**, and **Delta time travel**. Then **Catalog Explorer** tab.
 
 ---
 
@@ -164,9 +164,9 @@ Predictive: a Random Forest large-award classifier — Fund, Review, or Defer �
 
 Prescriptive: protect `ON_TARGET`, move dollars off `AT_RISK` and `TREND-DECLINE`, review large-award concentration. Engineer owns bronze and silver. Scientist owns the registered models. Analyst owns gold and the daily brief. Same catalog.
 
-`[DO THIS]` When 04c prints the readout, point at rows scored **408**, Fund / Review / Defer counts, IsolationForest flagged count. Then App → **Analytics**.
+`[DO THIS]` When 04c prints the readout, point at rows scored **408**, Fund / Review / Defer counts, IsolationForest flagged count. Then App → **Analytics**. Point at **Resource action**.
 
-Predictions tab. `model_name` is `rf_large_award_v1`. Fund, Review, Defer. The live grants are in this table.
+That sentence is the prescriptive close — Defer dollars off one area onto AT_RISK plus TREND-DECLINE. Predictions tab. `model_name` is `rf_large_award_v1`. Fund, Review, Defer. The live grants are in this table.
 
 `[DO THIS]` **Anomalies**.
 
@@ -190,9 +190,9 @@ A non-technical leader does not need SQL. Sidebar still shows four hundred and e
 
 Search is live against gold. It is also written to `app.search_history`. That is the audit Zero Trust asked for, and it is the usage meter for prompt (e).
 
-`[DO THIS]` **Automation** → **Generate daily brief**. Wait for the text.
+`[DO THIS]` **Automation** → **Generate daily brief**. Wait for the letterhead.
 
-Automated summary. If Foundation Model serving is on, this is `ai_query`. If not, it is the structured template. Either way a row lands in `app.daily_briefs`. That is process automation — not a staffer writing the morning book.
+Automated summary. Classification banner, three bullets, one recommended action. If Foundation Model serving is on, this is `ai_query`. If not, it is the structured template. Either way a row lands in `app.daily_briefs`. That is process automation — not a staffer writing the morning book.
 
 `[DO THIS]` **Budget Execution**. Point at one **AT_RISK** row.
 
@@ -214,7 +214,7 @@ Filtered bulk extract — not `SELECT *`. Open formats: CSV, JSON, Parquet. Sche
 
 `app.export_history` — who, what, filter, row count. Continuous authorization, not a static password file.
 
-`[DO THIS]` **API** tab. Click **Execute live Statement API call**. Point at `statement_id` and the JSON.
+`[DO THIS]` **API** tab. Click **Execute live Statement API call**. Point at the statement receipt — `statement_id`, `SUCCEEDED`, `row_count`, warehouse, elapsed.
 
 This is the live, documented Databricks Statement Execution REST API — `POST /api/2.0/sql/statements` — OAuth, short-lived token, same warehouse the dashboard uses. That is what Advana or Cloud One would call. It is not a Databricks-only extract and it is not a fictional host.
 

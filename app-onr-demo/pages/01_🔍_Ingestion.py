@@ -13,6 +13,7 @@ from utils.ingestion_helpers import (
     render_streaming_metrics,
     render_ingestion_demo,
     render_file_picker_and_reset,
+    render_time_travel_compare,
 )
 from utils.ui import page_header, render_architecture, live_chip
 
@@ -70,6 +71,7 @@ with tab3:
         render_schema_evolution(cursor, onr_catalog, onr_schema)
     with col2:
         render_streaming_metrics(cursor, onr_catalog)
+        render_time_travel_compare(cursor, onr_catalog)
 
 with tab4:
     render_ingestion_demo(onr_catalog, onr_schema)

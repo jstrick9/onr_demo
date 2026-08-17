@@ -8,7 +8,7 @@ from utils.runtime_env import get_runtime_env
 from utils.db_helpers import get_connection, read_yaml
 from utils.user_helpers import init_user_session_state
 from utils.workspace_names import SQL_WAREHOUSE_NAME, ALL_PURPOSE_CLUSTER_NAME
-from utils.ui import page_header, render_architecture, fit_metrics
+from utils.ui import page_header, render_architecture, fit_metrics, provenance_note
 
 set_page_config(page_title="Infrastructure | ONR Portfolio")
 setup_sidebar()
@@ -56,6 +56,7 @@ fit_metrics(
         ("Cluster", ALL_PURPOSE_CLUSTER_NAME),
     ]
 )
+provenance_note("app inventory", onr_catalog)
 if cursor and not uc_ok:
     st.caption("Warehouse is up but information_schema was not readable.")
 elif not cursor:
