@@ -39,9 +39,10 @@ run_for_seconds = int(dbutils.widgets.get("run_for_seconds") or "90")
 trigger_mode = dbutils.widgets.get("trigger_mode")
 
 landing = f"/Volumes/{catalog}/bronze/landing/"
-# v2: previous schema location stored .schema() + addNewColumns, which this DBR rejects.
-ckpt = f"/Volumes/{catalog}/bronze/checkpoints/grants_stream_v2"
-schema_loc = f"{landing}_schemas/grants_stream_v2"
+# v3: no .schema() and no schemaHints — this DBR treats either as "schema specified"
+# and rejects addNewColumns. Infer types; mergeSchema on write.
+ckpt = f"/Volumes/{catalog}/bronze/checkpoints/grants_stream_v3"
+schema_loc = f"{landing}_schemas/grants_stream_v3"
 
 for p in (f"{landing}grants", schema_loc, ckpt):
     try:
@@ -57,13 +58,8 @@ print(f"catalog={catalog}  trigger={trigger_mode}  interval={processing_seconds}
 from pyspark.sql.functions import current_timestamp, input_file_name, lit
 import time
 
-# addNewColumns cannot be combined with .schema(). Hints keep types; evolution still works.
-SCHEMA_HINTS = (
-    "grant_no STRING, title STRING, abstract STRING, program_area STRING, "
-    "fiscal_year INT, amount_usd DOUBLE, awardee STRING, org_unit STRING, "
-    "classification_band STRING, batch_id STRING, created_at STRING"
-)
 QUERY_NAME = "onr_grants_processingTime"
+print("01b cloudFiles: inferColumnTypes + addNewColumns; no .schema(); no schemaHints; ckpt=v3")
 
 # Stop any leftover demo query so a prior failed run cannot keep streaming.
 for active in spark.streams.active:
@@ -78,15 +74,15 @@ src = (
     spark.readStream
     .format("cloudFiles")
     .option("cloudFiles.format", "csv")
+    .option("header", "true")
     .option("cloudFiles.inferColumnTypes", "true")
     .option("cloudFiles.schemaLocation", schema_loc)
     .option("cloudFiles.schemaEvolutionMode", "addNewColumns")
-    .option("cloudFiles.schemaHints", SCHEMA_HINTS)
-    .option("header", "true")
     .load(f"{landing}grants/")
     .withColumn("_ingest_time", current_timestamp())
     .withColumn("_source_file", input_file_name())
     .withColumn("_batch_id", lit("stream-demo-2026"))
+    .withColumn("batch_id", lit("stream-demo-2026"))
 )
 
 writer = (

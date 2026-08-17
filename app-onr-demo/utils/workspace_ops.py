@@ -386,21 +386,30 @@ def publish_notebook_for_app(filename: str) -> str | None:
     return None
 
 
-def runnable_notebook_path(filename: str) -> str | None:
-    """Workspace path the app SP can actually read — required for job submit."""
+def runnable_notebook_path(filename: str, refresh: bool = False) -> str | None:
+    """Workspace path the app SP can actually read — required for job submit.
+
+    When refresh=True (Start stream), always overwrite the Shared copy from
+    the packaged notebook so a stale .schema() 01b cannot keep failing.
+    """
     key = f"_nb_run_{filename}"
+    if refresh:
+        published = publish_notebook_for_app(filename)
+        if published:
+            st.session_state[key] = published
+            return published
     cached = st.session_state.get(key)
     if cached and notebook_accessible(cached):
         return cached
+    published = publish_notebook_for_app(filename)
+    if published:
+        st.session_state[key] = published
+        return published
     guessed = guessed_notebook_path(filename)
     for path in [guessed, f"{guessed}.py" if guessed else None, *_candidate_paths(filename)]:
         if notebook_accessible(path):
             st.session_state[key] = path
             return path
-    published = publish_notebook_for_app(filename)
-    if published:
-        st.session_state[key] = published
-        return published
     return None
 
 
