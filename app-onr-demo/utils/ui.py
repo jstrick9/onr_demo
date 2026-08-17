@@ -374,13 +374,9 @@ def _e(s: str) -> str:
 def _defs() -> str:
     return f"""
     <defs>
-      <marker id="arrowGold" viewBox="0 0 10 10" refX="9" refY="5"
-              markerWidth="8" markerHeight="8" orient="auto-start-reverse">
-        <path d="M 0 0 L 10 5 L 0 10 z" fill="#b45309" stroke="#7c2d12" stroke-width="0.6"/>
-      </marker>
-      <marker id="arrowNavy" viewBox="0 0 10 10" refX="9" refY="5"
-              markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-        <path d="M 0 0 L 10 5 L 0 10 z" fill="{NAVY}"/>
+      <marker id="arrowGold" viewBox="0 0 10 10" refX="8" refY="5"
+              markerWidth="4" markerHeight="4" orient="auto-start-reverse">
+        <path d="M 0 1.2 L 8 5 L 0 8.8 z" fill="#b45309"/>
       </marker>
       <pattern id="grid" width="16" height="16" patternUnits="userSpaceOnUse">
         <path d="M 16 0 L 0 0 0 16" fill="none" stroke="#e6edf5" stroke-width="1"/>
@@ -391,9 +387,9 @@ def _defs() -> str:
 
 def _lane(x, y, w, h, label, fill="#eef3f8") -> str:
     return f"""
-    <rect x="{x}" y="{y}" width="{w}" height="{h}" rx="10" fill="{fill}" stroke="#d5deea"/>
-    <text x="{x+12}" y="{y+18}" fill="{MUTED}" font-size="11" font-weight="700"
-          font-family="Segoe UI, sans-serif" letter-spacing="1.4">{_e(label.upper())}</text>
+    <rect x="{x}" y="{y}" width="{w}" height="{h}" rx="10" fill="{fill}" stroke="#cbd5e1"/>
+    <text x="{x+14}" y="{y+20}" fill="{MUTED}" font-size="11" font-weight="700"
+          font-family="Segoe UI, sans-serif" letter-spacing="1.6">{_e(label.upper())}</text>
     """
 
 
@@ -401,7 +397,7 @@ def _box(x, y, w, h, title, line1="", line2="", head=NAVY, fs=11) -> str:
     title_fs = max(fs, 10)
     body_fs = max(fs - 1, 9)
     t2 = (
-        f'<text x="{x+8}" y="{y+54}" fill="{MUTED}" font-size="{body_fs}" '
+        f'<text x="{x+10}" y="{y+58}" fill="{MUTED}" font-size="{body_fs}" '
         f'font-family="Segoe UI, sans-serif">{_e(line2)}</text>'
         if line2
         else ""
@@ -409,30 +405,28 @@ def _box(x, y, w, h, title, line1="", line2="", head=NAVY, fs=11) -> str:
     return f"""
     <g>
       <rect x="{x}" y="{y}" width="{w}" height="{h}" rx="8" fill="#ffffff" stroke="{NAVY}" stroke-width="1.4"/>
-      <path d="M {x} {y+22} L {x} {y+8} Q {x} {y} {x+8} {y} L {x+w-8} {y} Q {x+w} {y} {x+w} {y+8} L {x+w} {y+22} Z" fill="{head}"/>
-      <text x="{x+8}" y="{y+15}" fill="#f7f1e6" font-size="{title_fs}" font-weight="700" font-family="Segoe UI, sans-serif">{_e(title)}</text>
-      <text x="{x+8}" y="{y+38}" fill="{INK}" font-size="{body_fs}" font-family="Segoe UI, sans-serif">{_e(line1)}</text>
+      <path d="M {x} {y+24} L {x} {y+8} Q {x} {y} {x+8} {y} L {x+w-8} {y} Q {x+w} {y} {x+w} {y+8} L {x+w} {y+24} Z" fill="{head}"/>
+      <text x="{x+10}" y="{y+16}" fill="#fff7ed" font-size="{title_fs}" font-weight="700" font-family="Segoe UI, sans-serif">{_e(title)}</text>
+      <text x="{x+10}" y="{y+42}" fill="{INK}" font-size="{body_fs}" font-family="Segoe UI, sans-serif">{_e(line1)}</text>
       {t2}
     </g>
     """
 
 
 def _arrow(x1, y1, x2, y2, label="") -> str:
-    mx, my = (x1 + x2) / 2, (y1 + y2) / 2 - 10
+    mx, my = (x1 + x2) / 2, (y1 + y2) / 2 - 8
     lab = (
         f'<text x="{mx}" y="{my}" text-anchor="middle" fill="#ffffff" stroke="#ffffff" '
-        f'stroke-width="4" paint-order="stroke" font-size="12" font-weight="800" '
+        f'stroke-width="3" paint-order="stroke" font-size="11" font-weight="800" '
         f'font-family="Segoe UI, sans-serif">{_e(label)}</text>'
-        f'<text x="{mx}" y="{my}" text-anchor="middle" fill="{GOLD}" font-size="12" '
+        f'<text x="{mx}" y="{my}" text-anchor="middle" fill="{GOLD}" font-size="11" '
         f'font-weight="800" font-family="Segoe UI, sans-serif">{_e(label)}</text>'
         if label
         else ""
     )
     return f"""
-    <line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" stroke="#7c2d12" stroke-width="5.2"
-          stroke-linecap="round"/>
-    <line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" stroke="{GOLD}" stroke-width="3.2"
-          marker-end="url(#arrowGold)" stroke-dasharray="9 6" class="flow-line"
+    <line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" stroke="{GOLD}" stroke-width="2.2"
+          marker-end="url(#arrowGold)" stroke-dasharray="8 6" class="flow-line"
           stroke-linecap="round"/>
     {lab}
     """
@@ -454,29 +448,30 @@ def _wrap(title: str, svg_body: str, w: int, h: int, note: str = "") -> None:
   html, body {{ margin: 0; padding: 0; background: #f7f9fc; }}
   .board {{
     font-family: "Segoe UI", "Source Sans 3", sans-serif;
-    border: 1px solid #d5deea;
+    border: 1.5px solid #475569;
     border-radius: 14px;
     background: #f7f9fc;
-    padding: 12px 12px 8px 12px;
+    padding: 8px 8px 6px 8px;
+    box-shadow: 0 8px 22px rgba(15,23,42,0.10);
   }}
   .kicker {{
-    color: #a6864a;
+    color: #b45309;
     font-size: 11px;
-    font-weight: 700;
+    font-weight: 800;
     letter-spacing: 0.16em;
     text-transform: uppercase;
   }}
   .title {{
     color: #0b1f3a;
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 700;
-    margin: 2px 0 10px 0;
+    margin: 1px 0 6px 0;
   }}
   svg {{ width: 100%; height: {h}px; display: block; }}
   .note {{
     color: #5b6b80;
     font-size: 12px;
-    margin: 8px 2px 2px 2px;
+    margin: 6px 2px 2px 2px;
   }}
   .flow-line {{ animation: dash 1.15s linear infinite; }}
   @keyframes dash {{ to {{ stroke-dashoffset: -24; }} }}
@@ -495,39 +490,39 @@ def _wrap(title: str, svg_body: str, w: int, h: int, note: str = "") -> None:
   </div>
 </body>
 </html>"""
-    components.html(doc, height=h + 136, scrolling=False)
+    components.html(doc, height=h + 92, scrolling=False)
 
 
 def _diagram_ingestion() -> tuple[str, int, int, str, str]:
     body = "".join(
         [
-            _lane(8, 8, 200, 250, "Source", "#f4efe6"),
-            _lane(220, 8, 250, 250, "Ingest", "#eef6f8"),
-            _lane(482, 8, 230, 250, "Quality", "#f8f1ee"),
-            _lane(724, 8, 248, 250, "Serve", "#eef4ea"),
-            _box(24, 48, 168, 78, "Landing Volume", "CSV / JSON files", "/bronze/landing", BRONZE),
-            _box(24, 150, 168, 78, "Checkpoints", "Auto Loader offsets", "resumable", SILVER),
-            _box(236, 48, 218, 78, "Detect", "cloudFiles / warehouse", "addNewColumns", TEAL),
-            _box(236, 150, 218, 78, "bronze.grants", "Raw Delta + metadata", "_ingest_time", BRONZE),
-            _box(498, 48, 198, 78, "Quality gates", "grant_no, amount positive", "dedupe", "#a15c4a"),
-            _box(498, 160, 90, 70, "Pass", "to silver", "", OK),
-            _box(600, 160, 90, 70, "Hold", "empty / dup / ≤0", "", "#a15c4a"),
-            _box(740, 48, 216, 78, "silver.grants", "Cleansed, _is_active", "leadership-ready", SILVER),
-            _box(740, 150, 216, 78, "gold.*", "KPIs · forecast · scores", "app reads here", GOLD_LANE),
-            _arrow(192, 87, 236, 87, "arrive"),
-            _arrow(192, 189, 236, 189),
-            _arrow(454, 87, 498, 87, "validate"),
-            _arrow(345, 126, 345, 150),
-            _arrow(597, 126, 543, 160),
-            _arrow(696, 87, 740, 87, "publish"),
-            _arrow(848, 126, 848, 150),
+            _lane(12, 10, 270, 340, "Source", "#f4efe6"),
+            _lane(314, 10, 270, 340, "Ingest", "#eef6f8"),
+            _lane(616, 10, 270, 340, "Quality", "#f8f1ee"),
+            _lane(918, 10, 270, 340, "Serve", "#eef4ea"),
+            _box(28, 48, 238, 130, "Landing Volume", "CSV / JSON files", "/bronze/landing", BRONZE),
+            _box(28, 202, 238, 128, "Checkpoints", "Auto Loader offsets", "resumable", SILVER),
+            _box(330, 48, 238, 130, "Detect", "cloudFiles / warehouse", "addNewColumns", TEAL),
+            _box(330, 202, 238, 128, "bronze.grants", "Raw Delta + metadata", "_ingest_time", BRONZE),
+            _box(632, 48, 238, 110, "Quality gates", "grant_no, amount positive", "dedupe", "#a15c4a"),
+            _box(632, 186, 110, 144, "Pass", "to silver", "", OK),
+            _box(760, 186, 110, 144, "Hold", "empty / dup / amt", "", "#a15c4a"),
+            _box(934, 48, 238, 130, "silver.grants", "Cleansed, _is_active", "leadership-ready", SILVER),
+            _box(934, 202, 238, 128, "gold.*", "KPIs, forecast, scores", "app reads here", GOLD_LANE),
+            _arrow(266, 113, 330, 113, "arrive"),
+            _arrow(266, 266, 330, 266),
+            _arrow(568, 103, 632, 103, "validate"),
+            _arrow(449, 178, 449, 202),
+            _arrow(751, 158, 687, 186),
+            _arrow(870, 103, 934, 103, "publish"),
+            _arrow(1053, 178, 1053, 202),
         ]
     )
     return (
         "Ingestion — file to serving tables",
         body,
-        980,
-        270,
+        1200,
+        360,
         "Same bronze table whether the file arrived through the console or a streaming job.",
     )
 
@@ -535,27 +530,27 @@ def _diagram_ingestion() -> tuple[str, int, int, str, str]:
 def _diagram_catalog() -> tuple[str, int, int, str, str]:
     body = "".join(
         [
-            _lane(8, 8, 964, 268, "Unity Catalog  ·  onr_demo", "#eef3f8"),
-            _box(28, 44, 200, 86, "bronze", "grants · financial", "landing + checkpoints", BRONZE),
-            _box(268, 44, 200, 86, "silver", "quality gates", "_is_active", SILVER),
-            _box(508, 44, 200, 86, "gold", "summaries · models", "forecast · anomalies", GOLD_LANE),
-            _box(748, 44, 200, 86, "app", "audit · briefs", "quality · lineage", APP_LANE),
-            _arrow(228, 87, 268, 87, "cleanse"),
-            _arrow(468, 87, 508, 87, "aggregate"),
-            _arrow(708, 87, 748, 87, "operate"),
-            _box(28, 160, 320, 86, "Lineage", "landing → bronze → silver → gold", "native Catalog Explorer graph", TEAL),
-            _box(368, 160, 280, 86, "Health scores", "complete · accurate", "consistent · timely", OK),
-            _box(668, 160, 280, 86, "Tags & grants", "data_source · sensitivity", "least privilege", NAVY),
-            _arrow(188, 130, 188, 160),
-            _arrow(508, 130, 508, 160),
-            _arrow(808, 130, 808, 160),
+            _lane(12, 10, 1176, 350, "Unity Catalog   onr_demo", "#eef3f8"),
+            _box(32, 46, 250, 130, "bronze", "grants · financial", "landing + checkpoints", BRONZE),
+            _box(326, 46, 250, 130, "silver", "quality gates", "_is_active", SILVER),
+            _box(620, 46, 250, 130, "gold", "summaries · models", "forecast · anomalies", GOLD_LANE),
+            _box(914, 46, 250, 130, "app", "audit · briefs", "quality · lineage", APP_LANE),
+            _arrow(282, 111, 326, 111, "cleanse"),
+            _arrow(576, 111, 620, 111, "aggregate"),
+            _arrow(870, 111, 914, 111, "operate"),
+            _box(32, 210, 360, 130, "Lineage", "landing to bronze to silver to gold", "native Catalog Explorer graph", TEAL),
+            _box(424, 210, 360, 130, "Health scores", "complete · accurate", "consistent · timely", OK),
+            _box(816, 210, 348, 130, "Tags and grants", "data_source · sensitivity", "least privilege", NAVY),
+            _arrow(157, 176, 157, 210),
+            _arrow(745, 176, 604, 210),
+            _arrow(1039, 176, 990, 210),
         ]
     )
     return (
         "Catalog — govern the portfolio",
         body,
-        980,
-        288,
+        1200,
+        370,
         "Unity Catalog is the system of record. The native lineage graph lives in Catalog Explorer.",
     )
 
@@ -563,33 +558,33 @@ def _diagram_catalog() -> tuple[str, int, int, str, str]:
 def _diagram_analytics() -> tuple[str, int, int, str, str]:
     body = "".join(
         [
-            _lane(8, 8, 220, 268, "Features", "#eef3f8"),
-            _lane(240, 8, 500, 268, "Models", "#f7f3ea"),
-            _lane(752, 8, 220, 268, "Decisions", "#eef4ea"),
-            _box(24, 50, 188, 90, "gold features", "grants + ERP", "funding_features", GOLD_LANE),
-            _box(24, 160, 188, 86, "Same portfolio", "no second dataset", "408 after inbound", TEAL),
-            _box(260, 44, 140, 100, "Random Forest", "large award ≥ $1M", "Fund / Review / Defer", NAVY),
-            _box(420, 44, 140, 100, "IsolationForest", "spike · collapse", "low-return", "#a15c4a"),
-            _box(580, 44, 140, 100, "OLS forecast", "2-yr + 95% band", "TREND-* IDs", TEAL),
-            _box(260, 168, 140, 78, "predictions", "grant_predictions", "", SILVER),
-            _box(420, 168, 140, 78, "anomalies", "grant_anomaly_scores", "", SILVER),
-            _box(580, 168, 140, 78, "forecast", "funding_forecast", "program_trends", SILVER),
-            _box(768, 50, 188, 90, "Resource officer", "who to fund", "what is declining", OK),
-            _box(768, 160, 188, 86, "Reallocate", "AT_RISK + TREND-DECLINE", "", GOLD_LANE),
-            _arrow(212, 95, 260, 95),
-            _arrow(212, 203, 260, 203),
-            _arrow(330, 144, 330, 168),
-            _arrow(490, 144, 490, 168),
-            _arrow(650, 144, 650, 168),
-            _arrow(720, 94, 768, 94, "advise"),
-            _arrow(720, 203, 768, 203),
+            _lane(12, 10, 250, 350, "Features", "#eef3f8"),
+            _lane(302, 10, 586, 350, "Models", "#f7f3ea"),
+            _lane(928, 10, 260, 350, "Decisions", "#eef4ea"),
+            _box(28, 50, 218, 136, "gold features", "grants + ERP", "funding_features", GOLD_LANE),
+            _box(28, 210, 218, 130, "Same portfolio", "no second dataset", "408 after inbound", TEAL),
+            _box(322, 48, 166, 136, "Random Forest", "large award >= $1M", "Fund / Review / Defer", NAVY),
+            _box(512, 48, 166, 136, "IsolationForest", "spike · collapse", "low-return", "#a15c4a"),
+            _box(702, 48, 166, 136, "OLS forecast", "2-yr + 95% band", "TREND-* IDs", TEAL),
+            _box(322, 214, 166, 126, "predictions", "grant_predictions", "", SILVER),
+            _box(512, 214, 166, 126, "anomalies", "grant_anomaly_scores", "", SILVER),
+            _box(702, 214, 166, 126, "forecast", "funding_forecast", "program_trends", SILVER),
+            _box(944, 50, 228, 136, "Resource officer", "who to fund", "what is declining", OK),
+            _box(944, 214, 228, 126, "Reallocate", "AT_RISK + TREND-DECLINE", "", GOLD_LANE),
+            _arrow(246, 118, 322, 118),
+            _arrow(246, 275, 322, 275),
+            _arrow(405, 184, 405, 214),
+            _arrow(595, 184, 595, 214),
+            _arrow(785, 184, 785, 214),
+            _arrow(868, 118, 944, 118, "advise"),
+            _arrow(868, 277, 944, 277),
         ]
     )
     return (
         "Analytics — three models, one portfolio",
         body,
-        980,
-        288,
+        1200,
+        370,
         "Registered models score the ingested portfolio. Forecast is OLS, not a neural net.",
     )
 
@@ -597,31 +592,31 @@ def _diagram_analytics() -> tuple[str, int, int, str, str]:
 def _diagram_portfolio() -> tuple[str, int, int, str, str]:
     body = "".join(
         [
-            _lane(8, 8, 230, 250, "Leader", "#eef3f8"),
-            _lane(250, 8, 470, 250, "Console", "#f7f3ea"),
-            _lane(732, 8, 240, 250, "Act", "#eef4ea"),
-            _box(24, 50, 198, 86, "No SQL required", "Code 08 officer", "signed-in identity", TEAL),
-            _box(24, 156, 198, 78, "gold.*", "single catalog", "", GOLD_LANE),
-            _box(270, 44, 130, 90, "Filter", "FY · area · $", "", NAVY),
-            _box(420, 44, 130, 90, "Search", "quantum · ONRD", "search_history", TEAL),
-            _box(570, 44, 130, 90, "Visuals", "KPIs · charts", "budget gauge", GOLD_LANE),
-            _box(270, 156, 200, 78, "Daily brief", "automated summary", "daily_briefs", OK),
-            _box(500, 156, 200, 78, "Flags", "AT_RISK · anomalies", "", "#a15c4a"),
-            _box(748, 50, 208, 86, "Extract", "CSV from search", "", SILVER),
-            _box(748, 156, 208, 78, "Follow up", "declining + AT_RISK", "", GOLD_LANE),
-            _arrow(222, 93, 270, 93),
-            _arrow(400, 89, 420, 89),
-            _arrow(550, 89, 570, 89),
-            _arrow(700, 89, 748, 89, "take away"),
-            _arrow(370, 134, 370, 156),
-            _arrow(635, 134, 600, 156),
+            _lane(12, 10, 260, 340, "Leader", "#eef3f8"),
+            _lane(312, 10, 560, 340, "Console", "#f7f3ea"),
+            _lane(912, 10, 276, 340, "Act", "#eef4ea"),
+            _box(28, 50, 228, 130, "No SQL required", "Code 08 officer", "signed-in identity", TEAL),
+            _box(28, 206, 228, 124, "gold.*", "single catalog", "", GOLD_LANE),
+            _box(332, 48, 160, 130, "Filter", "FY · area · amount", "", NAVY),
+            _box(516, 48, 160, 130, "Search", "quantum · ONRD", "search_history", TEAL),
+            _box(700, 48, 152, 130, "Visuals", "KPIs · charts", "budget gauge", GOLD_LANE),
+            _box(332, 206, 252, 124, "Daily brief", "automated summary", "daily_briefs", OK),
+            _box(608, 206, 244, 124, "Flags", "AT_RISK · anomalies", "", "#a15c4a"),
+            _box(928, 50, 244, 130, "Extract", "CSV from search", "", SILVER),
+            _box(928, 206, 244, 124, "Follow up", "declining + AT_RISK", "", GOLD_LANE),
+            _arrow(256, 115, 332, 115),
+            _arrow(492, 113, 516, 113),
+            _arrow(676, 113, 700, 113),
+            _arrow(852, 113, 928, 113, "take away"),
+            _arrow(412, 178, 412, 206),
+            _arrow(776, 178, 730, 206),
         ]
     )
     return (
         "Portfolio — leadership without the warehouse",
         body,
-        980,
-        270,
+        1200,
+        360,
         "Search and export writes are audited. The brief is generated, not typed.",
     )
 
@@ -629,30 +624,30 @@ def _diagram_portfolio() -> tuple[str, int, int, str, str]:
 def _diagram_export() -> tuple[str, int, int, str, str]:
     body = "".join(
         [
-            _lane(8, 8, 220, 250, "Select", "#eef3f8"),
-            _lane(240, 8, 360, 250, "Package", "#f7f3ea"),
-            _lane(612, 8, 360, 250, "Leave the platform", "#eef4ea"),
-            _box(24, 50, 188, 86, "Filtered query", "FY 2025–2026", "never SELECT *", TEAL),
-            _box(24, 156, 188, 78, "gold / silver", "business-ready", "", GOLD_LANE),
-            _box(260, 44, 100, 90, "CSV", "sheets", "", SILVER),
-            _box(370, 44, 100, 90, "JSON", "APIs", "", SILVER),
-            _box(480, 44, 100, 90, "Parquet", "analytics", "", SILVER),
-            _box(260, 156, 320, 78, "export_history", "who · what · filter · count", "", NAVY),
-            _box(632, 44, 160, 90, "Statement API", "POST /sql/statements", "OAuth", TEAL),
-            _box(808, 44, 148, 90, "Advana / C1", "JDBC · REST", "open standards", OK),
-            _box(632, 156, 324, 78, "Schema travels", "grant_no · area · amount", "", GOLD_LANE),
-            _arrow(212, 93, 260, 93, "format"),
-            _arrow(360, 134, 360, 156),
-            _arrow(580, 89, 632, 89),
-            _arrow(792, 89, 808, 89),
-            _arrow(212, 195, 260, 195),
+            _lane(12, 10, 260, 340, "Select", "#eef3f8"),
+            _lane(312, 10, 420, 340, "Package", "#f7f3ea"),
+            _lane(772, 10, 416, 340, "Leave the platform", "#eef4ea"),
+            _box(28, 50, 228, 130, "Filtered query", "FY 2025-2026", "never SELECT *", TEAL),
+            _box(28, 206, 228, 124, "gold / silver", "business-ready", "", GOLD_LANE),
+            _box(332, 48, 120, 130, "CSV", "sheets", "", SILVER),
+            _box(468, 48, 120, 130, "JSON", "APIs", "", SILVER),
+            _box(604, 48, 112, 130, "Parquet", "analytics", "", SILVER),
+            _box(332, 206, 384, 124, "export_history", "who · what · filter · count", "", NAVY),
+            _box(792, 48, 188, 130, "Statement API", "POST /sql/statements", "OAuth", TEAL),
+            _box(996, 48, 176, 130, "Advana / C1", "JDBC · REST", "open standards", OK),
+            _box(792, 206, 380, 124, "Schema travels", "grant_no · area · amount", "", GOLD_LANE),
+            _arrow(256, 115, 332, 115, "format"),
+            _arrow(524, 178, 524, 206),
+            _arrow(716, 113, 792, 113),
+            _arrow(980, 113, 996, 113),
+            _arrow(256, 268, 332, 268),
         ]
     )
     return (
         "Export — open formats, audited, integrable",
         body,
-        980,
-        270,
+        1200,
+        360,
         "The live contract is Databricks Statement Execution REST on the same warehouse.",
     )
 
@@ -660,31 +655,31 @@ def _diagram_export() -> tuple[str, int, int, str, str]:
 def _diagram_infrastructure() -> tuple[str, int, int, str, str]:
     body = "".join(
         [
-            _lane(8, 8, 240, 250, "Compute", "#eef3f8"),
-            _lane(260, 8, 300, 250, "Bundle", "#f7f3ea"),
-            _lane(572, 8, 200, 250, "Catalog", "#eef4ea"),
-            _lane(784, 8, 188, 250, "Identity", "#f8f1ee"),
-            _box(24, 48, 208, 90, "Warehouse", "onr demo warehouse", "serverless SQL", TEAL, fs=9),
-            _box(24, 154, 208, 82, "Cluster", "onr demo cluster", "jobs / stream", NAVY, fs=9),
-            _box(276, 44, 130, 78, "Volumes", "landing", "checkpoints", BRONZE),
-            _box(416, 44, 128, 78, "App", "onr-demo-poc", "", APP_LANE),
-            _box(276, 140, 130, 78, "File-arrival", "paused job", "", SILVER),
-            _box(416, 140, 128, 78, "SDP", "grants_stream", "", SILVER),
-            _box(588, 48, 168, 86, "onr_demo", "bronze → silver", "gold → app", GOLD_LANE),
-            _box(588, 154, 168, 78, "Models", "RF · IsolationForest", "OLS", NAVY),
-            _box(800, 48, 156, 86, "App SP", "own principal", "OAuth", "#a15c4a"),
-            _box(800, 154, 156, 78, "Least privilege", "gold SELECT", "no bronze", OK),
-            _arrow(232, 91, 276, 83),
-            _arrow(544, 83, 588, 91, "bind"),
-            _arrow(756, 91, 800, 91),
-            _arrow(232, 193, 276, 179),
+            _lane(12, 10, 276, 340, "Compute", "#eef3f8"),
+            _lane(324, 10, 312, 340, "Bundle", "#f7f3ea"),
+            _lane(672, 10, 246, 340, "Catalog", "#eef4ea"),
+            _lane(954, 10, 234, 340, "Identity", "#f8f1ee"),
+            _box(28, 50, 244, 130, "Warehouse", "onr demo warehouse", "serverless SQL", TEAL, fs=10),
+            _box(28, 206, 244, 124, "Cluster", "onr demo cluster", "jobs / stream", NAVY, fs=10),
+            _box(340, 48, 136, 130, "Volumes", "landing", "checkpoints", BRONZE),
+            _box(492, 48, 128, 130, "App", "onr-demo-poc", "", APP_LANE),
+            _box(340, 206, 136, 124, "File-arrival", "paused job", "", SILVER),
+            _box(492, 206, 128, 124, "SDP", "grants_stream", "", SILVER),
+            _box(688, 50, 214, 130, "onr_demo", "bronze to silver", "gold to app", GOLD_LANE),
+            _box(688, 206, 214, 124, "Models", "RF · IsolationForest", "OLS", NAVY),
+            _box(970, 50, 202, 130, "App SP", "own principal", "OAuth", "#a15c4a"),
+            _box(970, 206, 202, 124, "Least privilege", "gold SELECT", "no bronze", OK),
+            _arrow(272, 115, 340, 113),
+            _arrow(636, 113, 688, 115, "bind"),
+            _arrow(902, 115, 970, 115),
+            _arrow(272, 268, 340, 268),
         ]
     )
     return (
         "Infrastructure — what this workspace is",
         body,
-        980,
-        270,
+        1200,
+        360,
         "The bundle does not create the warehouse or cluster. The app has its own service principal.",
     )
 
@@ -692,26 +687,26 @@ def _diagram_infrastructure() -> tuple[str, int, int, str, str]:
 def _diagram_home() -> tuple[str, int, int, str, str]:
     body = "".join(
         [
-            _box(20, 40, 150, 80, "Ingest", "Volume + quality", "", BRONZE),
-            _box(210, 40, 150, 80, "Catalog", "UC + lineage", "", SILVER),
-            _box(400, 40, 150, 80, "Analytics", "RF · IF · OLS", "", NAVY),
-            _box(590, 40, 150, 80, "Portfolio", "search · brief", "", TEAL),
-            _box(780, 40, 170, 80, "Export", "open formats + API", "", GOLD_LANE),
-            _arrow(170, 80, 210, 80),
-            _arrow(360, 80, 400, 80),
-            _arrow(550, 80, 590, 80),
-            _arrow(740, 80, 780, 80),
-            _box(210, 160, 530, 70, "Unity Catalog  onr_demo", "bronze → silver → gold → app", "one identity plane", OK),
-            _arrow(285, 120, 285, 160),
-            _arrow(475, 120, 475, 160),
-            _arrow(665, 120, 665, 160),
+            _box(20, 36, 188, 140, "Ingest", "Volume + quality", "", BRONZE),
+            _box(256, 36, 188, 140, "Catalog", "UC + lineage", "", SILVER),
+            _box(492, 36, 188, 140, "Analytics", "RF · IF · OLS", "", NAVY),
+            _box(728, 36, 188, 140, "Portfolio", "search · brief", "", TEAL),
+            _box(964, 36, 216, 140, "Export", "open formats + API", "", GOLD_LANE),
+            _arrow(208, 106, 256, 106),
+            _arrow(444, 106, 492, 106),
+            _arrow(680, 106, 728, 106),
+            _arrow(916, 106, 964, 106),
+            _box(256, 214, 688, 116, "Unity Catalog  onr_demo", "bronze to silver to gold to app", "one identity plane", OK),
+            _arrow(350, 176, 350, 214),
+            _arrow(586, 176, 586, 214),
+            _arrow(822, 176, 822, 214),
         ]
     )
     return (
         "ONR Portfolio — end to end",
         body,
-        980,
-        250,
+        1200,
+        350,
         "One catalog. Leadership never leaves the console.",
     )
 
