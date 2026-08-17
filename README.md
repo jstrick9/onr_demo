@@ -13,7 +13,7 @@ Single-environment proof of concept for Office of Naval Research Code 08 ITSS.
 | Export | CSV / JSON / Parquet, Statement Execution API |
 | Infrastructure | DAB inventory, compute names, operator runbook |
 
-**50-minute recording:** [DEMO_SCRIPT.md](DEMO_SCRIPT.md) is the timed shot list (Elements 3–7). Night-before train `04` + `04b`; on camera run `04c`.
+**25-minute recording:** [DEMO_SCRIPT.md](DEMO_SCRIPT.md) is the word-for-word presenter script (Elements 3–7). Night-before train `04` + `04b`; on camera run `01b` + `04c`.
 
 ---
 
