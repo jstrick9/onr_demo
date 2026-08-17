@@ -392,6 +392,9 @@ def render_stream_controls(catalog: str = "onr_demo") -> None:
         workspace_action_row("Open stream notebook", notebook_url(path))
     render_run_status("Stream", st.session_state.get("last_stream"))
     provenance_note("bronze.grants", catalog)
+
+
+def render_file_picker_and_reset(cursor, catalog: str):
     """Inbound files and baseline restore."""
     from utils.demo_actions import (
         FILE_PACKS,

@@ -651,6 +651,26 @@ def inject_theme() -> None:
         pass
 
 
+def workspace_strip(items: list[dict]) -> None:
+    """Compact row of workspace links (notebooks, tables, volumes)."""
+    if not items:
+        return
+    chips = ['<div class="ws-strip"><span class="ws-kicker">Workspace</span>']
+    for item in items:
+        label = html.escape(str(item.get("label") or ""))
+        url = item.get("url")
+        if url:
+            chips.append(
+                f'<a href="{html.escape(str(url), quote=True)}" target="_blank" rel="noopener">{label}</a>'
+            )
+        else:
+            chips.append(
+                f'<span class="ws-chip dead" title="Workspace host or path not resolved">{label}</span>'
+            )
+    chips.append("</div>")
+    st.markdown("".join(chips), unsafe_allow_html=True)
+
+
 def page_header(kicker: str, title: str, caption: str) -> None:
     st.markdown(f'<div class="page-kicker">{html.escape(kicker)}</div>', unsafe_allow_html=True)
     st.title(title)

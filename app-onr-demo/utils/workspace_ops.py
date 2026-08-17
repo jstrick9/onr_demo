@@ -368,7 +368,13 @@ def render_page_links(page: str, catalog: str = "onr_demo") -> None:
 
 def render_workspace_strip(spec: list[dict], catalog: str = "onr_demo") -> None:
     """Resolve notebooks/tables/volumes for this page and render the strip."""
-    from utils.ui import workspace_strip
+    try:
+        from utils.ui import workspace_strip
+    except ImportError:
+        def workspace_strip(items: list[dict]) -> None:
+            labels = [str(i.get("label") or "") for i in (items or [])]
+            if labels:
+                st.caption("Workspace · " + " · ".join(labels))
 
     items = []
     for raw in spec:
