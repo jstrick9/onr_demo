@@ -89,7 +89,7 @@ workspace:
   cluster_id: ""
 
 app:
-  version: "1.9.6"
+  version: "1.9.7"
   environment: "poc"
   max_file_size_mb: 50
   session_timeout_minutes: 60
