@@ -393,21 +393,21 @@ def _lane(x, y, w, h, label, fill="#eef3f8") -> str:
     """
 
 
-def _box(x, y, w, h, title, line1="", line2="", head=NAVY, fs=11) -> str:
-    title_fs = max(fs, 10)
-    body_fs = max(fs - 1, 9)
+def _box(x, y, w, h, title, line1="", line2="", head=NAVY, fs=14) -> str:
+    title_fs = max(fs, 13)
+    body_fs = max(fs - 1, 12)
     t2 = (
-        f'<text x="{x+10}" y="{y+58}" fill="{MUTED}" font-size="{body_fs}" '
-        f'font-family="Segoe UI, sans-serif">{_e(line2)}</text>'
+        f'<text x="{x+10}" y="{y+70}" fill="{MUTED}" font-size="{body_fs}" '
+        f'font-weight="600" font-family="Segoe UI, sans-serif">{_e(line2)}</text>'
         if line2
         else ""
     )
     return f"""
     <g>
       <rect x="{x}" y="{y}" width="{w}" height="{h}" rx="8" fill="#ffffff" stroke="{NAVY}" stroke-width="1.4"/>
-      <path d="M {x} {y+24} L {x} {y+8} Q {x} {y} {x+8} {y} L {x+w-8} {y} Q {x+w} {y} {x+w} {y+8} L {x+w} {y+24} Z" fill="{head}"/>
-      <text x="{x+10}" y="{y+16}" fill="#fff7ed" font-size="{title_fs}" font-weight="700" font-family="Segoe UI, sans-serif">{_e(title)}</text>
-      <text x="{x+10}" y="{y+42}" fill="{INK}" font-size="{body_fs}" font-family="Segoe UI, sans-serif">{_e(line1)}</text>
+      <path d="M {x} {y+26} L {x} {y+8} Q {x} {y} {x+8} {y} L {x+w-8} {y} Q {x+w} {y} {x+w} {y+8} L {x+w} {y+26} Z" fill="{head}"/>
+      <text x="{x+10}" y="{y+18}" fill="#fff7ed" font-size="{title_fs}" font-weight="800" font-family="Segoe UI, sans-serif">{_e(title)}</text>
+      <text x="{x+10}" y="{y+50}" fill="{INK}" font-size="{body_fs}" font-weight="600" font-family="Segoe UI, sans-serif">{_e(line1)}</text>
       {t2}
     </g>
     """
@@ -417,9 +417,9 @@ def _arrow(x1, y1, x2, y2, label="") -> str:
     mx, my = (x1 + x2) / 2, (y1 + y2) / 2 - 8
     lab = (
         f'<text x="{mx}" y="{my}" text-anchor="middle" fill="#ffffff" stroke="#ffffff" '
-        f'stroke-width="3" paint-order="stroke" font-size="11" font-weight="800" '
+        f'stroke-width="3" paint-order="stroke" font-size="13" font-weight="800" '
         f'font-family="Segoe UI, sans-serif">{_e(label)}</text>'
-        f'<text x="{mx}" y="{my}" text-anchor="middle" fill="{GOLD}" font-size="11" '
+        f'<text x="{mx}" y="{my}" text-anchor="middle" fill="{GOLD}" font-size="13" '
         f'font-weight="800" font-family="Segoe UI, sans-serif">{_e(label)}</text>'
         if label
         else ""
@@ -456,21 +456,21 @@ def _wrap(title: str, svg_body: str, w: int, h: int, note: str = "") -> None:
   }}
   .kicker {{
     color: #b45309;
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 800;
     letter-spacing: 0.16em;
     text-transform: uppercase;
   }}
   .title {{
     color: #0b1f3a;
-    font-size: 16px;
-    font-weight: 700;
-    margin: 1px 0 6px 0;
+    font-size: 20px;
+    font-weight: 800;
+    margin: 2px 0 8px 0;
   }}
   svg {{ width: 100%; height: {h}px; display: block; }}
   .note {{
     color: #5b6b80;
-    font-size: 12px;
+    font-size: 14px;
     margin: 6px 2px 2px 2px;
   }}
   .flow-line {{ animation: dash 1.15s linear infinite; }}
