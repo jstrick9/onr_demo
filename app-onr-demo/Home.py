@@ -33,27 +33,6 @@ conn, cursor = get_connection()
 st.session_state["onr_conn"] = conn
 st.session_state["onr_cursor"] = cursor
 
-c1, c2, c3, c4 = st.columns(4)
-c1.info(f"**Catalog**  \n`{onr_catalog}`")
-c2.info("**Layers**  \nbronze · silver · gold · app")
-c3.info(f"**SQL**  \n`{SQL_WAREHOUSE_NAME}`")
-c4.info(f"**Jobs**  \n`{ALL_PURPOSE_CLUSTER_NAME}`")
-
-st.markdown("### What you can do")
-st.markdown(
-    """
-| Page | Use it to |
-|------|-----------|
-| **Ingestion** | Land a grants file, inspect quality, reset to the 400-grant seed |
-| **Catalog** | Browse Unity Catalog, health scores, and lineage |
-| **Analytics** | Fund / Review / Defer scores, anomaly queue, FY forecast + trend IDs |
-| **Portfolio** | Filter, search, generate a daily brief, review AT_RISK rows |
-| **Export** | Download CSV / JSON / Parquet; call the Statement Execution API |
-| **Infrastructure** | See what the DAB deploys, compute names, and the operator runbook |
-    """
-)
-
-st.markdown("---")
 st.markdown("### Live counts")
 
 try:
@@ -81,6 +60,26 @@ except Exception:
     b.metric("Portfolio", f"${k['total_funding']/1e6:.1f}M")
     c.metric("ERP lines", f"{k['transaction_count']:,}")
     st.caption("SQL warehouse not connected — showing the packaged Compass fixture.")
+
+c1, c2, c3, c4 = st.columns(4)
+c1.info(f"**Catalog**  \n`{onr_catalog}`")
+c2.info("**Layers**  \nbronze · silver · gold · app")
+c3.info(f"**SQL**  \n`{SQL_WAREHOUSE_NAME}`")
+c4.info(f"**Jobs**  \n`{ALL_PURPOSE_CLUSTER_NAME}`")
+
+st.markdown("### What you can do")
+st.markdown(
+    """
+| Page | Use it to |
+|------|-----------|
+| **Ingestion** | Land a grants file, inspect quality, reset to the 400-grant seed |
+| **Catalog** | Browse Unity Catalog, health scores, and lineage |
+| **Analytics** | Fund / Review / Defer scores, anomaly queue, FY forecast + trend IDs |
+| **Portfolio** | Filter, search, generate a daily brief, review AT_RISK rows |
+| **Export** | Download CSV / JSON / Parquet; call the Statement Execution API |
+| **Infrastructure** | See what the DAB deploys, compute names, and the operator runbook |
+    """
+)
 
 with st.expander("Source table check"):
     if cursor:

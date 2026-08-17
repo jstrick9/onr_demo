@@ -152,8 +152,9 @@ with tab3:
 | 3 | Run `notebooks/00_bootstrap.py` | Cluster · expect 400 / 1,200 |
 | 4 | Deploy app `onr-demo-poc` from `app-onr-demo/` | Apps |
 | 5 | Run `sql/grant_app_principal.sql` + warehouse **CAN USE** | SQL editor |
-| 6 | Optional: `04` then `04b` on the cluster | RF + IsolationForest |
-| 7 | Optional: `databricks bundle deploy -t poc` | CLI |
+| 6 | Night-before: `04` then `04b` on the cluster | RF + IsolationForest registered |
+| 7 | On camera: `04c_score_registered_models.py` | Score 408 from UC models |
+| 8 | Optional: `databricks bundle deploy -t poc` | CLI |
 
 **Daily / demo loop**
 

@@ -7,16 +7,16 @@
 # MAGIC Same `cloudFiles` path as `01_bronze_ingestion.py`, but the trigger is
 # MAGIC **`processingTime`** (near-real-time), not `availableNow` (batch).
 # MAGIC
-# MAGIC **Demo beat (≈3 minutes):**
-# MAGIC 1. Reset first if you already ingested the live CSV (`05_reset_demo.py`) so the
-# MAGIC    stream checkpoint is empty.
-# MAGIC 2. **Run all** on this notebook. It starts a 30-second micro-batch stream and
-# MAGIC    **auto-stops after `run_for_seconds`** (default 90) so it cannot be left on.
+# MAGIC **Recording beat (do not Reset on camera):**
+# MAGIC 1. App Process already landed Live 8 + quality-fail (silver **408**).
+# MAGIC 2. **Run all** here. 30-second micro-batches; **auto-stops** after
+# MAGIC    `run_for_seconds` (default 90).
 # MAGIC 3. While it is running, copy
 # MAGIC    `/Volumes/onr_demo/bronze/landing/_staged/batch_live_grants.csv`
-# MAGIC    → `/Volumes/onr_demo/bronze/landing/grants/`.
-# MAGIC 4. Watch `bronze.grants` tick (400 → 408) in the last cell / the Streamlit
-# MAGIC    Ingestion heartbeat.
+# MAGIC    → `/Volumes/onr_demo/bronze/landing/grants/batch_live_grants_stream.csv`
+# MAGIC    (new filename so Auto Loader sees a new path).
+# MAGIC 4. Watch `last_2_min` / `inputRows` tick. Silver stays 408 (dedupe). Bronze
+# MAGIC    may grow — that is the stream proof.
 # MAGIC
 # MAGIC Checkpoint is **`.../checkpoints/grants_stream`** so it does not collide with
 # MAGIC the availableNow job in notebook 01.

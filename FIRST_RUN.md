@@ -118,9 +118,9 @@ The Streamlit app authenticates as a **different** service principal. Without gr
 | Analytics → Forecasting | `gold.funding_forecast` + `gold.program_trends` (OLS, trend IDs) after bootstrap / Process |
 | Dashboard → Generate daily brief | Row in `app.daily_briefs` (ai_query or template) |
 | Integration → Execute live Statement API | `statement_id` + JSON from `/api/2.0/sql/statements` |
-| Optional: run `04_mlflow_grant_model.py` on the cluster | Predictions become `rf_large_award_v1`; model registered as `onr_demo.gold.grant_large_award` |
-| Optional: run `04b_funding_anomaly.py` on the cluster | IsolationForest flags replace heuristic; model `onr_demo.gold.funding_anomaly_detector` @ champion |
-| Optional: `01b_streaming_autoloader.py` | processingTime stream; drop live CSV; bronze ticks within 30s |
+| Optional: run `04` then `04b` on the cluster (night-before) | RF + IsolationForest registered |
+| Optional: `04c_score_registered_models.py` | Scores current silver from those models (camera beat) |
+| Optional: `01b_streaming_autoloader.py` | processingTime stream; drop `batch_live_grants_stream.csv`; last-2-min ticks |
 | Ingestion → Reset (checkbox) | Back to 400 |
 
 ---

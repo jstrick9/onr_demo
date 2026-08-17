@@ -194,7 +194,7 @@ def render_file_picker_and_reset(cursor, catalog: str):
         "Staged files to process",
         options=list(FILE_PACKS.keys()),
         format_func=lambda k: FILE_PACKS[k]["label"],
-        default=["live"],
+        default=["live", "quality_fail"],
         key="ingest_packs",
     )
     uploaded = st.file_uploader(
@@ -222,10 +222,30 @@ def render_file_picker_and_reset(cursor, catalog: str):
                         result = process_selected_files(
                             cursor, catalog, packs, extra_rows=extra_rows, extra_name=extra_name
                         )
-                        st.success(
-                            f"silver.grants: {result['before']} → {result['after']}"
+                        before_n = result.get("before")
+                        after_n = result.get("after")
+                        m1, m2, m3 = st.columns(3)
+                        m1.metric("Before", f"{before_n:,}" if before_n is not None else "—")
+                        m2.metric(
+                            "After",
+                            f"{after_n:,}" if after_n is not None else "—",
+                            delta=(
+                                f"{after_n - before_n:+d}"
+                                if before_n is not None and after_n is not None
+                                else None
+                            ),
                         )
-                        st.dataframe(pd.DataFrame(result["files"]), use_container_width=True)
+                        landed = sum(int(f.get("landed") or 0) for f in result["files"])
+                        rejected = sum(
+                            int(f.get("rejected") or 0) + int(f.get("skipped") or 0)
+                            for f in result["files"]
+                        )
+                        m3.metric("Rejected / skipped", f"{rejected:,}")
+                        st.success(
+                            f"silver.grants: {before_n} → {after_n}  ·  landed {landed}"
+                        )
+                        show = pd.DataFrame(result["files"])
+                        st.dataframe(show, use_container_width=True)
                         for fsum in result["files"]:
                             if fsum.get("reasons"):
                                 with st.expander(f"Details: {fsum['file']}"):

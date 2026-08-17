@@ -71,7 +71,7 @@ def render_quality_scores(cursor, catalog: str, schema: str):
         
         if scores:
             for table, score, completeness, accuracy, consistency, timeliness, assessed in scores:
-                with st.expander(f"📊 {table} — Score: {score:.1%}", expanded=True):
+                with st.expander(f"{table} — Score: {score:.1%}", expanded=False):
                     col1, col2, col3, col4 = st.columns(4)
                     
                     with col1:
@@ -100,57 +100,57 @@ def render_quality_scores(cursor, catalog: str, schema: str):
 # -------------------------------
 def render_lineage_visualization():
     """Display end-to-end data lineage visualization."""
-    st.markdown("### 🔗 End-to-End Data Lineage")
-    
-    # Create a visual lineage diagram using Streamlit native components
-    st.markdown("""
-    ```mermaid
-    graph LR
-        A[📁 Raw Files<br/>CSV/JSON] -->|Auto Loader| B[🥉 Bronze<br/>Raw Ingestion]
-        B -->|Quality Checks| C[🥈 Silver<br/>Cleansed]
-        C -->|Business Logic| D[🥇 Gold<br/>Aggregated]
-        D --> E[📊 Dashboard]
-        D --> F[🤖 Analytics]
-        D --> G[📤 Export]
-    ```
-    """)
-    
-    # Detailed lineage table
-    st.markdown("#### Lineage Details")
-    
-    lineage_data = [
-        {
-            "Source": "S3 Landing Zone",
-            "Pipeline": "Auto Loader",
-            "Target": "onr_demo.bronze.grants",
-            "Transformations": "Schema inference, file metadata",
-            "Quality Gates": "Null check on grant_no"
-        },
-        {
-            "Source": "onr_demo.bronze.grants",
-            "Pipeline": "Silver Transform",
-            "Target": "onr_demo.silver.grants",
-            "Transformations": "Deduplication, type casting, validation",
-            "Quality Gates": "Positive amounts, awardee not null"
-        },
-        {
-            "Source": "onr_demo.silver.grants",
-            "Pipeline": "Gold Aggregation",
-            "Target": "onr_demo.gold.grants_summary",
-            "Transformations": "Group by program_area, fiscal_year",
-            "Quality Gates": "Count validation, freshness check"
-        },
-        {
-            "Source": "onr_demo.gold.grants_summary",
-            "Pipeline": "Analytics Model",
-            "Target": "ML Predictions",
-            "Transformations": "Feature engineering, model scoring",
-            "Quality Gates": "Model accuracy threshold"
-        },
-    ]
-    
-    df = pd.DataFrame(lineage_data)
-    st.dataframe(df, use_container_width=True)
+    st.markdown("### End-to-end lineage")
+    st.info(
+        "**Camera beat:** open **Catalog Explorer → `onr_demo` → a table → Lineage**. "
+        "That native Unity Catalog graph is the lineage visual — landing Volume → "
+        "bronze → silver → gold → this app. The sketch below is a map, not the system of record."
+    )
+
+    with st.expander("Sketch and hop list (not the native graph)"):
+        st.markdown(
+            """
+```
+/Volumes/onr_demo/bronze/landing/grants
+        -> bronze.grants -> silver.grants -> gold.grants_summary
+                                |                    |
+                                v                    v
+                        silver.financial      Portfolio / Analytics / Export
+```
+            """
+        )
+        st.dataframe(
+            pd.DataFrame(
+                [
+                    {
+                        "Source": "/Volumes/onr_demo/bronze/landing",
+                        "Pipeline": "Auto Loader / Process",
+                        "Target": "onr_demo.bronze.grants",
+                        "Quality": "grant_no NOT NULL",
+                    },
+                    {
+                        "Source": "onr_demo.bronze.grants",
+                        "Pipeline": "Silver quality",
+                        "Target": "onr_demo.silver.grants",
+                        "Quality": "amount > 0, awardee not null, dedupe",
+                    },
+                    {
+                        "Source": "onr_demo.silver.grants",
+                        "Pipeline": "Gold aggregation",
+                        "Target": "onr_demo.gold.grants_summary",
+                        "Quality": "count + freshness",
+                    },
+                    {
+                        "Source": "onr_demo.gold.*",
+                        "Pipeline": "04c score / OLS",
+                        "Target": "predictions, anomalies, forecast",
+                        "Quality": "registered model + trend IDs",
+                    },
+                ]
+            ),
+            use_container_width=True,
+            hide_index=True,
+        )
 
 
 # -------------------------------

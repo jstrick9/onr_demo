@@ -88,16 +88,19 @@ def render_decision_support(cursor=None, catalog: str = "onr_demo"):
             lines.append("- **{}**: ${:,.0f} across {} grants".format(area, fund, n))
         st.markdown("Largest program areas in gold / fixture:\n" + "\n".join(lines))
     st.caption(
-        "Refresh gold via Process selected files or notebooks 03 / 04. "
+        "Refresh gold via Process selected files or notebook 03. "
         "Forecast + trend IDs land in `gold.funding_forecast` / `gold.program_trends`. "
-        "Run `04_mlflow_grant_model.py` on **onr demo cluster** to replace heuristic scores with the RF model."
+        "Run `04c_score_registered_models.py` to apply the registered RF + IsolationForest."
     )
 
 
 def render_grant_predictions(cursor, catalog: str, schema: str = "silver"):
     """Scores from gold.grant_predictions (UC)."""
     st.markdown("### Grant scores")
-    st.caption("`onr_demo.gold.grant_predictions` — heuristic after ingest, Random Forest after notebook 04.")
+    st.caption(
+        "`gold.grant_predictions` — heuristic after Process; "
+        "`rf_large_award_v1` after notebook **04c** (or 04)."
+    )
     df = _query_df(
         cursor,
         f"""
@@ -127,13 +130,14 @@ def render_grant_predictions(cursor, catalog: str, schema: str = "silver"):
 
 
 def render_model_execution(cursor=None, catalog: str = "onr_demo"):
-    """Point at the cluster notebook; do not fake a training run."""
-    st.markdown("### Train / refresh the model")
+    """Point at the score-from-registry notebook; do not fake a training run."""
+    st.markdown("### Score from registered models")
     st.markdown(
-        "On **onr demo cluster** run `notebooks/04_mlflow_grant_model.py`. "
-        "It trains on `silver.grants`, writes `gold.grant_predictions` + `gold.model_metrics`, "
-        "registers `onr_demo.gold.grant_large_award` in Unity Catalog, "
-        "and logs to MLflow `/Shared/onr-demo/grant-size`."
+        "On camera run `notebooks/04c_score_registered_models.py` on **onr demo cluster**. "
+        "It **does not train**. It loads `onr_demo.gold.grant_large_award` and "
+        "`onr_demo.gold.funding_anomaly_detector@champion` and writes "
+        "`gold.grant_predictions` + `gold.grant_anomaly_scores` for the current silver portfolio "
+        "(400 → 408 after the live drop). Training is night-before: notebooks **04** and **04b**."
     )
     df = _query_df(
         cursor,

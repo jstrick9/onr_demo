@@ -11,7 +11,7 @@ Full prompt text is quoted from Volume IV §11.4. Show a live artifact while you
 |--------|-------------|----------------------------------|
 | (a) Legacy sustainment | Element 3 or 7 | Ingestion page + `landing/` volume, or Export tab |
 | (b) Financial / budgetary | Element 5 + 6 | Analytics predictions + Dashboard budget gauge |
-| (c) Zero Trust / IL5 | Element 4 or 7 | Catalog Explorer grants, or Integration Zero Trust panel |
+| (c) Zero Trust / IL5 | Element 4 or 7 | Catalog Explorer grants, or Export Security + live Statement API |
 | (d) DR / resilience | Element 3 reset, or close | Reset-to-seed + `databricks.yml` file-arrival job |
 | (e) Vendor / lifecycle | Element 4 | Quality scores + UC tags (`data_source=mock`) |
 
@@ -63,7 +63,7 @@ Full prompt text is quoted from Volume IV §11.4. Show a live artifact while you
 
 > Detail how the proposed application architecture implements micro-segmentation, continuous compliance, and least-privilege boundary configurations within a DoD Impact Level 5 (IL5) hosting environment.
 
-**Show:** Integration page “Zero Trust / IL4/IL5” panel, *or* Catalog Explorer on `onr_demo` (grants + tags). Do **not** claim this POC *is* IL5 — it is unclassified mock on commercial AWS (FedRAMP Moderate). IL5 is the *target hosting pattern* (GovCloud + IL5 PA).
+**Show:** Export page Security caption + live Statement API, *or* Catalog Explorer on `onr_demo` (grants + tags). Do **not** claim this POC *is* IL5 — it is unclassified mock on commercial AWS (FedRAMP Moderate). IL5 is the *target hosting pattern* (GovCloud + IL5 PA).
 
 **Say (~80 s):**
 
@@ -125,7 +125,7 @@ Full prompt text is quoted from Volume IV §11.4. Show a live artifact while you
 |------:|--------|-----------|
 | 0:00–0:80 | (a) Legacy | Ingestion + landing path |
 | 1:20–2:40 | (b) Financial | Budget gauge + predictions |
-| 2:40–4:00 | (c) Zero Trust | Integration IL4/IL5 panel |
+| 2:40–4:00 | (c) Zero Trust | Export Security + Statement API |
 | 4:00–5:20 | (d) DR | Reset confirmation / DAB job |
 | 5:20–6:30 | (e) Vendor | Quality scores + tags |
 

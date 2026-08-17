@@ -13,6 +13,8 @@ Single-environment proof of concept for Office of Naval Research Code 08 ITSS.
 | Export | CSV / JSON / Parquet, Statement Execution API |
 | Infrastructure | DAB inventory, compute names, operator runbook |
 
+**50-minute recording:** [DEMO_SCRIPT.md](DEMO_SCRIPT.md) is the timed shot list (Elements 3–7). Night-before train `04` + `04b`; on camera run `04c`.
+
 ---
 
 ## Unity Catalog (medallion)
@@ -84,7 +86,7 @@ onr_demo/
 │   ├── app.yml
 │   ├── config/onr-conf.yaml
 │   ├── data/grants_portfolio.json # App fixture fallback
-│   ├── pages/                     # Elements 3–7
+│   ├── pages/                     # Ingestion, Catalog, Analytics, Portfolio, Export, Infrastructure
 │   └── utils/
 ├── notebooks/
 │   ├── 00_bootstrap.py            # RUN FIRST
@@ -92,8 +94,9 @@ onr_demo/
 │   ├── 01b_streaming_autoloader.py # Auto Loader (processingTime, live stream)
 │   ├── 02_silver_quality.py
 │   ├── 03_gold_aggregation.py     # includes OLS forecast + trend IDs
-│   ├── 04_mlflow_grant_model.py   # RF large-award classifier
-│   ├── 04b_funding_anomaly.py     # IsolationForest (adapted from ML engineer demo)
+│   ├── 04_mlflow_grant_model.py   # RF large-award classifier (night-before)
+│   ├── 04b_funding_anomaly.py     # IsolationForest (night-before)
+│   ├── 04c_score_registered_models.py # Camera: score 408 from UC models
 │   └── 05_reset_demo.py           # Cluster reset to 400-grant seed
 ├── sql/
 │   ├── setup_uc_objects.sql       # Optional empty DDL

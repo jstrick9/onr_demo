@@ -83,35 +83,20 @@ with tab5:
 # UNITY CATALOG OVERVIEW
 # -------------------------------
 st.markdown("---")
-st.markdown("### How it works")
+with st.expander("How it works"):
+    st.code(
+        """
+catalog onr_demo
+  bronze (grants, financial, grants_stream, volumes landing + checkpoints)
+  silver (quality gates, _is_active)
+  gold   (summaries, budget, predictions, forecast, trends, anomalies)
+  app    (quality, lineage, audit, briefs)
 
-st.markdown("""
-```
-┌─────────────────────────────────────────────────────────────────────────────────────────┐
-│                                Unity Catalog  (onr_demo)                                │
-├─────────────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                         │
-│  catalog onr_demo                                                                       │
-│  +-----------------------------------------------------------------------------------+  │
-│  | bronze                silver                gold                       app        |  │
-│  | +------------------+  +------------------+  +--------------------+  +-----------+ |  │
-│  | | grants           |  | grants           |  | grants_summary     |  | quality   | |  │
-│  | | financial        |  | financial        |  | budget_execution   |  | lineage   | |  │
-│  | | grants_stream    |  | _is_active       |  | predictions        |  | audit     | |  │
-│  | +------------------+  +------------------+  | forecast / trends  |  | briefs    | |  │
-│  |                                             | anomalies          |  +-----------+ |  │
-│  |                                             +--------------------+                |  │
-│  | Volumes                                                                           |  │
-│  |   /Volumes/onr_demo/bronze/landing/                                               |  │
-│  |   /Volumes/onr_demo/bronze/checkpoints/                                           |  │
-│  +-----------------------------------------------------------------------------------+  │
-│                                                                                         │
-│  Governance: tags | constraints | UC lineage | audit | least privilege                  │
-│  Open Catalog Explorer -> onr_demo -> Lineage for the native graph.                     │
-│                                                                                         │
-└─────────────────────────────────────────────────────────────────────────────────────────┘
-```
-""")
+Governance: tags | constraints | UC lineage | audit | least privilege
+Open Catalog Explorer -> onr_demo -> Lineage for the native graph.
+        """.strip(),
+        language="text",
+    )
 
 # -------------------------------
 # DDL EXAMPLES

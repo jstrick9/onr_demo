@@ -103,40 +103,10 @@ with tab4:
 # DASHBOARD ARCHITECTURE
 # -------------------------------
 st.markdown("---")
-st.markdown("### How it works")
-
-st.markdown("""
-```
-┌─────────────────────────────────────────────────────────────────────────────────────┐
-│                             Unified Executive Dashboard                             │
-├─────────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                     │
-│  Non-technical leader (no SQL required)                                             │
-│  +-------------------------------------------------------------------------------+  │
-│  |   Search    |    Filter FY / area    |    Extract CSV    |    Daily brief     |  │
-│  +-------------------------------------------------------------------------------+  │
-│                                       |                                             │
-│                                       v                                             │
-│  +-------------------------------------------------------------------------------+  │
-│  | Streamlit     KPIs | charts | tables | AT_RISK flags | anomaly queue          |  │
-│  +-------------------------------------------------------------------------------+  │
-│                                       |                                             │
-│                                       v                                             │
-│  +-------------------------------------------------------------------------------+  │
-│  | Process automation                                                            |  │
-│  |   daily brief (ai_query or template) -> app.daily_briefs                      |  │
-│  |   budget ON_TARGET / WARNING / AT_RISK                                        |  │
-│  |   IsolationForest review queue                                                |  │
-│  |   search / export audit -> app.search_history / app.export_history            |  │
-│  +-------------------------------------------------------------------------------+  │
-│                                       |                                             │
-│                                       v                                             │
-│  +-------------------------------------------------------------------------------+  │
-│  | gold.grants_summary      gold.budget_execution      gold.program_trends       |  │
-│  | gold.grant_predictions                   gold.grant_anomaly_scores            |  │
-│  +-------------------------------------------------------------------------------+  │
-│                                                                                     │
-└─────────────────────────────────────────────────────────────────────────────────────┘
-```
-""")
+with st.expander("How it works"):
+    st.caption(
+        "Non-technical leader: search, filter FY/area, extract, daily brief. "
+        "Automation writes `app.daily_briefs`, budget AT_RISK, anomaly queue, "
+        "and `app.search_history` / `app.export_history` from gold tables."
+    )
 

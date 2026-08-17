@@ -8,6 +8,34 @@ from PIL import Image
 from utils.user_helpers import get_current_user
 
 APP_ROOT = Path(__file__).resolve().parent.parent
+SEED_GRANT_COUNT = 400
+
+
+def _render_grant_pulse() -> None:
+    """Sticky 400 → 408 readout. Visible on every page."""
+    try:
+        from utils.db_helpers import get_connection, read_yaml
+        from utils.demo_actions import grant_count
+
+        catalog = "onr_demo"
+        try:
+            cfg = read_yaml(str(APP_ROOT / "config" / "onr-conf.yaml"))
+            catalog = cfg["schema"]["catalog"]
+        except Exception:
+            pass
+        _conn, cursor = get_connection()
+        n = grant_count(cursor, catalog)
+        if n is None:
+            st.caption("Active grants — warehouse not connected")
+            return
+        delta = int(n) - SEED_GRANT_COUNT
+        st.metric(
+            "Active grants",
+            f"{int(n):,}",
+            delta=("seed" if delta == 0 else f"{delta:+d} vs seed"),
+        )
+    except Exception:
+        st.caption("Active grants — unavailable")
 
 
 @st.cache_data
@@ -41,6 +69,9 @@ def setup_sidebar():
 - **Infrastructure** — IaC, compute, runbook
             """
         )
+
+        st.markdown("---")
+        _render_grant_pulse()
 
         st.markdown("---")
         st.markdown("### Environment")

@@ -184,7 +184,7 @@ def render_export_options():
         - Ideal for analytics
         """
         )
-        parquet_selected = st.checkbox("Include Parquet", value=False, key="export_parquet")
+        parquet_selected = st.checkbox("Include Parquet", value=True, key="export_parquet")
 
     formats = []
     if csv_selected:
@@ -254,7 +254,7 @@ def render_export_filters():
     with col1:
         date_range = st.date_input(
             "Date Range",
-            value=(date(2019, 1, 1), date(2026, 12, 31)),
+            value=(date(2025, 1, 1), date(2026, 12, 31)),
             min_value=date(2018, 1, 1),
             max_value=date(2027, 12, 31),
             key="export_date_range",
@@ -294,15 +294,8 @@ def render_secure_export(cursor, catalog: str, schema: str, dataset_table: str, 
     if col:
         st.caption(f"Filter that will be applied: **{filter_label}** on `{col}`.")
 
-    # Security notice
-    st.warning(
-        """
-    ⚠️ **Security Notice**: This export uses:
-    - Encrypted data transfer (TLS 1.3)
-    - Audit logging of all exports (`app.export_history`)
-    - Data classification tags applied
-    - No CUI/PII in mock data
-    """
+    st.caption(
+        "TLS to the warehouse · row written to `app.export_history` · mock data only."
     )
 
     if st.button("🚀 Execute Export", type="primary", key="exec_export_btn"):
@@ -444,92 +437,25 @@ def render_api_documentation():
 
     st.markdown(
         """
-    The live, open integration surface is the **Databricks Statement Execution REST API**
-    against the serverless SQL warehouse — the same endpoint Advana / Cloud One / JDBC
-    consumers would call. Illustrative resource paths below map onto that warehouse.
-    """
+The live integration surface is **Databricks Statement Execution REST**
+(`/api/2.0/sql/statements`) against the serverless SQL warehouse — the same
+endpoint Advana, Cloud One, or any JDBC client would call. Use the button
+above. Do not treat `api.onr-demo.com` as a real host.
+        """
     )
-
-    tab1, tab2, tab3 = st.tabs(["Grants API", "Financial API", "Export API"])
-
-    with tab1:
-        st.markdown("#### GET /api/v1/grants")
+    with st.expander("Illustrative resource paths (not a public host)"):
+        st.caption(
+            "These curls are a mapping story only. The live call is the Statement API above."
+        )
         st.code(
             """
-# Retrieve grants with filters
-curl -X GET "https://api.onr-demo.com/v1/grants" \\
-  -H "Authorization: Bearer {token}" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "fiscal_year": 2026,
-    "program_area": "AI/ML",
-    "limit": 100
-  }'
-
-# Equivalent live call (Statement Execution REST — warehouse):
+# Same SQL the Statement API runs:
 # POST https://<workspace>/api/2.0/sql/statements
 # { "warehouse_id": "<onr demo warehouse>",
 #   "statement": "SELECT grant_no, title, amount_usd, awardee
 #                 FROM onr_demo.silver.grants
-#                 WHERE fiscal_year = 2026 AND program_area = 'AI/ML' LIMIT 100" }
-
-# Response
-{
-  "status": "success",
-  "count": 45,
-  "data": [
-    {
-      "grant_no": "ONRD-2026-AIML-00336",
-      "title": "Advancing graph neural network reasoning...",
-      "amount_usd": 2551000,
-      "awardee": "Anchor Applied Research LLC"
-    }
-  ]
-}
-        """,
-            language="bash",
-        )
-
-    with tab2:
-        st.markdown("#### GET /api/v1/financial")
-        st.code(
-            """
-# Retrieve financial data
-curl -X GET "https://api.onr-demo.com/v1/financial" \\
-  -H "Authorization: Bearer {token}" \\
-  -d '{
-    "cost_center": "R&D-001",
-    "fiscal_year": 2026,
-    "quarter": "Q2"
-  }'
-        """,
-            language="bash",
-        )
-
-    with tab3:
-        st.markdown("#### POST /api/v1/export")
-        st.code(
-            """
-# Trigger secure export
-curl -X POST "https://api.onr-demo.com/v1/export" \\
-  -H "Authorization: Bearer {token}" \\
-  -d '{
-    "dataset": "grants_summary",
-    "format": "parquet",
-    "filters": {
-      "fiscal_year": 2026
-    },
-    "notify_email": "user@navy.mil"
-  }'
-
-# Response
-{
-  "export_id": "exp-789xyz",
-  "status": "processing",
-  "estimated_time": "2 minutes",
-  "download_url": null  // Available when complete
-}
-        """,
+#                 WHERE fiscal_year BETWEEN 2025 AND 2026 LIMIT 100" }
+            """.strip(),
             language="bash",
         )
 
