@@ -284,8 +284,8 @@ def render_score_controls(catalog: str = "onr_demo") -> None:
 
     st.markdown("### Registered model score")
     st.caption(
-        "Applies the night-before Random Forest and IsolationForest to the current silver portfolio. "
-        "Does not train."
+        "Applies the night-before Random Forest and IsolationForest to the current silver portfolio "
+        "on the SQL warehouse. Does not train. Does not need the all-purpose cluster."
     )
     c1, c2 = st.columns([2, 1])
     with c1:
@@ -293,7 +293,16 @@ def render_score_controls(catalog: str = "onr_demo") -> None:
             try:
                 result = start_score(catalog)
                 st.session_state["last_score"] = result
-                st.success("Scoring run submitted.")
+                scored = result.get("scored") or {}
+                if result.get("via") == "warehouse" and scored:
+                    st.success(
+                        f"Scored {scored.get('n_rf', 0)} grants on the warehouse. "
+                        f"Fund {scored.get('n_fund', 0)} · Review {scored.get('n_review', 0)} · "
+                        f"Defer {scored.get('n_defer', 0)} · flagged {scored.get('n_flag', 0)}."
+                    )
+                    st.rerun()
+                else:
+                    st.success("Scoring run submitted on the cluster.")
             except Exception as e:
                 st.session_state["last_score"] = {"error": str(e), "notebook": resolve_notebook(SCORE_NOTEBOOK)}
                 st.error(f"Scoring did not start: {e}")

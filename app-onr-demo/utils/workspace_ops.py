@@ -309,26 +309,89 @@ def _search_notebook(w, filename: str, max_nodes: int = 180) -> str | None:
     return None
 
 
+def _norm_name(s: str) -> str:
+    return "".join(ch for ch in (s or "").lower() if ch.isalnum())
+
+
+def _configured_cluster_id() -> str:
+    env = (os.getenv("ONR_CLUSTER_ID") or os.getenv("DATABRICKS_CLUSTER_ID") or "").strip()
+    if env:
+        return env
+    try:
+        from utils.db_helpers import read_yaml
+
+        here = Path(__file__).resolve()
+        for cand in (
+            here.parents[1] / "config" / "onr-conf.yaml",
+            here.parents[2] / "app-onr-demo" / "config" / "onr-conf.yaml",
+        ):
+            if cand.exists():
+                cfg = read_yaml(str(cand)) or {}
+                cid = ((cfg.get("workspace") or {}).get("cluster_id") or "").strip()
+                if cid:
+                    return cid
+    except Exception:
+        pass
+    return ""
+
+
 def start_named_cluster() -> tuple[str | None, str]:
     from utils.workspace_names import ALL_PURPOSE_CLUSTER_NAME
 
+    configured = _configured_cluster_id()
     try:
         w = _client()
-        want = ALL_PURPOSE_CLUSTER_NAME.strip().lower()
-        for c in w.clusters.list():
-            if (c.cluster_name or "").strip().lower() != want:
-                continue
-            state = str(getattr(c, "state", "") or "").upper()
+    except Exception as e:
+        return None, f"Cannot reach cluster API ({e})"
+
+    if configured:
+        try:
+            info = w.clusters.get(cluster_id=configured)
+            state = str(getattr(info, "state", "") or "").upper()
             if "RUNNING" not in state:
                 try:
-                    w.clusters.start(c.cluster_id)
+                    w.clusters.start(configured)
                 except Exception as e:
-                    return c.cluster_id, f"Cluster start requested ({e})"
-                return c.cluster_id, f"Starting {ALL_PURPOSE_CLUSTER_NAME}"
-            return c.cluster_id, f"{ALL_PURPOSE_CLUSTER_NAME} is running"
-        return None, f"Cluster '{ALL_PURPOSE_CLUSTER_NAME}' not found"
+                    return configured, f"Cluster start requested ({e})"
+                return configured, f"Starting configured cluster {configured}"
+            return configured, f"Configured cluster {configured} is running"
+        except Exception as e:
+            return None, f"Configured cluster id {configured} is not usable ({e})"
+
+    try:
+        clusters = list(w.clusters.list())
     except Exception as e:
-        return None, str(e)
+        return None, (
+            f"App principal cannot list clusters ({e}). "
+            "Set workspace.cluster_id or ONR_CLUSTER_ID, or use warehouse scoring."
+        )
+
+    want = ALL_PURPOSE_CLUSTER_NAME.strip().lower()
+    want_n = _norm_name(ALL_PURPOSE_CLUSTER_NAME)
+    exact, fuzzy = [], []
+    for c in clusters:
+        name = (c.cluster_name or "").strip()
+        if name.lower() == want:
+            exact.append(c)
+        elif want_n and want_n in _norm_name(name):
+            fuzzy.append(c)
+    picked = (exact or fuzzy)
+    if not picked:
+        listed = ", ".join((c.cluster_name or c.cluster_id or "?") for c in clusters[:8]) or "none"
+        return None, (
+            f"Cluster '{ALL_PURPOSE_CLUSTER_NAME}' is not visible to the app principal "
+            f"(listed {len(clusters)}: {listed}). "
+            "Set workspace.cluster_id, or score on the SQL warehouse."
+        )
+    c = picked[0]
+    state = str(getattr(c, "state", "") or "").upper()
+    if "RUNNING" not in state:
+        try:
+            w.clusters.start(c.cluster_id)
+        except Exception as e:
+            return c.cluster_id, f"Cluster start requested ({e})"
+        return c.cluster_id, f"Starting {c.cluster_name}"
+    return c.cluster_id, f"{c.cluster_name} is running"
 
 
 def submit_notebook(path: str, run_name: str, params: dict | None = None) -> dict:
@@ -436,11 +499,43 @@ def start_stream(catalog: str = "onr_demo") -> dict:
 
 
 def start_score(catalog: str = "onr_demo") -> dict:
+    """Score UC models on the SQL warehouse. Cluster notebook is fallback only."""
     path = resolve_notebook(SCORE_NOTEBOOK)
-    if not path:
-        raise RuntimeError("Scoring notebook was not found in the workspace")
-    run = submit_notebook(path, run_name="onr-demo-score", params={"catalog": catalog})
-    return {"run": run, "notebook": path}
+    warehouse_error = None
+    try:
+        from utils.db_helpers import get_connection
+        from utils.score_models import score_registered_models
+
+        _conn, cursor = get_connection()
+        if not cursor:
+            raise RuntimeError("SQL warehouse is not connected")
+        scored = score_registered_models(cursor, catalog)
+        return {
+            "run": None,
+            "via": "warehouse",
+            "notebook": path,
+            "scored": scored,
+        }
+    except Exception as e:
+        warehouse_error = e
+
+    if path:
+        try:
+            run = submit_notebook(path, run_name="onr-demo-score", params={"catalog": catalog})
+            return {
+                "run": run,
+                "via": "cluster",
+                "notebook": path,
+                "warehouse_error": str(warehouse_error),
+            }
+        except Exception as e2:
+            raise RuntimeError(
+                f"Warehouse scoring failed ({warehouse_error}). "
+                f"Cluster job also failed ({e2}). "
+                "Open the scoring notebook on **onr demo cluster**, or grant the app "
+                "EXECUTE on the UC models and CAN ATTACH TO the cluster."
+            ) from e2
+    raise RuntimeError(str(warehouse_error))
 
 
 PAGE_LINKS = {
@@ -559,6 +654,19 @@ def workspace_action_row(label: str, url: str | None) -> None:
 
 def render_run_status(kind: str, payload: dict | None) -> None:
     if not payload:
+        return
+    scored = payload.get("scored") or {}
+    if payload.get("via") == "warehouse" or scored:
+        bits = (
+            f"{kind} · warehouse · "
+            f"RF {scored.get('n_rf', '—')} · IF {scored.get('n_if', '—')} · "
+            f"flagged {scored.get('n_flag', '—')}"
+        )
+        st.caption(bits)
+        if scored.get("rf_uri"):
+            st.caption(f"{scored.get('rf_uri')} · {scored.get('if_uri')}")
+        if payload.get("error"):
+            st.caption(payload["error"])
         return
     run = payload.get("run") or {}
     run_id = run.get("run_id")

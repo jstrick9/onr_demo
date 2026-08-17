@@ -84,9 +84,12 @@ workspace:
   # app source path. Override if notebook chips do not open.
   # Example: /Workspace/Users/you@org/onr_demo
   repo_root: ""
+  # Optional. Only needed if Start stream must submit 01b on the cluster.
+  # Score registered models uses the SQL warehouse and does not need this.
+  cluster_id: ""
 
 app:
-  version: "1.9.3"
+  version: "1.9.4"
   environment: "poc"
   max_file_size_mb: 50
   session_timeout_minutes: 60
