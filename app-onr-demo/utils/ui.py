@@ -100,6 +100,39 @@ html, body, [class*="css"] {{
   background: {GOLD};
   box-shadow: 0 0 8px {GOLD};
 }}
+.hud-brand {{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 10px 0;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #2a4a70;
+}}
+.hud-compass {{
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  display: block;
+  border-radius: 50%;
+  filter: drop-shadow(0 0 8px rgba(245,158,11,0.40));
+}}
+.hud-word {{
+  font-size: 1.12rem;
+  font-weight: 800;
+  letter-spacing: 0.20em;
+  line-height: 1;
+  text-transform: uppercase;
+}}
+.hud-sub {{
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-top: 4px;
+}}
+[data-testid="stSidebar"] .hud-word {{ color: #f59e0b !important; }}
+[data-testid="stSidebar"] .hud-sub {{ color: #8b9bb4 !important; }}
+[data-testid="stSidebar"] .hud-user {{ color: #f59e0b !important; }}
+[data-testid="stSidebar"] .hud-foot {{ color: #8b9bb4 !important; }}
 .hud-user {{
   color: {GOLD_BRIGHT}; font-size: 0.82rem; margin-top: 6px; font-weight: 700;
 }}
