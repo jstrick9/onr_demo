@@ -123,7 +123,7 @@ The Streamlit app authenticates as a **different** service principal. Without gr
 | Optional: run `04` then `04b` on the cluster (night-before) | RF + IsolationForest registered |
 | Ingestion → **Start stream** | Lands `batch_live_grants_stream.csv` and submits `01b` (or **Open stream notebook**) |
 | Analytics → **Score registered models** | Submits `04c` against current silver (or **Open scoring notebook**) |
-| Ingestion → Reset (checkbox) | Back to 400 |
+| Ingestion → Restore baseline snapshot | Back to 400; silver rebuilt; `app.quarantine_log` empty |
 
 ---
 

@@ -5,7 +5,9 @@
 # MAGIC # 05 — Reset demo to seed
 # MAGIC
 # MAGIC Deletes live/quality-fail bronze rows, rebuilds silver + gold with Spark SQL
-# MAGIC (no `notebook.run` dependency), and clears Auto Loader checkpoints.
+# MAGIC (no `notebook.run` dependency), clears `app.quarantine_log` /
+# MAGIC `app.quality_findings` / `app.ingestion_quality_log`, writes a baseline
+# MAGIC silver quality log, and clears Auto Loader checkpoints.
 
 # COMMAND ----------
 
@@ -26,8 +28,84 @@ spark.sql(f"""
 DELETE FROM `{catalog}`.`bronze`.financial
 WHERE coalesce(batch_id, _batch_id, '{SEED}') <> '{SEED}'
 """)
+spark.sql(f"""
+DELETE FROM `{catalog}`.`bronze`.grants
+WHERE grant_no IS NULL OR trim(grant_no) = ''
+   OR amount_usd IS NULL OR amount_usd <= 0
+""")
 bronze_n = spark.table(f"`{catalog}`.`bronze`.grants").count()
 print("bronze.grants", bronze_n)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Silver / quarantine logs — empty at baseline
+
+# COMMAND ----------
+
+spark.sql(f"""
+CREATE TABLE IF NOT EXISTS `{catalog}`.`app`.quarantine_log (
+    event_id STRING NOT NULL,
+    grant_no STRING,
+    title STRING,
+    abstract STRING,
+    program_area STRING,
+    fiscal_year INT,
+    amount_usd DOUBLE,
+    awardee STRING,
+    org_unit STRING,
+    classification_band STRING,
+    batch_id STRING,
+    reason_code STRING,
+    reason_detail STRING,
+    source_file STRING,
+    pipeline_name STRING,
+    quarantined_at TIMESTAMP
+) USING DELTA
+""")
+spark.sql(f"""
+CREATE TABLE IF NOT EXISTS `{catalog}`.`app`.quality_findings (
+    finding_id STRING NOT NULL,
+    grant_no STRING,
+    title STRING,
+    program_area STRING,
+    amount_usd DOUBLE,
+    severity STRING,
+    check_name STRING,
+    detail STRING,
+    published BOOLEAN,
+    source_file STRING,
+    pipeline_name STRING,
+    found_at TIMESTAMP
+) USING DELTA
+""")
+spark.sql(f"""
+CREATE TABLE IF NOT EXISTS `{catalog}`.`app`.hold_queue (
+    hold_id STRING NOT NULL,
+    grant_no STRING,
+    title STRING,
+    amount_usd DOUBLE,
+    reason_code STRING,
+    detail STRING,
+    source_file STRING,
+    held_at TIMESTAMP
+) USING DELTA
+""")
+spark.sql(f"""
+CREATE TABLE IF NOT EXISTS `{catalog}`.`app`.ingestion_quality_log (
+    check_id STRING NOT NULL,
+    check_name STRING,
+    check_status STRING,
+    records_checked INT,
+    records_passed INT,
+    records_failed INT,
+    check_timestamp TIMESTAMP,
+    pipeline_name STRING
+) USING DELTA
+""")
+for table in ("hold_queue", "quarantine_log", "quality_findings", "ingestion_quality_log"):
+    spark.sql(f"DELETE FROM `{catalog}`.`app`.{table}")
+    print("cleared app." + table)
 
 # COMMAND ----------
 
@@ -237,6 +315,39 @@ except Exception as e:
     print("Checkpoint rm:", e)
 
 n = spark.table(f"`{catalog}`.`silver`.grants").count()
+bronze_n = spark.table(f"`{catalog}`.`bronze`.grants").count()
+q_n = spark.table(f"`{catalog}`.`app`.quarantine_log").count()
+w_n = spark.table(f"`{catalog}`.`app`.quality_findings").count()
+
+from datetime import datetime
+from pyspark.sql.types import StructType, StructField, StringType, IntegerType, TimestampType
+
+now = datetime.utcnow()
+baseline_rows = [
+    ("reset-grant_no_present", "grant_no_present", "PASS", int(bronze_n), int(n), 0, now, "restore_baseline"),
+    ("reset-amount_positive", "amount_positive", "PASS", int(bronze_n), int(n), 0, now, "restore_baseline"),
+    ("reset-grant_no_unique", "grant_no_unique", "PASS", int(bronze_n), int(n), 0, now, "restore_baseline"),
+    ("reset-silver_publish", "silver_publish", "PASS", int(bronze_n), int(n), 0, now, "restore_baseline"),
+    ("reset-quarantine_log", "quarantine_log", "PASS", 0, 0, 0, now, "restore_baseline"),
+    ("reset-warn_published", "warn_published", "PASS", int(bronze_n), int(n), 0, now, "restore_baseline"),
+]
+qlog_schema = StructType([
+    StructField("check_id", StringType(), False),
+    StructField("check_name", StringType(), True),
+    StructField("check_status", StringType(), True),
+    StructField("records_checked", IntegerType(), True),
+    StructField("records_passed", IntegerType(), True),
+    StructField("records_failed", IntegerType(), True),
+    StructField("check_timestamp", TimestampType(), True),
+    StructField("pipeline_name", StringType(), True),
+])
+spark.createDataFrame(baseline_rows, schema=qlog_schema).write.mode("append").saveAsTable(
+    f"`{catalog}`.`app`.ingestion_quality_log"
+)
+
 print("RESET COMPLETE — silver.grants =", n)
+print("bronze.grants =", bronze_n, "quarantine_log =", q_n, "quality_findings =", w_n)
 if n != 400:
     print("WARNING: expected 400. Run 00_bootstrap.py to full-reload the fixture.")
+if q_n != 0:
+    print("WARNING: quarantine_log should be empty after restore.")

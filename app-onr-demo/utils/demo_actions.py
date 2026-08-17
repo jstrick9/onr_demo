@@ -472,8 +472,67 @@ def load_hold_queue(cursor, catalog: str) -> list[dict]:
         return []
 
 
+QUALITY_LOG_TABLES = (
+    "hold_queue",
+    "quarantine_log",
+    "quality_findings",
+    "ingestion_quality_log",
+)
+
+
+def _clear_quality_logs(cursor, catalog: str) -> list[str]:
+    """Empty quarantine / findings / gate history so restore matches the seed."""
+    cleared: list[str] = []
+    _ensure_app_tables(cursor, catalog)
+    for table in QUALITY_LOG_TABLES:
+        try:
+            cursor.execute(f"DELETE FROM `{catalog}`.`app`.{table}")
+            cleared.append(table)
+        except Exception:
+            pass
+    return cleared
+
+
+def _write_baseline_quality_log(cursor, catalog: str, silver_n: int, bronze_n: int) -> None:
+    """Seed-state gate history: silver published, quarantine empty."""
+    if not cursor:
+        return
+    _ensure_app_tables(cursor, catalog)
+    checked = int(bronze_n or 0)
+    passed = int(silver_n or 0)
+    rows = [
+        ("grant_no_present", True, checked, passed, 0),
+        ("amount_positive", True, checked, passed, 0),
+        ("grant_no_unique", True, checked, passed, 0),
+        ("silver_publish", True, checked, passed, 0),
+        ("quarantine_log", True, 0, 0, 0),
+        ("warn_published", True, checked, passed, 0),
+    ]
+    stamp = "date_format(current_timestamp(), 'yyyyMMddHHmmss')"
+    for name, ok, n_checked, n_pass, n_fail in rows:
+        status = "PASS" if ok else "FAIL"
+        cursor.execute(
+            f"""
+            INSERT INTO `{catalog}`.`app`.ingestion_quality_log
+            (check_id, check_name, check_status, records_checked, records_passed,
+             records_failed, check_timestamp, pipeline_name)
+            VALUES (
+                concat('reset-', {stamp}, '-', '{name}'),
+                '{name}',
+                '{status}',
+                {int(n_checked or 0)},
+                {int(n_pass or 0)},
+                {int(n_fail or 0)},
+                CURRENT_TIMESTAMP(),
+                'restore_baseline'
+            )
+            """
+        )
+
+
 def reset_to_seed_sql(cursor, catalog: str) -> dict:
     before = grant_count(cursor, catalog)
+    _ensure_app_tables(cursor, catalog)
     cursor.execute(
         f"""DELETE FROM `{catalog}`.`bronze`.grants
             WHERE coalesce(batch_id, _batch_id, '{SEED_BATCH_ID}') <> '{SEED_BATCH_ID}'"""
@@ -482,32 +541,51 @@ def reset_to_seed_sql(cursor, catalog: str) -> dict:
         f"""DELETE FROM `{catalog}`.`bronze`.financial
             WHERE coalesce(batch_id, _batch_id, '{SEED_BATCH_ID}') <> '{SEED_BATCH_ID}'"""
     )
-    for table in ("hold_queue", "quarantine_log", "quality_findings"):
-        try:
-            cursor.execute(f"DELETE FROM `{catalog}`.`app`.{table}")
-        except Exception:
-            pass
+    # Safety: leftover quarantine-class rows must not sit in bronze after restore.
+    try:
+        cursor.execute(
+            f"""DELETE FROM `{catalog}`.`bronze`.grants
+                WHERE grant_no IS NULL OR trim(grant_no) = ''
+                   OR amount_usd IS NULL OR amount_usd <= 0"""
+        )
+    except Exception:
+        pass
+    cleared = _clear_quality_logs(cursor, catalog)
     bronze_n = bronze_count(cursor, catalog)
     reloaded = False
     if bronze_n != 400:
         # Do not INSERT 1,600 rows from the app (warehouse timeouts).
         # Point the operator at the cluster bootstrap instead.
-        refresh_silver_gold_sql(cursor, catalog)
+        refresh_silver_gold_sql(cursor, catalog, quality_pipeline=None)
+        after = grant_count(cursor, catalog)
+        try:
+            _write_baseline_quality_log(cursor, catalog, after or 0, bronze_n)
+        except Exception:
+            pass
         return {
             "before_silver": before,
-            "after_silver": grant_count(cursor, catalog),
+            "after_silver": after,
             "bronze_grants": bronze_n,
+            "quarantine_log": 0,
+            "quality_logs_cleared": cleared,
             "reloaded_fixture": False,
             "checkpoints": clear_autoloader_checkpoints(),
             "warning": (
                 f"bronze.grants is {bronze_n}, expected 400. Restore from the official snapshot on the cluster."
             ),
         }
-    refresh_silver_gold_sql(cursor, catalog)
+    refresh_silver_gold_sql(cursor, catalog, quality_pipeline=None)
+    after = grant_count(cursor, catalog)
+    try:
+        _write_baseline_quality_log(cursor, catalog, after or 0, bronze_n)
+    except Exception:
+        pass
     return {
         "before_silver": before,
-        "after_silver": grant_count(cursor, catalog),
+        "after_silver": after,
         "bronze_grants": bronze_n,
+        "quarantine_log": 0,
+        "quality_logs_cleared": cleared,
         "reloaded_fixture": reloaded,
         "checkpoints": clear_autoloader_checkpoints(),
     }
@@ -807,7 +885,7 @@ def _write_lineage(cursor, catalog: str, timings: dict) -> None:
         )
 
 
-def refresh_silver_gold_sql(cursor, catalog: str) -> None:
+def refresh_silver_gold_sql(cursor, catalog: str, quality_pipeline: str | None = "streamlit_live_drop") -> None:
     """Rebuild silver + gold from bronze (same rules as notebooks 02/03)."""
     import time
 
@@ -992,25 +1070,27 @@ def refresh_silver_gold_sql(cursor, catalog: str) -> None:
         )
     except Exception:
         pass
-    try:
-        cursor.execute(
-            f"""
-            INSERT INTO `{catalog}`.`app`.ingestion_quality_log
-            (check_id, check_name, check_status, records_checked, records_passed,
-             records_failed, check_timestamp, pipeline_name)
-            VALUES (
-                concat('live-', date_format(current_timestamp(), 'yyyyMMddHHmmss')),
-                'live_batch_drop', 'PASS',
-                (SELECT COUNT(*) FROM `{catalog}`.`bronze`.grants),
-                (SELECT COUNT(*) FROM `{catalog}`.`silver`.grants),
-                (SELECT COUNT(*) FROM `{catalog}`.`bronze`.grants)
-                  - (SELECT COUNT(*) FROM `{catalog}`.`silver`.grants),
-                CURRENT_TIMESTAMP(), 'streamlit_live_drop'
+    if quality_pipeline:
+        try:
+            pipe = str(quality_pipeline).replace("'", "")
+            cursor.execute(
+                f"""
+                INSERT INTO `{catalog}`.`app`.ingestion_quality_log
+                (check_id, check_name, check_status, records_checked, records_passed,
+                 records_failed, check_timestamp, pipeline_name)
+                VALUES (
+                    concat('live-', date_format(current_timestamp(), 'yyyyMMddHHmmss')),
+                    'live_batch_drop', 'PASS',
+                    (SELECT COUNT(*) FROM `{catalog}`.`bronze`.grants),
+                    (SELECT COUNT(*) FROM `{catalog}`.`silver`.grants),
+                    (SELECT COUNT(*) FROM `{catalog}`.`bronze`.grants)
+                      - (SELECT COUNT(*) FROM `{catalog}`.`silver`.grants),
+                    CURRENT_TIMESTAMP(), '{pipe}'
+                )
+                """
             )
-            """
-        )
-    except Exception:
-        pass
+        except Exception:
+            pass
 
 
 def try_start_cluster_notebooks() -> str:

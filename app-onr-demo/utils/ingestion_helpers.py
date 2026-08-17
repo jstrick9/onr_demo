@@ -291,16 +291,15 @@ def _heartbeat_body(cursor, catalog: str) -> None:
     held = None
     if isinstance(n, int) and silver_n is not None:
         held = n - int(silver_n)
-        c3.metric("Held in bronze", f"{held}", help="Negative-amount and other bronze rows that did not pass silver.")
+        c3.metric("Quarantine gap", f"{held}", help="Bronze minus silver. Should be 0 — quarantine never lands in bronze.")
     else:
         c3.metric("Last 2 min", f"{last2}", delta=delta)
     c4.metric("Last file", pulse["ago"])
     provenance_note("bronze.grants", catalog, when=pulse["last"])
     if isinstance(n, int) and silver_n is not None:
         st.caption(
-            f"Bronze {n:,} includes quarantine rows that stay out of silver. "
-            f"Active silver is {silver_n:,}. Empty grant_no never entered bronze; "
-            f"duplicate was skipped; negative amount is the extra bronze row."
+            f"Bronze {n:,} and silver {silver_n:,} should match. "
+            "Quarantine (empty / dup / amt) never enters bronze — see Quality / app.quarantine_log."
         )
 
 
@@ -538,14 +537,18 @@ def render_file_picker_and_reset(cursor, catalog: str):
                         result = reset_to_seed_sql(cursor, catalog)
                         st.session_state.pop("last_ingest", None)
                         st.success(
-                            f"Baseline restored. Active grants {result['before_silver']} → {result['after_silver']}"
+                            f"Baseline restored. Active grants {result['before_silver']} → {result['after_silver']}. "
+                            f"Silver rebuilt. Quarantine log empty."
                         )
                         if result.get("warning"):
                             st.warning(result["warning"])
                         st.rerun()
                     except Exception as e:
                         st.error(f"Restore failed: {e}")
-        st.caption("Removes inbound batches and rebuilds silver and gold from the official snapshot.")
+        st.caption(
+            "Removes inbound batches, rebuilds silver and gold, and clears the "
+            "quarantine error log plus quality findings."
+        )
 
 
 def render_ingestion_demo(catalog: str, schema: str):

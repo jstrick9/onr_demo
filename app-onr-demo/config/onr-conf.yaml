@@ -86,7 +86,7 @@ workspace:
   repo_root: ""
 
 app:
-  version: "1.9.2"
+  version: "1.9.3"
   environment: "poc"
   max_file_size_mb: 50
   session_timeout_minutes: 60

@@ -26,7 +26,7 @@ Catalog **`onr_demo`** — one POC, no prod.
 | `bronze` | `grants`, `financial` · volumes `landing`, `checkpoints` |
 | `silver` | `grants`, `financial` |
 | `gold` | `grants_summary`, `financial_summary`, `grants_by_awardee`, `budget_execution`, `grant_predictions`, `model_metrics`, `funding_forecast`, `program_trends`, `funding_features`, `grant_anomaly_scores` |
-| `app` | `ingestion_quality_log`, `data_quality_scores`, `lineage_tracking`, search/export history, `daily_briefs` |
+| `app` | `ingestion_quality_log`, `quarantine_log`, `quality_findings`, `data_quality_scores`, `lineage_tracking`, search/export history, `daily_briefs` |
 
 Landing path: `/Volumes/onr_demo/bronze/landing/`
 
@@ -64,7 +64,7 @@ After bootstrap, extra files sit in:
 **In the app (Ingestion page):**
 
 - Multi-select staged files (**Live 8 grants**, **Quality-fail sample**) and/or upload a CSV → **Process selected files**
-- **Reset demo to seed** (confirm checkbox) → back to 400 grants, checkpoints cleared
+- **Restore baseline snapshot** (confirm checkbox) → back to 400 grants, silver rebuilt, quarantine / quality logs cleared
 
 **On the cluster:** `05_reset_demo.py` on **onr demo cluster**, then `01`–`03` if you are showing Auto Loader on Volume files.
 

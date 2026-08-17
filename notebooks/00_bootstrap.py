@@ -339,6 +339,60 @@ qlog = spark.createDataFrame([{
 }])
 qlog.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(f"`{catalog}`.`app`.ingestion_quality_log")
 
+spark.sql(f"""
+CREATE TABLE IF NOT EXISTS `{catalog}`.`app`.quarantine_log (
+    event_id STRING NOT NULL,
+    grant_no STRING,
+    title STRING,
+    abstract STRING,
+    program_area STRING,
+    fiscal_year INT,
+    amount_usd DOUBLE,
+    awardee STRING,
+    org_unit STRING,
+    classification_band STRING,
+    batch_id STRING,
+    reason_code STRING,
+    reason_detail STRING,
+    source_file STRING,
+    pipeline_name STRING,
+    quarantined_at TIMESTAMP
+) USING DELTA
+COMMENT 'Quarantined grants — never landed in bronze'
+""")
+spark.sql(f"DELETE FROM `{catalog}`.`app`.quarantine_log")
+spark.sql(f"""
+CREATE TABLE IF NOT EXISTS `{catalog}`.`app`.quality_findings (
+    finding_id STRING NOT NULL,
+    grant_no STRING,
+    title STRING,
+    program_area STRING,
+    amount_usd DOUBLE,
+    severity STRING,
+    check_name STRING,
+    detail STRING,
+    published BOOLEAN,
+    source_file STRING,
+    pipeline_name STRING,
+    found_at TIMESTAMP
+) USING DELTA
+COMMENT 'WARN findings on rows that still published'
+""")
+spark.sql(f"DELETE FROM `{catalog}`.`app`.quality_findings")
+spark.sql(f"""
+CREATE TABLE IF NOT EXISTS `{catalog}`.`app`.hold_queue (
+    hold_id STRING NOT NULL,
+    grant_no STRING,
+    title STRING,
+    amount_usd DOUBLE,
+    reason_code STRING,
+    detail STRING,
+    source_file STRING,
+    held_at TIMESTAMP
+) USING DELTA
+""")
+spark.sql(f"DELETE FROM `{catalog}`.`app`.hold_queue")
+
 # App audit / quality tables so Process / Export / Search work on a fresh workspace
 spark.sql(f"""
 CREATE TABLE IF NOT EXISTS `{catalog}`.`app`.export_history (

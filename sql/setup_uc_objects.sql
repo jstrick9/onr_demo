@@ -374,6 +374,54 @@ CREATE TABLE IF NOT EXISTS `onr_demo`.`app`.ingestion_quality_log (
 ) USING DELTA
 COMMENT 'Ingestion quality check results';
 
+CREATE TABLE IF NOT EXISTS `onr_demo`.`app`.quarantine_log (
+    event_id STRING NOT NULL,
+    grant_no STRING,
+    title STRING,
+    abstract STRING,
+    program_area STRING,
+    fiscal_year INT,
+    amount_usd DOUBLE,
+    awardee STRING,
+    org_unit STRING,
+    classification_band STRING,
+    batch_id STRING,
+    reason_code STRING,
+    reason_detail STRING,
+    source_file STRING,
+    pipeline_name STRING,
+    quarantined_at TIMESTAMP
+) USING DELTA
+COMMENT 'Quarantined grants — never landed in bronze';
+
+CREATE TABLE IF NOT EXISTS `onr_demo`.`app`.quality_findings (
+    finding_id STRING NOT NULL,
+    grant_no STRING,
+    title STRING,
+    program_area STRING,
+    amount_usd DOUBLE,
+    severity STRING,
+    check_name STRING,
+    detail STRING,
+    published BOOLEAN,
+    source_file STRING,
+    pipeline_name STRING,
+    found_at TIMESTAMP
+) USING DELTA
+COMMENT 'WARN findings on rows that still published';
+
+CREATE TABLE IF NOT EXISTS `onr_demo`.`app`.hold_queue (
+    hold_id STRING NOT NULL,
+    grant_no STRING,
+    title STRING,
+    amount_usd DOUBLE,
+    reason_code STRING,
+    detail STRING,
+    source_file STRING,
+    held_at TIMESTAMP
+) USING DELTA
+COMMENT 'Quality-gate Hold inbox (empty / dup / amt)';
+
 -- =====================================================
 -- 7. GRANTS (Access Control)
 -- =====================================================
