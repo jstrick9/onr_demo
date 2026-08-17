@@ -418,9 +418,9 @@ display(out.sort_values("anomaly_score", ascending=False).head(12))
 # MAGIC %sql
 # MAGIC -- GRANT USE CATALOG ON CATALOG onr_demo TO `data-scientists`;
 # MAGIC -- GRANT USE SCHEMA  ON SCHEMA  onr_demo.gold TO `data-scientists`;
-# MAGIC -- GRANT MODIFY, EXECUTE ON MODEL onr_demo.gold.funding_anomaly_detector TO `data-scientists`;
-# MAGIC -- GRANT EXECUTE ON MODEL onr_demo.gold.funding_anomaly_detector TO `svc-udap-portal`;
-# MAGIC -- GRANT ALL PRIVILEGES ON MODEL onr_demo.gold.funding_anomaly_detector TO `ml-platform-admins`;
+# MAGIC -- GRANT MODIFY, EXECUTE ON FUNCTION onr_demo.gold.funding_anomaly_detector TO `data-scientists`;
+# MAGIC -- GRANT EXECUTE ON FUNCTION onr_demo.gold.funding_anomaly_detector TO `svc-udap-portal`;
+# MAGIC -- GRANT ALL PRIVILEGES ON FUNCTION onr_demo.gold.funding_anomaly_detector TO `ml-platform-admins`;
 # MAGIC SELECT 'GRANTs are commented — see markdown above. App reads gold.grant_anomaly_scores, not the model binary.' AS note;
 
 # COMMAND ----------

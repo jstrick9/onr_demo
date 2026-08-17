@@ -628,7 +628,7 @@ def start_score(catalog: str = "onr_demo") -> dict:
                 f"Warehouse scoring failed ({warehouse_error}). "
                 f"Cluster job also failed ({e2}). "
                 "Open the scoring notebook on **onr demo cluster**, or grant the app "
-                "EXECUTE on the UC models and CAN ATTACH TO the cluster."
+                "EXECUTE ON FUNCTION for the UC models and CAN ATTACH TO the cluster."
             ) from e2
     raise RuntimeError(str(warehouse_error))
 

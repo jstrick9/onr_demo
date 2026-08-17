@@ -83,7 +83,7 @@ def _load_sklearn(uris: list[str]):
     raise RuntimeError(
         "Could not load a registered Unity Catalog model. "
         "Night-before 04 / 04b must have registered the models, and the app "
-        "principal needs EXECUTE on them (sql/grant_app_principal.sql). "
+        "principal needs GRANT EXECUTE ON FUNCTION for them (sql/grant_app_principal.sql). "
         + " | ".join(errors)
     )
 

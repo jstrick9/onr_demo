@@ -41,6 +41,7 @@ GRANT READ VOLUME, WRITE VOLUME ON VOLUME `onr_demo`.`bronze`.`landing` TO `<APP
 GRANT READ VOLUME, WRITE VOLUME ON VOLUME `onr_demo`.`bronze`.`checkpoints` TO `<APP_SERVICE_PRINCIPAL>`;
 
 -- Required for Analytics → Score registered models (in-app / warehouse path).
--- Models exist only after night-before 04 + 04b. Skip these two if register failed.
-GRANT EXECUTE ON MODEL `onr_demo`.`gold`.`grant_large_award` TO `<APP_SERVICE_PRINCIPAL>`;
-GRANT EXECUTE ON MODEL `onr_demo`.`gold`.`funding_anomaly_detector` TO `<APP_SERVICE_PRINCIPAL>`;
+-- UC registered models are granted as FUNCTIONs in this workspace — not MODEL.
+-- Objects exist only after night-before 04 + 04b. Skip these two if register failed.
+GRANT EXECUTE ON FUNCTION `onr_demo`.`gold`.`grant_large_award` TO `<APP_SERVICE_PRINCIPAL>`;
+GRANT EXECUTE ON FUNCTION `onr_demo`.`gold`.`funding_anomaly_detector` TO `<APP_SERVICE_PRINCIPAL>`;
