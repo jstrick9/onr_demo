@@ -326,19 +326,59 @@ def _v_arrow(x, y1, y2, label="") -> str:
 
 
 def _wrap(title: str, svg_body: str, w: int, h: int, note: str = "") -> None:
-    svg = f"""
-    <div class="arch">
-      <div class="arch-kicker">Architecture</div>
-      <div class="arch-title">{html.escape(title)}</div>
-      <svg viewBox="0 0 {w} {h}" xmlns="http://www.w3.org/2000/svg" role="img">
-        {_defs()}
-        <rect width="{w}" height="{h}" fill="url(#grid)"/>
-        {svg_body}
-      </svg>
-      {f'<p class="arch-note">{html.escape(note)}</p>' if note else ""}
-    </div>
-    """
-    st.markdown(svg, unsafe_allow_html=True)
+    """Render via an iframe so Streamlit cannot strip the SVG."""
+    import streamlit.components.v1 as components
+
+    doc = f"""<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<style>
+  html, body {{ margin: 0; padding: 0; background: #f7f9fc; }}
+  .board {{
+    font-family: "Segoe UI", "Source Sans 3", sans-serif;
+    border: 1px solid #d5deea;
+    border-radius: 14px;
+    background: #f7f9fc;
+    padding: 12px 12px 8px 12px;
+  }}
+  .kicker {{
+    color: #a6864a;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }}
+  .title {{
+    color: #0b1f3a;
+    font-size: 18px;
+    font-weight: 700;
+    margin: 2px 0 10px 0;
+  }}
+  svg {{ width: 100%; height: auto; display: block; }}
+  .note {{
+    color: #5b6b80;
+    font-size: 12px;
+    margin: 8px 2px 2px 2px;
+  }}
+  .flow-line {{ animation: dash 1.15s linear infinite; }}
+  @keyframes dash {{ to {{ stroke-dashoffset: -24; }} }}
+</style>
+</head>
+<body>
+  <div class="board">
+    <div class="kicker">Architecture</div>
+    <div class="title">{html.escape(title)}</div>
+    <svg viewBox="0 0 {w} {h}" xmlns="http://www.w3.org/2000/svg">
+      {_defs()}
+      <rect width="{w}" height="{h}" fill="url(#grid)"/>
+      {svg_body}
+    </svg>
+    {f'<div class="note">{html.escape(note)}</div>' if note else ""}
+  </div>
+</body>
+</html>"""
+    components.html(doc, height=int(h * 0.72) + 92, scrolling=False)
 
 
 def _diagram_ingestion() -> tuple[str, int, int, str, str]:
