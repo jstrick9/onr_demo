@@ -336,8 +336,17 @@ financial_score = (
     (financial_completeness[3] / _ft) * 0.3
 )
 
-# Save quality scores
+# Save quality scores. Cast every metric to DOUBLE — the warehouse CREATE OR
+# REPLACE path types SQL 1.0 as DECIMAL, and overwrite without overwriteSchema
+# then fails: DELTA_FAILED_TO_MERGE_FIELDS timeliness/timeliness.
 from pyspark.sql.functions import current_timestamp
+from pyspark.sql.types import DoubleType, StringType, StructField, StructType, TimestampType
+
+def _f(v):
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return None
 
 # Gold-layer scores (same shape as the app SQL path) — skip if gold not built yet
 try:
@@ -358,25 +367,36 @@ try:
     _gbt = gold_budget[0] or 1
     gold_budget_score = (gold_budget[1] / _gbt) * 0.5 + (gold_budget[2] / _gbt) * 0.5
     gold_rows = [
-        ("gold.grants_summary", gold_summary_score, gold_summary[1]/_gst,
-         gold_summary[2]/_gst, 1.0, 1.0),
-        ("gold.budget_execution", gold_budget_score, gold_budget[1]/_gbt,
-         gold_budget[2]/_gbt, 1.0, 1.0),
+        ("gold.grants_summary", _f(gold_summary_score), _f(gold_summary[1] / _gst),
+         _f(gold_summary[2] / _gst), 1.0, 1.0),
+        ("gold.budget_execution", _f(gold_budget_score), _f(gold_budget[1] / _gbt),
+         _f(gold_budget[2] / _gbt), 1.0, 1.0),
     ]
 except Exception:
     gold_rows = []
 
-quality_scores = spark.createDataFrame([
-    ("silver.grants", grants_score, grants_completeness[1]/_gt,
-     grants_completeness[3]/_gt, grants_completeness[2]/_gt, 1.0),
-    ("silver.financial", financial_score, financial_completeness[1]/_ft,
-     financial_completeness[2]/_ft, financial_completeness[3]/_ft, 1.0),
-    *gold_rows,
-], ["table_name", "quality_score", "completeness", "accuracy", "consistency", "timeliness"])
-
-quality_scores = quality_scores.withColumn("last_assessed", current_timestamp())
-
-quality_scores.write.mode("overwrite").saveAsTable(f"`{catalog}`.`app`.data_quality_scores")
+score_schema = StructType([
+    StructField("table_name", StringType(), False),
+    StructField("quality_score", DoubleType(), True),
+    StructField("completeness", DoubleType(), True),
+    StructField("accuracy", DoubleType(), True),
+    StructField("consistency", DoubleType(), True),
+    StructField("timeliness", DoubleType(), True),
+])
+quality_scores = spark.createDataFrame(
+    [
+        ("silver.grants", _f(grants_score), _f(grants_completeness[1] / _gt),
+         _f(grants_completeness[3] / _gt), _f(grants_completeness[2] / _gt), 1.0),
+        ("silver.financial", _f(financial_score), _f(financial_completeness[1] / _ft),
+         _f(financial_completeness[2] / _ft), _f(financial_completeness[3] / _ft), 1.0),
+        *gold_rows,
+    ],
+    schema=score_schema,
+)
+quality_scores = quality_scores.withColumn("last_assessed", current_timestamp().cast("timestamp"))
+quality_scores.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(
+    f"`{catalog}`.`app`.data_quality_scores"
+)
 
 print(f"📊 Grants Quality Score: {grants_score:.2%}")
 print(f"📊 Financial Quality Score: {financial_score:.2%}")

@@ -815,45 +815,45 @@ def _write_data_quality_scores(cursor, catalog: str) -> None:
             FROM `{catalog}`.`gold`.budget_execution
         )
         SELECT 'silver.grants' AS table_name,
-               (g.valid_id / NULLIF(g.total, 0)) * 0.3
+               CAST((g.valid_id / NULLIF(g.total, 0)) * 0.3
              + (g.valid_awardee / NULLIF(g.total, 0)) * 0.3
              + (g.valid_amount / NULLIF(g.total, 0)) * 0.2
-             + (g.valid_area / NULLIF(g.total, 0)) * 0.2 AS quality_score,
-               g.valid_id / NULLIF(g.total, 0) AS completeness,
-               g.valid_amount / NULLIF(g.total, 0) AS accuracy,
-               g.valid_awardee / NULLIF(g.total, 0) AS consistency,
-               1.0 AS timeliness,
+             + (g.valid_area / NULLIF(g.total, 0)) * 0.2 AS DOUBLE) AS quality_score,
+               CAST(g.valid_id / NULLIF(g.total, 0) AS DOUBLE) AS completeness,
+               CAST(g.valid_amount / NULLIF(g.total, 0) AS DOUBLE) AS accuracy,
+               CAST(g.valid_awardee / NULLIF(g.total, 0) AS DOUBLE) AS consistency,
+               CAST(1.0 AS DOUBLE) AS timeliness,
                CURRENT_TIMESTAMP() AS last_assessed
         FROM g
         UNION ALL
         SELECT 'silver.financial',
-               (f.valid_id / NULLIF(f.total, 0)) * 0.4
+               CAST((f.valid_id / NULLIF(f.total, 0)) * 0.4
              + (f.valid_budget / NULLIF(f.total, 0)) * 0.3
-             + (f.valid_actual / NULLIF(f.total, 0)) * 0.3,
-               f.valid_id / NULLIF(f.total, 0),
-               f.valid_budget / NULLIF(f.total, 0),
-               f.valid_actual / NULLIF(f.total, 0),
-               1.0,
+             + (f.valid_actual / NULLIF(f.total, 0)) * 0.3 AS DOUBLE),
+               CAST(f.valid_id / NULLIF(f.total, 0) AS DOUBLE),
+               CAST(f.valid_budget / NULLIF(f.total, 0) AS DOUBLE),
+               CAST(f.valid_actual / NULLIF(f.total, 0) AS DOUBLE),
+               CAST(1.0 AS DOUBLE),
                CURRENT_TIMESTAMP()
         FROM f
         UNION ALL
         SELECT 'gold.grants_summary',
-               (gs.valid_area / NULLIF(gs.total, 0)) * 0.5
-             + (gs.valid_funding / NULLIF(gs.total, 0)) * 0.5,
-               gs.valid_area / NULLIF(gs.total, 0),
-               gs.valid_funding / NULLIF(gs.total, 0),
-               1.0,
-               1.0,
+               CAST((gs.valid_area / NULLIF(gs.total, 0)) * 0.5
+             + (gs.valid_funding / NULLIF(gs.total, 0)) * 0.5 AS DOUBLE),
+               CAST(gs.valid_area / NULLIF(gs.total, 0) AS DOUBLE),
+               CAST(gs.valid_funding / NULLIF(gs.total, 0) AS DOUBLE),
+               CAST(1.0 AS DOUBLE),
+               CAST(1.0 AS DOUBLE),
                CURRENT_TIMESTAMP()
         FROM gs
         UNION ALL
         SELECT 'gold.budget_execution',
-               (be.valid_status / NULLIF(be.total, 0)) * 0.5
-             + (be.valid_rate / NULLIF(be.total, 0)) * 0.5,
-               be.valid_status / NULLIF(be.total, 0),
-               be.valid_rate / NULLIF(be.total, 0),
-               1.0,
-               1.0,
+               CAST((be.valid_status / NULLIF(be.total, 0)) * 0.5
+             + (be.valid_rate / NULLIF(be.total, 0)) * 0.5 AS DOUBLE),
+               CAST(be.valid_status / NULLIF(be.total, 0) AS DOUBLE),
+               CAST(be.valid_rate / NULLIF(be.total, 0) AS DOUBLE),
+               CAST(1.0 AS DOUBLE),
+               CAST(1.0 AS DOUBLE),
                CURRENT_TIMESTAMP()
         FROM be
         """
