@@ -21,7 +21,7 @@ def render_ingestion_status(cursor, catalog: str, schema: str):
         # Get ingestion metrics
         query = f"""
         SELECT 
-            'Grants' as pipeline,
+            'Bronze grants' as pipeline,
             COUNT(*) as total_records,
             SUM(CASE WHEN _ingest_time >= CURRENT_TIMESTAMP() - INTERVAL 1 HOUR THEN 1 ELSE 0 END) as last_hour,
             MAX(_ingest_time) as last_ingest,
