@@ -8,15 +8,16 @@ import streamlit as st
 NAVY = "#0b1f3a"
 NAVY_CARD = "#122a4a"
 NAVY_EDGE = "#1e3a5f"
-GOLD = "#c5a572"
-GOLD_SOFT = "#a6864a"
+GOLD = "#b45309"
+GOLD_SOFT = "#7c2d12"
+GOLD_BRIGHT = "#f59e0b"
 INK = "#1a2332"
 MUTED = "#5b6b80"
 TEAL = "#2f6f86"
 OK = "#2f7d57"
 BRONZE = "#8a5a2b"
 SILVER = "#5d738a"
-GOLD_LANE = "#9a7b3c"
+GOLD_LANE = "#b45309"
 APP_LANE = "#3d6b8a"
 SIDEBAR = "#0d2744"
 CANVAS = "#f7f9fc"
@@ -57,11 +58,11 @@ html, body, [class*="css"] {{
   letter-spacing: 0.04em;
 }}
 [data-testid="stSidebarNav"] a:hover {{
-  background: rgba(197,165,114,0.10) !important;
+  background: rgba(180,83,9,0.16) !important;
 }}
 [data-testid="stSidebarNav"] [aria-current="page"] {{
-  border-left: 2px solid {GOLD} !important;
-  background: rgba(197,165,114,0.14) !important;
+  border-left: 3px solid {GOLD_BRIGHT} !important;
+  background: rgba(180,83,9,0.22) !important;
 }}
 .hud {{
   position: relative;
@@ -100,7 +101,7 @@ html, body, [class*="css"] {{
   box-shadow: 0 0 8px {GOLD};
 }}
 .hud-user {{
-  color: #e8d5a3; font-size: 0.82rem; margin-top: 6px;
+  color: {GOLD_BRIGHT}; font-size: 0.82rem; margin-top: 6px; font-weight: 700;
 }}
 .hud-foot {{
   color: #8b9bb4; font-size: 0.68rem; letter-spacing: 0.12em;
@@ -112,10 +113,15 @@ h1, h2, h3 {{ letter-spacing: 0.01em; color: {NAVY} !important; }}
 
 [data-testid="stMetric"] {{
   background: #ffffff;
-  border: 1px solid #d5deea;
+  border: 1.5px solid #475569;
   border-radius: 12px;
   padding: 14px 16px;
-  box-shadow: 0 6px 18px rgba(11,31,58,0.06);
+  box-shadow: 0 8px 22px rgba(15,23,42,0.12);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}}
+[data-testid="stMetric"]:hover {{
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(15,23,42,0.16);
 }}
 [data-testid="stMetric"] label {{
   color: {MUTED} !important;
@@ -127,8 +133,8 @@ h1, h2, h3 {{ letter-spacing: 0.01em; color: {NAVY} !important; }}
 [data-testid="stMetricDelta"] {{ font-weight: 700; }}
 
 @keyframes metricFlash {{
-  0% {{ box-shadow: 0 0 0 0 rgba(197,165,114,0.55); }}
-  100% {{ box-shadow: 0 0 0 12px rgba(197,165,114,0); }}
+  0% {{ box-shadow: 0 0 0 0 rgba(180,83,9,0.55); }}
+  100% {{ box-shadow: 0 0 0 12px rgba(180,83,9,0); }}
 }}
 [data-testid="stMetric"]:has([data-testid="stMetricDelta"]) {{
   animation: metricFlash 1.6s ease-out 2;
@@ -136,45 +142,80 @@ h1, h2, h3 {{ letter-spacing: 0.01em; color: {NAVY} !important; }}
 
 .stTabs [data-baseweb="tab-list"] {{
   gap: 6px;
-  border-bottom: 1px solid #d5deea;
-}}
-.stTabs [data-baseweb="tab"] {{
-  background: transparent;
-  color: {MUTED};
+  border-bottom: 2px solid #475569;
 }}
 .stTabs [aria-selected="true"] {{
-  color: {NAVY} !important;
-  border-bottom: 2px solid {GOLD} !important;
+  color: {GOLD} !important;
+  border-bottom: 3px solid {GOLD} !important;
+  font-weight: 700;
 }}
 
 div.stButton > button {{
-  background: linear-gradient(180deg, #d4b57e, {GOLD});
-  color: #1a1208;
-  border: 0;
-  font-weight: 700;
+  background: linear-gradient(180deg, {GOLD_BRIGHT}, {GOLD});
+  color: #1c1004;
+  border: 1px solid #7c2d12;
+  font-weight: 800;
   border-radius: 8px;
+  box-shadow: 0 6px 16px rgba(180,83,9,0.35);
 }}
-div.stButton > button:hover {{ filter: brightness(1.05); }}
+div.stButton > button:hover {{
+  filter: brightness(1.08);
+  box-shadow: 0 8px 20px rgba(180,83,9,0.45);
+}}
 
 [data-testid="stDataFrame"], .stDataFrame {{
-  border: 1px solid #d5deea;
+  border: 1.5px solid #334155 !important;
   border-radius: 10px;
+  box-shadow: 0 8px 22px rgba(15,23,42,0.12);
+}}
+
+[data-testid="stTextInput"] input,
+[data-testid="stNumberInput"] input,
+[data-testid="stDateInput"] input,
+[data-testid="stTextArea"] textarea,
+[data-baseweb="select"] > div,
+[data-testid="stMultiSelect"] [data-baseweb="select"] > div,
+[data-testid="stSelectbox"] [data-baseweb="select"] > div {{
+  border: 1.5px solid #475569 !important;
+  box-shadow: 0 4px 14px rgba(15,23,42,0.10) !important;
+  background: #ffffff !important;
+}}
+[data-testid="stTextInput"] input:focus,
+[data-testid="stNumberInput"] input:focus,
+[data-testid="stDateInput"] input:focus,
+[data-testid="stTextArea"] textarea:focus,
+[data-baseweb="select"] > div:focus-within {{
+  border-color: {GOLD} !important;
+  box-shadow: 0 0 0 3px rgba(180,83,9,0.28) !important;
+}}
+
+[data-testid="stExpander"] {{
+  border: 1.5px solid #475569 !important;
+  border-radius: 10px !important;
+  box-shadow: 0 6px 16px rgba(15,23,42,0.08);
+}}
+
+[data-testid="stFileUploader"] {{
+  border: 1.5px dashed {GOLD} !important;
+  border-radius: 10px;
+  background: #fffbeb;
 }}
 
 .page-kicker {{
-  color: {GOLD_SOFT};
-  font-size: 0.72rem;
-  font-weight: 700;
+  color: {GOLD};
+  font-size: 0.78rem;
+  font-weight: 800;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   margin-bottom: 4px;
 }}
 .page-rule {{
-  height: 2px;
-  width: 72px;
-  background: linear-gradient(90deg, {GOLD}, transparent);
+  height: 3px;
+  width: 88px;
+  background: linear-gradient(90deg, {GOLD_BRIGHT}, {GOLD});
   margin: 8px 0 18px 0;
 }}
+
 .unclass-chip {{
   display: inline-block;
   border: 1px solid #d5deea;
@@ -250,14 +291,20 @@ div.stButton > button:hover {{ filter: brightness(1.05); }}
 }}
 .cap-card {{
   background: #ffffff;
-  border: 1px solid #d5deea;
+  border: 1.5px solid #475569;
   border-radius: 12px;
   padding: 14px 16px;
-  box-shadow: 0 6px 18px rgba(11,31,58,0.05);
+  box-shadow: 0 8px 20px rgba(15,23,42,0.10);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}}
+.cap-card:hover {{
+  transform: translateY(-3px);
+  box-shadow: 0 14px 28px rgba(15,23,42,0.16);
+  border-color: {GOLD};
 }}
 .cap-card h4 {{
   margin: 0 0 6px 0;
-  color: {NAVY};
+  color: {GOLD};
   font-size: 0.95rem;
 }}
 .cap-card p {{
@@ -328,8 +375,8 @@ def _defs() -> str:
     return f"""
     <defs>
       <marker id="arrowGold" viewBox="0 0 10 10" refX="9" refY="5"
-              markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-        <path d="M 0 0 L 10 5 L 0 10 z" fill="{GOLD}"/>
+              markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#b45309" stroke="#7c2d12" stroke-width="0.6"/>
       </marker>
       <marker id="arrowNavy" viewBox="0 0 10 10" refX="9" refY="5"
               markerWidth="7" markerHeight="7" orient="auto-start-reverse">
@@ -371,16 +418,22 @@ def _box(x, y, w, h, title, line1="", line2="", head=NAVY, fs=11) -> str:
 
 
 def _arrow(x1, y1, x2, y2, label="") -> str:
-    mx, my = (x1 + x2) / 2, (y1 + y2) / 2 - 8
+    mx, my = (x1 + x2) / 2, (y1 + y2) / 2 - 10
     lab = (
-        f'<text x="{mx}" y="{my}" text-anchor="middle" fill="{GOLD_SOFT}" font-size="10" '
-        f'font-weight="700" font-family="Segoe UI, sans-serif">{_e(label)}</text>'
+        f'<text x="{mx}" y="{my}" text-anchor="middle" fill="#ffffff" stroke="#ffffff" '
+        f'stroke-width="4" paint-order="stroke" font-size="12" font-weight="800" '
+        f'font-family="Segoe UI, sans-serif">{_e(label)}</text>'
+        f'<text x="{mx}" y="{my}" text-anchor="middle" fill="{GOLD}" font-size="12" '
+        f'font-weight="800" font-family="Segoe UI, sans-serif">{_e(label)}</text>'
         if label
         else ""
     )
     return f"""
-    <line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" stroke="{GOLD}" stroke-width="2.2"
-          marker-end="url(#arrowGold)" stroke-dasharray="8 6" class="flow-line"/>
+    <line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" stroke="#7c2d12" stroke-width="5.2"
+          stroke-linecap="round"/>
+    <line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" stroke="{GOLD}" stroke-width="3.2"
+          marker-end="url(#arrowGold)" stroke-dasharray="9 6" class="flow-line"
+          stroke-linecap="round"/>
     {lab}
     """
 

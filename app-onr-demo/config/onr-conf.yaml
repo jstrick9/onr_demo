@@ -80,7 +80,7 @@ export:
   export_chunksize: 100000
 
 app:
-  version: "1.7.1"
+  version: "1.7.2"
   environment: "poc"
   max_file_size_mb: 50
   session_timeout_minutes: 60
