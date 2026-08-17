@@ -246,7 +246,7 @@ def render_export_filters():
     st.caption(
         "Date range is applied to the dataset’s date column "
         "(`fiscal_year` on summaries, `created_at` / `scored_at` / `latest_grant_date` on detail tables). "
-        "Narrow the range during the demo to prove a **filtered** bulk export."
+        "Narrow the range for a filtered bulk extract."
     )
 
     col1, col2 = st.columns(2)
