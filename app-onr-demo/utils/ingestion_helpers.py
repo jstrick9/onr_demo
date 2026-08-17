@@ -573,8 +573,9 @@ def render_ingestion_demo(catalog: str, schema: str):
         f'''
 spark.readStream.format("cloudFiles")
     .option("cloudFiles.format", "csv")
-    .option("cloudFiles.schemaLocation", "/Volumes/{catalog}/bronze/landing/_schemas/grants")
+    .option("cloudFiles.schemaLocation", "/Volumes/{catalog}/bronze/landing/_schemas/grants_stream_v2")
     .option("cloudFiles.schemaEvolutionMode", "addNewColumns")
+    .option("cloudFiles.schemaHints", "grant_no STRING, amount_usd DOUBLE, ...")
     .option("header", "true")
     .load("/Volumes/{catalog}/bronze/landing/grants/")
     .writeStream.format("delta")

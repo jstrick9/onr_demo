@@ -36,8 +36,9 @@ run_for_seconds = int(dbutils.widgets.get("run_for_seconds") or "90")
 trigger_mode = dbutils.widgets.get("trigger_mode")
 
 landing = f"/Volumes/{catalog}/bronze/landing/"
-ckpt = f"/Volumes/{catalog}/bronze/checkpoints/grants_stream"
-schema_loc = f"{landing}_schemas/grants_stream"
+# v2: previous schema location stored .schema() + addNewColumns, which this DBR rejects.
+ckpt = f"/Volumes/{catalog}/bronze/checkpoints/grants_stream_v2"
+schema_loc = f"{landing}_schemas/grants_stream_v2"
 
 for p in (f"{landing}grants", schema_loc, ckpt):
     try:
@@ -50,23 +51,25 @@ print(f"catalog={catalog}  trigger={trigger_mode}  interval={processing_seconds}
 
 # COMMAND ----------
 
-from pyspark.sql.functions import col, current_timestamp, input_file_name, lit
-from pyspark.sql.types import *
+from pyspark.sql.functions import current_timestamp, input_file_name, lit
 import time
 
-grants_schema = StructType([
-    StructField("grant_no", StringType(), False),
-    StructField("title", StringType(), True),
-    StructField("abstract", StringType(), True),
-    StructField("program_area", StringType(), True),
-    StructField("fiscal_year", IntegerType(), True),
-    StructField("amount_usd", DoubleType(), True),
-    StructField("awardee", StringType(), True),
-    StructField("org_unit", StringType(), True),
-    StructField("classification_band", StringType(), True),
-    StructField("batch_id", StringType(), True),
-    StructField("created_at", StringType(), True),
-])
+# addNewColumns cannot be combined with .schema(). Hints keep types; evolution still works.
+SCHEMA_HINTS = (
+    "grant_no STRING, title STRING, abstract STRING, program_area STRING, "
+    "fiscal_year INT, amount_usd DOUBLE, awardee STRING, org_unit STRING, "
+    "classification_band STRING, batch_id STRING, created_at STRING"
+)
+QUERY_NAME = "onr_grants_processingTime"
+
+# Stop any leftover demo query so a prior failed run cannot keep streaming.
+for active in spark.streams.active:
+    try:
+        if (active.name or "") == QUERY_NAME:
+            active.stop()
+            print("Stopped leftover query", QUERY_NAME)
+    except Exception as e:
+        print("Could not stop leftover query:", e)
 
 src = (
     spark.readStream
@@ -75,8 +78,8 @@ src = (
     .option("cloudFiles.inferColumnTypes", "true")
     .option("cloudFiles.schemaLocation", schema_loc)
     .option("cloudFiles.schemaEvolutionMode", "addNewColumns")
+    .option("cloudFiles.schemaHints", SCHEMA_HINTS)
     .option("header", "true")
-    .schema(grants_schema)
     .load(f"{landing}grants/")
     .withColumn("_ingest_time", current_timestamp())
     .withColumn("_source_file", input_file_name())
@@ -89,39 +92,47 @@ writer = (
     .option("checkpointLocation", ckpt)
     .option("mergeSchema", "true")
     .outputMode("append")
-    .queryName("onr_grants_processingTime")
+    .queryName(QUERY_NAME)
 )
 
-if trigger_mode == "availableNow":
-    q = writer.trigger(availableNow=True).toTable(f"`{catalog}`.`bronze`.grants")
-    q.awaitTermination()
-    print("availableNow stream finished")
-else:
-    q = writer.trigger(processingTime=f"{processing_seconds} seconds").toTable(
-        f"`{catalog}`.`bronze`.grants"
-    )
-    print(
-        f"Stream '{q.name}' started. Drop a CSV into {landing}grants/ now. "
-        f"Auto-stop in {run_for_seconds}s."
-    )
-    t0 = time.time()
-    last_n = None
-    while q.isActive and (time.time() - t0) < run_for_seconds:
-        time.sleep(5)
-        try:
-            n = spark.table(f"`{catalog}`.`bronze`.grants").count()
-        except Exception:
-            n = "?"
-        progress = q.lastProgress or {}
-        batch_id = progress.get("batchId")
-        inputs = (progress.get("sources") or [{}])[0].get("numInputRows")
-        print(f"  t={int(time.time()-t0):3d}s  bronze.grants={n}  batch={batch_id}  inputRows={inputs}")
-        last_n = n
-    if q.isActive:
-        q.stop()
-        print("Stopped after run_for_seconds (demo safety).")
+q = None
+last_n = None
+try:
+    if trigger_mode == "availableNow":
+        q = writer.trigger(availableNow=True).toTable(f"`{catalog}`.`bronze`.grants")
+        q.awaitTermination()
+        print("availableNow stream finished")
     else:
-        print("Stream already stopped.")
+        q = writer.trigger(processingTime=f"{processing_seconds} seconds").toTable(
+            f"`{catalog}`.`bronze`.grants"
+        )
+        print(
+            f"Stream '{q.name}' started. Drop a CSV into {landing}grants/ now. "
+            f"This query is bounded — it stops itself in {run_for_seconds}s. "
+            "To stop early: Cancel the job run, or run spark.streams.active stop."
+        )
+        t0 = time.time()
+        while q.isActive and (time.time() - t0) < run_for_seconds:
+            time.sleep(5)
+            try:
+                n = spark.table(f"`{catalog}`.`bronze`.grants").count()
+            except Exception:
+                n = "?"
+            progress = q.lastProgress or {}
+            batch_id = progress.get("batchId")
+            inputs = (progress.get("sources") or [{}])[0].get("numInputRows")
+            print(f"  t={int(time.time()-t0):3d}s  bronze.grants={n}  batch={batch_id}  inputRows={inputs}")
+            last_n = n
+finally:
+    if q is not None:
+        try:
+            if q.isActive:
+                q.stop()
+                print(f"Stopped '{QUERY_NAME}' after {run_for_seconds}s (demo safety).")
+            else:
+                print("Stream already stopped.")
+        except Exception as e:
+            print("Stop:", e)
     print("Final bronze.grants =", last_n)
 
 # COMMAND ----------

@@ -30,7 +30,6 @@ for sub in ("grants", "financial", "_schemas/grants", "_schemas/financial"):
 # COMMAND ----------
 
 from pyspark.sql.functions import col, current_timestamp, input_file_name, lit
-from pyspark.sql.types import *
 
 # Set catalog context
 spark.sql(f"USE CATALOG `{catalog}`")
@@ -46,19 +45,12 @@ print(f"✅ Context set: {catalog}.{{bronze,silver,gold,app}}")
 # COMMAND ----------
 
 # Auto Loader — Incremental ingest for grants
-grants_schema = StructType([
-    StructField("grant_no", StringType(), False),
-    StructField("title", StringType(), True),
-    StructField("abstract", StringType(), True),
-    StructField("program_area", StringType(), True),
-    StructField("fiscal_year", IntegerType(), True),
-    StructField("amount_usd", DoubleType(), True),
-    StructField("awardee", StringType(), True),
-    StructField("org_unit", StringType(), True),
-    StructField("classification_band", StringType(), True),
-    StructField("batch_id", StringType(), True),
-    StructField("created_at", StringType(), True),
-])
+# addNewColumns cannot be combined with .schema(); use schemaHints.
+GRANTS_HINTS = (
+    "grant_no STRING, title STRING, abstract STRING, program_area STRING, "
+    "fiscal_year INT, amount_usd DOUBLE, awardee STRING, org_unit STRING, "
+    "classification_band STRING, batch_id STRING, created_at STRING"
+)
 
 grants_bronze_df = (
     spark.readStream
@@ -67,8 +59,8 @@ grants_bronze_df = (
     .option("cloudFiles.inferColumnTypes", "true")
     .option("cloudFiles.schemaLocation", f"{landing_path}_schemas/grants")
     .option("cloudFiles.schemaEvolutionMode", "addNewColumns")
+    .option("cloudFiles.schemaHints", GRANTS_HINTS)
     .option("header", "true")
-    .schema(grants_schema)
     .load(f"{landing_path}grants/")
     .withColumn("_ingest_time", current_timestamp())
     .withColumn("_source_file", input_file_name())
@@ -96,21 +88,12 @@ print("✅ Grants ingestion complete")
 # COMMAND ----------
 
 # Auto Loader — Incremental ingest for financial data
-financial_schema = StructType([
-    StructField("transaction_id", StringType(), False),
-    StructField("grant_no", StringType(), True),
-    StructField("cost_center", StringType(), True),
-    StructField("program_area", StringType(), True),
-    StructField("category", StringType(), True),
-    StructField("fiscal_year", IntegerType(), True),
-    StructField("quarter", StringType(), True),
-    StructField("budget_allocated", DoubleType(), True),
-    StructField("actual_expenditure", DoubleType(), True),
-    StructField("execution_rate", DoubleType(), True),
-    StructField("variance", DoubleType(), True),
-    StructField("status", StringType(), True),
-    StructField("batch_id", StringType(), True),
-])
+FIN_HINTS = (
+    "transaction_id STRING, grant_no STRING, cost_center STRING, program_area STRING, "
+    "category STRING, fiscal_year INT, quarter STRING, budget_allocated DOUBLE, "
+    "actual_expenditure DOUBLE, execution_rate DOUBLE, variance DOUBLE, "
+    "status STRING, batch_id STRING"
+)
 
 financial_bronze_df = (
     spark.readStream
@@ -119,8 +102,8 @@ financial_bronze_df = (
     .option("cloudFiles.inferColumnTypes", "true")
     .option("cloudFiles.schemaLocation", f"{landing_path}_schemas/financial")
     .option("cloudFiles.schemaEvolutionMode", "addNewColumns")
+    .option("cloudFiles.schemaHints", FIN_HINTS)
     .option("header", "true")
-    .schema(financial_schema)
     .load(f"{landing_path}financial/")
     .withColumn("_ingest_time", current_timestamp())
     .withColumn("_source_file", input_file_name())
