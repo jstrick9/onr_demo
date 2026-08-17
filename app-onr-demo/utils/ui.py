@@ -859,10 +859,10 @@ def receipt_card(fields: dict) -> None:
     )
 
 
-def heartbeat_strip(bronze: str, last2: str, ago: str) -> None:
+def heartbeat_strip(bronze: str, last2: str, ago: str, kicker: str = "Bronze") -> None:
     st.markdown(
         '<div class="hb-strip">'
-        '<div><div class="hb-kicker">Stream</div>'
+        f'<div><div class="hb-kicker">{html.escape(kicker)}</div>'
         f'<div class="hb-count">{html.escape(str(bronze))}</div></div>'
         f'<div class="hb-meta">bronze grants</div>'
         f'<div class="hb-meta">last 2 min · {html.escape(str(last2))}</div>'

@@ -185,13 +185,86 @@ def process_selected_files(cursor, catalog: str, pack_keys: list[str], extra_row
         _write_hold_queue(cursor, catalog, holds)
     except Exception:
         pass
+    after = grant_count(cursor, catalog)
+    try:
+        bronze_n = bronze_count(cursor, catalog)
+    except Exception:
+        bronze_n = None
+    try:
+        _write_ingest_quality_log(
+            cursor,
+            catalog,
+            summaries=summaries,
+            holds=holds,
+            before=before,
+            after=after,
+            bronze_n=bronze_n,
+        )
+    except Exception:
+        pass
     return {
         "before": before,
-        "after": grant_count(cursor, catalog),
+        "after": after,
+        "bronze": bronze_n,
         "files": summaries,
         "holds": holds,
         "held": held,
     }
+
+
+def _write_ingest_quality_log(
+    cursor,
+    catalog: str,
+    summaries: list[dict],
+    holds: list[dict],
+    before,
+    after,
+    bronze_n,
+) -> None:
+    """One row per quality gate so the Quality tab matches the Hold tray."""
+    if not cursor:
+        return
+    _ensure_app_tables(cursor, catalog)
+    by_code = {"empty": 0, "dup": 0, "amt": 0}
+    for rec in holds or []:
+        code = str(rec.get("code") or "").lower()
+        if code in by_code:
+            by_code[code] += 1
+    landed = sum(int(s.get("landed") or 0) for s in summaries or [])
+    checked = sum(int(s.get("input_rows") or 0) for s in summaries or [])
+    held_n = sum(by_code.values())
+    rows = [
+        ("grant_no_present", by_code["empty"] == 0, checked, checked - by_code["empty"], by_code["empty"]),
+        ("amount_positive", by_code["amt"] == 0, checked, checked - by_code["amt"], by_code["amt"]),
+        ("grant_no_unique", by_code["dup"] == 0, checked, checked - by_code["dup"], by_code["dup"]),
+        (
+            "silver_publish",
+            True,
+            bronze_n if bronze_n is not None else checked,
+            after if after is not None else 0,
+            held_n,
+        ),
+    ]
+    stamp = "date_format(current_timestamp(), 'yyyyMMddHHmmss')"
+    for name, ok, n_checked, n_pass, n_fail in rows:
+        status = "PASS" if ok else "FAIL"
+        cursor.execute(
+            f"""
+            INSERT INTO `{catalog}`.`app`.ingestion_quality_log
+            (check_id, check_name, check_status, records_checked, records_passed,
+             records_failed, check_timestamp, pipeline_name)
+            VALUES (
+                concat('ingest-', {stamp}, '-', '{name}'),
+                '{name}',
+                '{status}',
+                {int(n_checked or 0)},
+                {int(n_pass or 0)},
+                {int(n_fail or 0)},
+                CURRENT_TIMESTAMP(),
+                'ingest_selected_files'
+            )
+            """
+        )
 
 
 def _write_hold_queue(cursor, catalog: str, holds: list[dict]) -> None:

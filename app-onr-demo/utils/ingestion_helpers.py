@@ -58,40 +58,53 @@ def render_ingestion_status(cursor, catalog: str, schema: str):
 # -------------------------------
 def render_quality_checks(cursor, catalog: str, schema: str):
     """Display data quality check results from ingestion."""
+    from utils.demo_actions import load_hold_queue
+    from utils.ui import hold_tray
+
     st.markdown("### Quality checks")
-    
+    st.caption("Gates from the last ingest: empty grant_no · duplicate · amount not positive.")
+
+    holds = load_hold_queue(cursor, catalog) if cursor else []
+    last = st.session_state.get("last_ingest") or {}
+    if not holds:
+        holds = last.get("holds") or []
+    if holds:
+        hold_tray(holds)
+    else:
+        st.caption("Hold queue is empty — no rows were quarantined this session.")
+
     if not cursor:
-        st.info("Quality check results will appear after pipeline execution.")
+        st.info("Warehouse is not connected — gate log is unavailable.")
         return
     try:
         query = f"""
-        SELECT 
+        SELECT
             check_name,
             check_status,
             records_checked,
             records_passed,
             records_failed,
-            check_timestamp
+            check_timestamp,
+            pipeline_name
         FROM `{catalog}`.`app`.ingestion_quality_log
         ORDER BY check_timestamp DESC
-        LIMIT 10
+        LIMIT 20
         """
         cursor.execute(query)
         results = cursor.fetchall()
-        
+
         if results:
             df = pd.DataFrame(results, columns=[
-                "Check Name", "Status", "Checked", "Passed", "Failed", "Timestamp"
+                "Check", "Status", "Checked", "Passed", "Failed", "Timestamp", "Pipeline"
             ])
-            
-            # Color code status
+
             def color_status(val):
                 if val == "PASS":
                     return "background-color: #d4edda"
                 elif val == "FAIL":
                     return "background-color: #f8d7da"
                 return ""
-            
+
             sty = df.style
             try:
                 sty = sty.map(color_status, subset=["Status"])
@@ -99,9 +112,9 @@ def render_quality_checks(cursor, catalog: str, schema: str):
                 sty = df.style.applymap(color_status, subset=["Status"])
             st.dataframe(sty, use_container_width=True)
         else:
-            st.caption("No quality results yet.")
+            st.caption("No quality log rows yet. Ingest inbound grants and the quarantine sample.")
     except Exception as e:
-        st.info("Quality check results will appear after pipeline execution.")
+        st.caption(f"Quality log not readable ({e}). Hold tray above is the live gate.")
 
 
 # -------------------------------
@@ -203,15 +216,24 @@ def _bronze_pulse(cursor, catalog: str) -> dict:
 
 
 def _heartbeat_body(cursor, catalog: str) -> None:
+    from utils.demo_actions import grant_count
     from utils.ui import heartbeat_strip, provenance_note
 
     pulse = _bronze_pulse(cursor, catalog)
     last2 = pulse["last2"]
     n = pulse["n"]
+    silver_n = grant_count(cursor, catalog) if cursor else None
+    streaming = bool(st.session_state.get("last_stream"))
+    try:
+        streaming = streaming or (last2 not in {None, "—"} and int(last2) > 0)
+    except (TypeError, ValueError):
+        pass
+    kicker = "Stream" if streaming else "Bronze"
     heartbeat_strip(
         f"{n:,}" if isinstance(n, int) else str(n),
         f"{last2}" if last2 != "—" else "—",
         pulse["ago"],
+        kicker=kicker,
     )
     c1, c2, c3, c4 = st.columns(4)
     delta = None
@@ -220,16 +242,28 @@ def _heartbeat_body(cursor, catalog: str) -> None:
             delta = f"+{int(last2)}"
     except (TypeError, ValueError):
         delta = None
-    c1.metric("Bronze grants", f"{n}", delta=delta)
-    c2.metric("Source files", f"{pulse['files']}")
-    c3.metric("Last 2 min", f"{last2}", delta=delta)
+    c1.metric("Bronze", f"{n}")
+    c2.metric("Silver", f"{silver_n:,}" if silver_n is not None else "—")
+    held = None
+    if isinstance(n, int) and silver_n is not None:
+        held = n - int(silver_n)
+        c3.metric("Held in bronze", f"{held}", help="Negative-amount and other bronze rows that did not pass silver.")
+    else:
+        c3.metric("Last 2 min", f"{last2}", delta=delta)
     c4.metric("Last file", pulse["ago"])
     provenance_note("bronze.grants", catalog, when=pulse["last"])
+    if isinstance(n, int) and silver_n is not None:
+        st.caption(
+            f"Bronze {n:,} includes quarantine rows that stay out of silver. "
+            f"Active silver is {silver_n:,}. Empty grant_no never entered bronze; "
+            f"duplicate was skipped; negative amount is the extra bronze row."
+        )
 
 
 def render_streaming_metrics(cursor=None, catalog: str = "onr_demo"):
-    """File-based ingest health from bronze (Auto Loader processingTime)."""
-    st.markdown("### Stream health")
+    """Landing health from bronze. Stream kicker only after Start stream / recent files."""
+    st.markdown("### Landing")
+    st.caption("Bronze is the landing table. Silver is what leadership reads.")
     st.session_state["_onr_hb_catalog"] = catalog
     rendered = False
     if hasattr(st, "fragment"):
