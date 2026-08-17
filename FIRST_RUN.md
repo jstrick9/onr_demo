@@ -123,6 +123,7 @@ The Streamlit app authenticates as a **different** service principal. Without gr
 | Optional: run `04` then `04b` on the cluster (night-before) | RF + IsolationForest registered |
 | Ingestion → **Start stream** | Lands `batch_live_grants_stream.csv` and submits `01b` (or **Open stream notebook**) |
 | Analytics → **Score registered models** | Scores UC models on the SQL warehouse (no cluster). Needs `GRANT EXECUTE ON FUNCTION` for the two registered models. |
+| Ingestion → **Start stream** | Lands the CSV. Job submit only if the **app SP** can read the notebook (Shared copy). Otherwise warehouse load. **Open stream notebook** runs as you. |
 | Ingestion → Restore baseline snapshot | Back to 400; silver rebuilt; `app.quarantine_log` empty |
 
 ---
