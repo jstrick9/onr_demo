@@ -30,22 +30,142 @@ def _client():
 
 
 def workspace_host() -> str:
-    try:
-        host = (_client().config.host or "").strip()
-    except Exception:
-        host = ""
+    cached = st.session_state.get("_ws_host")
+    if cached:
+        return cached
+    host = (
+        os.getenv("DATABRICKS_HOST")
+        or os.getenv("DATABRICKS_SERVER_HOSTNAME")
+        or os.getenv("DATABRICKS_WORKSPACE_URL")
+        or ""
+    ).strip()
     if not host:
-        return ""
-    if not host.startswith("http"):
+        try:
+            host = (_client().config.host or "").strip()
+        except Exception:
+            host = ""
+    if host and not host.startswith("http"):
         host = "https://" + host
-    return host.rstrip("/")
+    host = host.rstrip("/")
+    if host:
+        st.session_state["_ws_host"] = host
+    return host
+
+
+def _conf_repo_root() -> str:
+    env = (os.getenv("ONR_REPO_ROOT") or os.getenv("DATABRICKS_REPO_ROOT") or "").strip()
+    if env:
+        return env.rstrip("/")
+    try:
+        from utils.db_helpers import read_yaml
+
+        here = Path(__file__).resolve()
+        for cand in (
+            here.parents[1] / "config" / "onr-conf.yaml",
+            here.parents[2] / "app-onr-demo" / "config" / "onr-conf.yaml",
+        ):
+            if cand.exists():
+                cfg = read_yaml(str(cand)) or {}
+                root = ((cfg.get("workspace") or {}).get("repo_root") or "").strip()
+                if root:
+                    return root.rstrip("/")
+    except Exception:
+        pass
+    return ""
+
+
+def _app_source_repo_root() -> str:
+    try:
+        w = _client()
+        names = [os.getenv("DATABRICKS_APP_NAME") or "", "onr-demo-poc"]
+        app = None
+        for name in names:
+            if not name:
+                continue
+            try:
+                app = w.apps.get(name)
+                break
+            except Exception:
+                continue
+        if not app:
+            return ""
+        paths = []
+        for attr in (
+            "default_source_code_path",
+            "source_code_path",
+            "source_code_dir",
+        ):
+            val = getattr(app, attr, None)
+            if val:
+                paths.append(str(val))
+        dep = getattr(app, "active_deployment", None) or getattr(app, "deployment", None)
+        if dep is not None:
+            for attr in ("source_code_path", "default_source_code_path", "path"):
+                val = getattr(dep, attr, None)
+                if val:
+                    paths.append(str(val))
+        for p in paths:
+            p = p.rstrip("/")
+            if p.endswith("/app-onr-demo"):
+                return p[: -len("/app-onr-demo")]
+            if p.endswith("app-onr-demo"):
+                return p.rsplit("/", 1)[0]
+            if p.endswith("/onr_demo") or p.endswith("/onr-demo"):
+                return p
+            if "/notebooks" in p:
+                return p.split("/notebooks")[0]
+            if p:
+                return p
+    except Exception:
+        return ""
+    return ""
+
+
+def _repo_from_repos_api() -> str:
+    try:
+        w = _client()
+        lister = getattr(w.repos, "list", None)
+        if not lister:
+            return ""
+        for repo in lister():
+            path = str(getattr(repo, "path", "") or "")
+            url = str(getattr(repo, "url", "") or "")
+            blob = f"{path} {url}".lower()
+            if "onr_demo" in blob or "onr-demo" in blob:
+                return path.rstrip("/")
+    except Exception:
+        return ""
+    return ""
+
+
+def repo_root() -> str:
+    cached = st.session_state.get("_ws_repo_root")
+    if cached:
+        return cached
+    root = _conf_repo_root() or _app_source_repo_root() or _repo_from_repos_api()
+    if root:
+        st.session_state["_ws_repo_root"] = root
+    return root
+
+
+def guessed_notebook_path(filename: str) -> str | None:
+    """Build a clickable workspace path. Does not require the app SP to list the folder."""
+    stem = (filename or "").replace(".py", "").strip()
+    if not stem:
+        return None
+    root = repo_root()
+    if not root:
+        return None
+    if not root.startswith("/"):
+        root = "/" + root
+    return f"{root.rstrip('/')}/notebooks/{stem}"
 
 
 def notebook_url(path: str | None) -> str | None:
-    if not path:
-        return None
     host = workspace_host()
     if not host:
+        return None
+    if not path:
         return None
     path = path if path.startswith("/") else "/" + path
     return f"{host}/#workspace{path}"
@@ -80,12 +200,19 @@ def run_url(run_id: int | None, page_url: str | None = None) -> str | None:
 
 
 def _candidate_paths(filename: str) -> list[str]:
-    env_key = "ONR_NOTEBOOK_STREAM" if "01b" in filename else "ONR_NOTEBOOK_SCORE"
-    env = (os.getenv(env_key) or "").strip()
+    env = (
+        os.getenv("ONR_NOTEBOOK_STREAM" if "01b" in filename else "")
+        or os.getenv("ONR_NOTEBOOK_SCORE" if "04c" in filename else "")
+        or ""
+    ).strip()
     stems = [filename, filename + ".py", filename.replace(".py", "")]
     roots = []
     if env:
         roots.append(env)
+    repo = repo_root()
+    if repo:
+        for stem in stems:
+            roots.append(f"{repo.rstrip('/')}/notebooks/{stem}")
     try:
         me = _client().current_user.me()
         email = getattr(me, "user_name", None) or ""
@@ -118,28 +245,39 @@ def _candidate_paths(filename: str) -> list[str]:
 
 
 def resolve_notebook(filename: str) -> str | None:
-    """Return a workspace path for 01b / 04c. Cached per session."""
+    """Workspace path for a notebook.
+
+    Prefer a path the app SP can see (for job submit). If listing fails —
+    usual for an app service principal — return the constructed Git-folder
+    path so the presenter's browser can still open the file.
+    """
     key = f"_nb_path_{filename}"
     if key in st.session_state:
         return st.session_state[key]
+    guessed = guessed_notebook_path(filename)
     try:
         w = _client()
     except Exception:
-        return None
-    for path in _candidate_paths(filename):
-        try:
-            w.workspace.get_status(path)
-            st.session_state[key] = path
-            return path
-        except Exception:
-            continue
-    # Full workspace walk only for the two camera notebooks.
-    if filename in {STREAM_NOTEBOOK, SCORE_NOTEBOOK}:
-        found = _search_notebook(w, filename)
-        if found:
-            st.session_state[key] = found
-            return found
-    st.session_state[key] = None
+        w = None
+    candidates = _candidate_paths(filename)
+    if guessed:
+        candidates = [guessed, f"{guessed}.py"] + candidates
+    if w is not None:
+        for path in candidates:
+            try:
+                w.workspace.get_status(path)
+                st.session_state[key] = path
+                return path
+            except Exception:
+                continue
+        if filename in {STREAM_NOTEBOOK, SCORE_NOTEBOOK}:
+            found = _search_notebook(w, filename)
+            if found:
+                st.session_state[key] = found
+                return found
+    if guessed:
+        st.session_state[key] = guessed
+        return guessed
     return None
 
 
@@ -383,7 +521,8 @@ def render_workspace_strip(spec: list[dict], catalog: str = "onr_demo") -> None:
         url = None
         if kind == "notebook":
             name = raw.get("name") or NOTEBOOKS.get(str(raw.get("key") or ""), "")
-            url = notebook_url(resolve_notebook(name)) if name else None
+            path = resolve_notebook(name) if name else None
+            url = notebook_url(path or guessed_notebook_path(name or ""))
         elif kind == "table":
             url = catalog_table_url(
                 catalog,
@@ -397,6 +536,16 @@ def render_workspace_strip(spec: list[dict], catalog: str = "onr_demo") -> None:
             url = raw.get("url")
         items.append({"label": label, "url": url})
     workspace_strip(items)
+    missing_nb = [
+        raw.get("label")
+        for raw, item in zip(spec, items)
+        if raw.get("kind") == "notebook" and not item.get("url")
+    ]
+    if missing_nb and not repo_root():
+        st.caption(
+            "Notebook links need the Git folder path. Set `workspace.repo_root` in "
+            "`config/onr-conf.yaml` to `/Workspace/Users/<you>/onr_demo` and restart the app."
+        )
 
 
 def workspace_action_row(label: str, url: str | None) -> None:

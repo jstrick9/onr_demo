@@ -63,6 +63,8 @@ Repos / Git folder → clone `https://github.com/jstrick9/onr_demo` onto `main`.
 
 Note the folder path. Example: `/Workspace/Users/you@org/onr_demo`.
 
+If Ingestion / Analytics notebook chips say the path is not resolved, set that path in `app-onr-demo/config/onr-conf.yaml` as `workspace.repo_root` and restart the app. Table chips do not need this — they use Catalog Explorer.
+
 ---
 
 ## 3. Bootstrap (creates UC + data)
