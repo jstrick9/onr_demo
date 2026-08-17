@@ -15,16 +15,18 @@ from utils.analytics_helpers import (
     render_model_metrics,
     render_anomaly_detection,
     render_score_controls,
+    render_drift,
 )
 from utils.ui import page_header, render_architecture
+from utils.workspace_ops import render_page_links
 
-set_page_config(page_title="Analytics | ONR Portfolio")
+set_page_config(page_title="Element 5 · Analytics | ONR Portfolio")
 setup_sidebar()
 
 page_header(
-    "Decision support",
+    "Element 5 · Decision support",
     "Analytics",
-    "Fund / Review / Defer, award-level anomalies, and FY forecast with trend IDs.",
+    "Fund / Review / Defer, award-level anomalies, FY forecast, and feature/score drift.",
 )
 
 init_user_session_state()
@@ -39,10 +41,13 @@ except Exception as e:
     st.error(f"Configuration error: {str(e)}")
     st.stop()
 
+render_page_links("analytics", onr_catalog)
+
 conn, cursor = get_connection()
 
 render_score_controls(onr_catalog)
 render_decision_support(cursor, onr_catalog)
+render_drift(cursor, onr_catalog)
 
 tab1, tab2, tab3, tab4, tab5 = st.tabs(
     ["Predictions", "Anomalies", "Forecasting", "Trends", "Metrics"]

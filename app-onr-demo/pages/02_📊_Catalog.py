@@ -15,12 +15,13 @@ from utils.governance_helpers import (
     render_lineage_launch,
 )
 from utils.ui import page_header, render_architecture
+from utils.workspace_ops import render_page_links
 
-set_page_config(page_title="Catalog | ONR Portfolio")
+set_page_config(page_title="Element 4 · Catalog | ONR Portfolio")
 setup_sidebar()
 
 page_header(
-    "Governance",
+    "Element 4 · Governance",
     "Catalog",
     "Unity Catalog is the system of record for tables, tags, health, and lineage.",
 )
@@ -36,6 +37,8 @@ try:
 except Exception as e:
     st.error(f"Configuration error: {str(e)}")
     st.stop()
+
+render_page_links("catalog", onr_catalog)
 
 conn, cursor = get_connection()
 

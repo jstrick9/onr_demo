@@ -580,6 +580,50 @@ div.stButton > button:hover {{
   font-size: 1.45rem;
   font-weight: 800;
 }}
+
+.ws-strip {{
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 16px 0;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+}}
+.ws-kicker {{
+  color: {GOLD};
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-right: 6px;
+}}
+.ws-strip a, .ws-chip {{
+  display: inline-block;
+  border: 1px solid #475569;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: {NAVY};
+  text-decoration: none;
+  background: #ffffff;
+}}
+.ws-strip a:hover {{
+  border-color: {GOLD};
+  color: {GOLD};
+}}
+.ws-chip.dead {{
+  color: {MUTED};
+  border-style: dashed;
+}}
+.drift-note {{
+  color: {MUTED};
+  font-size: 0.78rem;
+  margin: -4px 0 12px 0;
+}}
 </style>
 """
 

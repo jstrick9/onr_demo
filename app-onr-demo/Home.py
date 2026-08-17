@@ -7,15 +7,17 @@ from utils.runtime_env import get_runtime_env
 from utils.db_helpers import get_connection, read_yaml, validate_source_tables
 from utils.user_helpers import init_user_session_state
 from utils.ui import page_header, capability_cards, render_architecture
+from utils.workspace_ops import render_page_links
 
-set_page_config(page_title="Home | ONR Portfolio")
+set_page_config(page_title="Elements 3–7 | ONR Portfolio")
 setup_sidebar()
 
 page_header(
-    "Office of Naval Research · Code 08",
+    "Elements 3–7",
     "ONR Portfolio",
-    "Self-service grants and ERP on catalog onr_demo.",
+    "Office of Naval Research · Code 08. Self-service grants and ERP on catalog onr_demo.",
 )
+render_page_links("home", "onr_demo")
 st.markdown(
     '<span class="unclass-chip">UNCLASSIFIED // MOCK DATA</span>',
     unsafe_allow_html=True,
@@ -90,12 +92,12 @@ render_architecture("home")
 
 capability_cards(
     [
-        {"title": "Ingestion", "body": "Land files, apply quality gates, refresh silver and gold."},
-        {"title": "Catalog", "body": "Registry, health scores, lineage, and classification tags."},
-        {"title": "Analytics", "body": "Fund / Review / Defer, anomaly queue, FY forecast and trend IDs."},
-        {"title": "Portfolio", "body": "Search, filter, daily brief, and AT_RISK execution."},
-        {"title": "Export", "body": "CSV, JSON, Parquet, and Statement Execution API."},
-        {"title": "Infrastructure", "body": "Deployed catalog, compute, and bundle inventory."},
+        {"title": "Element 3 · Ingestion", "body": "Land files, apply quality gates, refresh silver and gold."},
+        {"title": "Element 4 · Catalog", "body": "Registry, health scores, lineage, and classification tags."},
+        {"title": "Element 5 · Analytics", "body": "Fund / Review / Defer, anomaly queue, FY forecast, drift, and trend IDs."},
+        {"title": "Element 6 · Portfolio", "body": "Search, filter, daily brief, and AT_RISK execution."},
+        {"title": "Element 7 · Export", "body": "CSV, JSON, Parquet, and Statement Execution API."},
+        {"title": "Element 2 · Infrastructure", "body": "Deployed catalog, compute, and bundle inventory. Companion tape."},
     ]
 )
 

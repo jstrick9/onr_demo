@@ -10,8 +10,8 @@
 - Lines in *italics* inside `[DO THIS]` are clicks. Do them, then keep reading.
 - Clock marks are the latest you should still be on that beat. If you are late, jump to the next **[CATCH-UP]** line.
 
-**On screen, product names only:** Ingestion · Catalog · Analytics · Portfolio · Export · Infrastructure.  
-**Out loud, say “Element 3” through “Element 7.”** They are not labeled in the UI.
+**On screen:** gold kicker is the Element number (`Element 3 · Data operations`); the title stays the product name (`Ingestion`). Sidebar nav stays product names.  
+**Out loud, still say “Element 3” through “Element 7.”**
 
 **Camera rule:** one take, live cloud + live repo, no slides, no overlays.
 
@@ -28,7 +28,7 @@
 | 0:00–1:00 | Home | Point at **400** | Mock data; catalog |
 | 1:00–8:30 | Ingestion | **Ingest selected files** then **Start stream** | **Element 3**; 400→408; Hold; **(a)**; **(d)** |
 | 8:30–12:00 | Catalog | **Open lineage** | **Element 4**; **(e)** |
-| 12:00–18:00 | Analytics | **Score registered models** | **Element 5**; **(b)**; Resource action |
+| 12:00–18:00 | Analytics | **Score registered models**; point at **Drift** | **Element 5**; **(b)**; Resource action |
 | 18:00–21:00 | Portfolio | Search `quantum`; **Generate daily brief** | **Element 6** |
 | 21:00–24:20 | Export | FY 2025–2026 export; **Execute live Statement API** | **Element 7**; **(c)** |
 | 24:20–25:00 | Infrastructure | Inventory 10 s | Close; companion tape |
@@ -70,7 +70,7 @@ This is the ONR Code 08 portfolio on Databricks. Everything on this screen is mo
 
 You are looking at catalog `onr_demo`, medallion layers bronze, silver, gold, and app. SQL runs on the serverless warehouse named `onr demo warehouse`. Jobs run on `onr demo cluster`. The product in front of you is the Databricks App `onr-demo-poc`.
 
-This recording is the data-and-analytics path — Elements three through seven. Secure access and infrastructure-as-code are the companion tape. I will say the Element numbers; the UI uses product names.
+This recording is the data-and-analytics path — Elements three through seven. Secure access and infrastructure-as-code are the companion tape. Each page kicker is the Element number. The Workspace strip on every page opens the live notebook or Unity Catalog table for that Element.
 
 `[DO THIS]` Click **Ingestion**.
 
@@ -94,7 +94,7 @@ There it is. Silver grants: four hundred to four hundred and eight. Eight rows l
 
 Same Element three. That button was the warehouse SQL path. Next is the near-real-time path. I am not leaving this console.
 
-`[DO THIS]` Click **Start stream**. Do **not** restore the baseline. If the run does not submit, click **Open stream notebook** and Run all there — then come straight back to this page.
+`[DO THIS]` Click **Start stream**. Do **not** restore the baseline. If the run does not submit, use the Workspace strip — **01b stream** — Run all there, then come straight back to this page.
 
 This is Databricks Auto Loader — `cloudFiles` — with trigger `processingTime` thirty seconds, not a batch `availableNow`. The console just wrote `batch_live_grants_stream.csv` onto the landing Volume. Schema evolution is `addNewColumns`, so a new column from a legacy extract does not break the job. The stream auto-stops at ninety seconds so we cannot leave it running.
 
@@ -140,7 +140,7 @@ Strategic prompt (e). Every external feed is a licensed product: owner, renewal 
 
 The models were trained last night and registered in Unity Catalog. I am **not** retraining on camera. I am triggering a live score against the portfolio we just ingested — including the eight new grants. Still this page.
 
-`[DO THIS]` Click **Score registered models**. If the run does not submit, click **Open scoring notebook** and Run all — then come straight back here. Keep talking.
+`[DO THIS]` Click **Score registered models**. If the run does not submit, Workspace strip **04c score** — Run all, then come straight back here. Keep talking.
 
 Strategic prompt (b), financial and budgetary, while it scores.
 
@@ -152,9 +152,13 @@ Predictive: a Random Forest large-award classifier — Fund, Review, or Defer �
 
 Prescriptive: protect `ON_TARGET`, move dollars off `AT_RISK` and `TREND-DECLINE`, review large-award concentration. Engineer owns bronze and silver. Scientist owns the registered models. Analyst owns gold and the daily brief. Same catalog.
 
-`[DO THIS]` Point at **Resource action**. Then **Predictions**. `model_name` is `rf_large_award_v1`. Fund, Review, Defer. The live grants are in this table.
+`[DO THIS]` Point at **Resource action**. Then **Drift** — program-mix PSI, award-size PSI, Fund share, baseline versus now.
 
-That sentence is the close a resource officer would sign — Defer dollars off one area onto AT_RISK plus TREND-DECLINE.
+That is feature and score drift on the portfolio we just ingested, not a fake accuracy drop. The live grants moved the mix. Workspace strip **grant_predictions** is the scored table.
+
+`[DO THIS]` **Predictions**. `model_name` is `rf_large_award_v1`. Fund, Review, Defer. The live grants are in this table.
+
+That Resource action sentence is the close a resource officer would sign — Defer dollars off one area onto AT_RISK plus TREND-DECLINE.
 
 `[DO THIS]` **Anomalies**.
 
@@ -259,6 +263,7 @@ Tomorrow another CSV lands on the same Volume. Same gold. Same registered models
 - The stream is Amazon Kinesis. It is Auto Loader `processingTime`.
 - Lineage is drawn inside Streamlit. Native lineage is Catalog Explorer.
 - “We trained the models just now.” You scored from the registry. Training was last night.
+- Drift is accuracy decay. It is feature and score mix versus the baseline snapshot.
 - “We rewrite the legacy estate.” Strangler-fig only.
 - Any Element 1 or Element 2 deep-dive. Companion tape.
 

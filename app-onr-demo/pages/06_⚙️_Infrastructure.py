@@ -9,14 +9,15 @@ from utils.db_helpers import get_connection, read_yaml
 from utils.user_helpers import init_user_session_state
 from utils.workspace_names import SQL_WAREHOUSE_NAME, ALL_PURPOSE_CLUSTER_NAME
 from utils.ui import page_header, render_architecture, fit_metrics, provenance_note
+from utils.workspace_ops import render_page_links
 
-set_page_config(page_title="Infrastructure | ONR Portfolio")
+set_page_config(page_title="Element 2 · Infrastructure | ONR Portfolio")
 setup_sidebar()
 
 page_header(
-    "Platform",
+    "Element 2 · glance",
     "Infrastructure",
-    "What is deployed in this workspace. The bundle does not create the warehouse or cluster.",
+    "What is deployed in this workspace. Full IaC is the companion tape. The bundle does not create the warehouse or cluster.",
 )
 
 init_user_session_state()

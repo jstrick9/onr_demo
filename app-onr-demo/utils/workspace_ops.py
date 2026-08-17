@@ -11,6 +11,17 @@ import streamlit as st
 STREAM_NOTEBOOK = "01b_streaming_autoloader"
 SCORE_NOTEBOOK = "04c_score_registered_models"
 
+NOTEBOOKS = {
+    "01": "01_bronze_ingestion",
+    "01b": "01b_streaming_autoloader",
+    "02": "02_silver_quality",
+    "03": "03_gold_aggregation",
+    "04": "04_mlflow_grant_model",
+    "04b": "04b_funding_anomaly",
+    "04c": "04c_score_registered_models",
+    "05": "05_reset_demo",
+}
+
 
 def _client():
     from databricks.sdk import WorkspaceClient
@@ -122,10 +133,14 @@ def resolve_notebook(filename: str) -> str | None:
             return path
         except Exception:
             continue
-    found = _search_notebook(w, filename)
-    if found:
-        st.session_state[key] = found
-    return found
+    # Full workspace walk only for the two camera notebooks.
+    if filename in {STREAM_NOTEBOOK, SCORE_NOTEBOOK}:
+        found = _search_notebook(w, filename)
+        if found:
+            st.session_state[key] = found
+            return found
+    st.session_state[key] = None
+    return None
 
 
 def _search_notebook(w, filename: str, max_nodes: int = 180) -> str | None:
@@ -288,6 +303,94 @@ def start_score(catalog: str = "onr_demo") -> dict:
         raise RuntimeError("Scoring notebook was not found in the workspace")
     run = submit_notebook(path, run_name="onr-demo-score", params={"catalog": catalog})
     return {"run": run, "notebook": path}
+
+
+PAGE_LINKS = {
+    "home": [
+        {"kind": "table", "schema": "silver", "table": "grants", "label": "silver.grants"},
+        {"kind": "table", "schema": "gold", "table": "grants_summary", "label": "gold.grants_summary"},
+        {"kind": "table", "schema": "gold", "table": "budget_execution", "label": "gold.budget_execution"},
+    ],
+    "ingestion": [
+        {"kind": "notebook", "name": "01_bronze_ingestion", "label": "01 ingest"},
+        {"kind": "notebook", "name": "01b_streaming_autoloader", "label": "01b stream"},
+        {"kind": "notebook", "name": "02_silver_quality", "label": "02 quality"},
+        {"kind": "volume", "volume": "landing", "label": "landing Volume"},
+        {"kind": "table", "schema": "bronze", "table": "grants", "label": "bronze.grants"},
+        {"kind": "table", "schema": "silver", "table": "grants", "label": "silver.grants"},
+    ],
+    "catalog": [
+        {"kind": "table", "schema": "silver", "table": "grants", "tab": "lineage", "label": "Lineage"},
+        {"kind": "table", "schema": "gold", "table": "grants_summary", "label": "gold.grants_summary"},
+        {"kind": "table", "schema": "app", "table": "data_quality_scores", "label": "quality scores"},
+        {"kind": "table", "schema": "app", "table": "lineage_tracking", "label": "lineage_tracking"},
+    ],
+    "analytics": [
+        {"kind": "notebook", "name": "04c_score_registered_models", "label": "04c score"},
+        {"kind": "notebook", "name": "04_mlflow_grant_model", "label": "04 RF"},
+        {"kind": "notebook", "name": "04b_funding_anomaly", "label": "04b IsolationForest"},
+        {"kind": "table", "schema": "gold", "table": "grant_predictions", "label": "grant_predictions"},
+        {"kind": "table", "schema": "gold", "table": "grant_anomaly_scores", "label": "anomaly scores"},
+        {"kind": "table", "schema": "gold", "table": "funding_forecast", "label": "funding_forecast"},
+        {"kind": "table", "schema": "gold", "table": "program_trends", "label": "program_trends"},
+    ],
+    "portfolio": [
+        {"kind": "table", "schema": "gold", "table": "grants_summary", "label": "grants_summary"},
+        {"kind": "table", "schema": "gold", "table": "budget_execution", "label": "budget_execution"},
+        {"kind": "table", "schema": "app", "table": "daily_briefs", "label": "daily_briefs"},
+        {"kind": "table", "schema": "app", "table": "search_history", "label": "search_history"},
+    ],
+    "export": [
+        {"kind": "table", "schema": "gold", "table": "grants_summary", "label": "grants_summary"},
+        {"kind": "table", "schema": "silver", "table": "grants", "label": "silver.grants"},
+        {"kind": "table", "schema": "app", "table": "export_history", "label": "export_history"},
+    ],
+    "infrastructure": [
+        {"kind": "notebook", "name": "00_bootstrap", "label": "00 bootstrap"},
+        {"kind": "notebook", "name": "01_bronze_ingestion", "label": "01"},
+        {"kind": "notebook", "name": "01b_streaming_autoloader", "label": "01b"},
+        {"kind": "notebook", "name": "02_silver_quality", "label": "02"},
+        {"kind": "notebook", "name": "03_gold_aggregation", "label": "03"},
+        {"kind": "notebook", "name": "04_mlflow_grant_model", "label": "04"},
+        {"kind": "notebook", "name": "04b_funding_anomaly", "label": "04b"},
+        {"kind": "notebook", "name": "04c_score_registered_models", "label": "04c"},
+        {"kind": "volume", "volume": "landing", "label": "landing"},
+        {"kind": "volume", "volume": "checkpoints", "label": "checkpoints"},
+        {"kind": "table", "schema": "bronze", "table": "grants", "label": "bronze.grants"},
+        {"kind": "table", "schema": "gold", "table": "grant_predictions", "label": "predictions"},
+    ],
+}
+
+
+def render_page_links(page: str, catalog: str = "onr_demo") -> None:
+    render_workspace_strip(PAGE_LINKS.get(page) or [], catalog)
+
+
+def render_workspace_strip(spec: list[dict], catalog: str = "onr_demo") -> None:
+    """Resolve notebooks/tables/volumes for this page and render the strip."""
+    from utils.ui import workspace_strip
+
+    items = []
+    for raw in spec:
+        kind = raw.get("kind")
+        label = raw.get("label") or raw.get("name") or raw.get("table") or "object"
+        url = None
+        if kind == "notebook":
+            name = raw.get("name") or NOTEBOOKS.get(str(raw.get("key") or ""), "")
+            url = notebook_url(resolve_notebook(name)) if name else None
+        elif kind == "table":
+            url = catalog_table_url(
+                catalog,
+                raw.get("schema") or "gold",
+                raw.get("table"),
+                tab=raw.get("tab"),
+            )
+        elif kind == "volume":
+            url = volume_url(catalog, raw.get("schema") or "bronze", raw.get("volume") or "landing")
+        elif kind == "url":
+            url = raw.get("url")
+        items.append({"label": label, "url": url})
+    workspace_strip(items)
 
 
 def workspace_action_row(label: str, url: str | None) -> None:

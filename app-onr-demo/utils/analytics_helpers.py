@@ -20,6 +20,257 @@ def _query_df(cursor, sql: str) -> pd.DataFrame:
         return pd.DataFrame()
 
 
+def _psi(base: dict, now: dict) -> float:
+    import math
+
+    keys = set(base) | set(now)
+    tb = sum(float(v or 0) for v in base.values()) or 1.0
+    tn = sum(float(v or 0) for v in now.values()) or 1.0
+    score = 0.0
+    for k in keys:
+        p = max(float(base.get(k) or 0) / tb, 1e-6)
+        q = max(float(now.get(k) or 0) / tn, 1e-6)
+        score += (q - p) * math.log(q / p)
+    return float(score)
+
+
+def _psi_word(v: float) -> str:
+    if v < 0.10:
+        return "stable"
+    if v < 0.25:
+        return "shift"
+    return "material"
+
+
+def _mix_from_df(df: pd.DataFrame, key: str, val: str = "n") -> dict:
+    if df is None or df.empty:
+        return {}
+    out = {}
+    for rec in df.to_dict(orient="records"):
+        k = rec.get(key)
+        if k is None:
+            continue
+        out[str(k)] = float(rec.get(val) or 0)
+    return out
+
+
+def _version_clause(version) -> str:
+    if version is None:
+        return ""
+    try:
+        return f" VERSION AS OF {int(version)}"
+    except (TypeError, ValueError):
+        return ""
+
+
+def _prior_table_version(cursor, catalog: str, schema: str, table: str):
+    if not cursor:
+        return None, None
+    try:
+        cursor.execute(f"DESCRIBE HISTORY `{catalog}`.`{schema}`.{table}")
+        rows = cursor.fetchall()
+        cols = [str(d[0]).lower() for d in (cursor.description or [])]
+        idx = cols.index("version") if "version" in cols else 0
+        versions = [r[idx] for r in rows if r and r[idx] is not None]
+        if not versions:
+            return None, None
+        current = versions[0]
+        prior = versions[1] if len(versions) > 1 else None
+        return current, prior
+    except Exception:
+        return None, None
+
+
+def render_drift(cursor=None, catalog: str = "onr_demo") -> None:
+    """Feature + score mix: baseline snapshot vs now. Not accuracy."""
+    from utils.ui import provenance_note
+
+    st.markdown("### Drift")
+    st.caption(
+        "Feature and score mix versus the baseline snapshot. "
+        "This is not accuracy — there are no ground-truth labels on mock data."
+    )
+
+    cur_v, prior_v = _prior_table_version(cursor, catalog, "silver", "grants")
+    pred_cur, pred_prior = _prior_table_version(cursor, catalog, "gold", "grant_predictions")
+
+    grants_now = _query_df(
+        cursor,
+        f"""
+        SELECT program_area, COUNT(*) AS n, AVG(amount_usd) AS avg_amt,
+               SUM(CASE WHEN amount_usd < 400000 THEN 1 ELSE 0 END) AS bin_s,
+               SUM(CASE WHEN amount_usd >= 400000 AND amount_usd < 1000000 THEN 1 ELSE 0 END) AS bin_m,
+               SUM(CASE WHEN amount_usd >= 1000000 AND amount_usd < 2000000 THEN 1 ELSE 0 END) AS bin_l,
+               SUM(CASE WHEN amount_usd >= 2000000 THEN 1 ELSE 0 END) AS bin_xl,
+               COUNT(*) AS grants
+        FROM `{catalog}`.`silver`.grants
+        WHERE _is_active = true
+        GROUP BY program_area
+        """,
+    )
+    if prior_v is not None:
+        grants_base = _query_df(
+            cursor,
+            f"""
+            SELECT program_area, COUNT(*) AS n, AVG(amount_usd) AS avg_amt,
+                   SUM(CASE WHEN amount_usd < 400000 THEN 1 ELSE 0 END) AS bin_s,
+                   SUM(CASE WHEN amount_usd >= 400000 AND amount_usd < 1000000 THEN 1 ELSE 0 END) AS bin_m,
+                   SUM(CASE WHEN amount_usd >= 1000000 AND amount_usd < 2000000 THEN 1 ELSE 0 END) AS bin_l,
+                   SUM(CASE WHEN amount_usd >= 2000000 THEN 1 ELSE 0 END) AS bin_xl
+            FROM `{catalog}`.`silver`.grants{_version_clause(prior_v)}
+            WHERE _is_active = true
+            GROUP BY program_area
+            """,
+        )
+        base_how = f"silver.grants VERSION AS OF {prior_v}"
+    else:
+        grants_base = _query_df(
+            cursor,
+            f"""
+            SELECT program_area, COUNT(*) AS n, AVG(amount_usd) AS avg_amt,
+                   SUM(CASE WHEN amount_usd < 400000 THEN 1 ELSE 0 END) AS bin_s,
+                   SUM(CASE WHEN amount_usd >= 400000 AND amount_usd < 1000000 THEN 1 ELSE 0 END) AS bin_m,
+                   SUM(CASE WHEN amount_usd >= 1000000 AND amount_usd < 2000000 THEN 1 ELSE 0 END) AS bin_l,
+                   SUM(CASE WHEN amount_usd >= 2000000 THEN 1 ELSE 0 END) AS bin_xl
+            FROM `{catalog}`.`silver`.grants
+            WHERE _is_active = true
+              AND coalesce(batch_id, 'seed-initial-2026') = 'seed-initial-2026'
+            GROUP BY program_area
+            """,
+        )
+        base_how = "batch seed-initial-2026"
+
+    rec_now = _query_df(
+        cursor,
+        f"""
+        SELECT recommendation, COUNT(*) AS n
+        FROM `{catalog}`.`gold`.grant_predictions
+        GROUP BY recommendation
+        """,
+    )
+    if pred_prior is not None:
+        rec_base = _query_df(
+            cursor,
+            f"""
+            SELECT recommendation, COUNT(*) AS n
+            FROM `{catalog}`.`gold`.grant_predictions{_version_clause(pred_prior)}
+            GROUP BY recommendation
+            """,
+        )
+    else:
+        rec_base = _query_df(
+            cursor,
+            f"""
+            SELECT p.recommendation, COUNT(*) AS n
+            FROM `{catalog}`.`gold`.grant_predictions p
+            JOIN `{catalog}`.`silver`.grants g ON p.grant_no = g.grant_no
+            WHERE g._is_active = true
+              AND coalesce(g.batch_id, 'seed-initial-2026') = 'seed-initial-2026'
+            GROUP BY p.recommendation
+            """,
+        )
+
+    flags = _query_df(
+        cursor,
+        f"""
+        SELECT
+          SUM(CASE WHEN is_flagged THEN 1 ELSE 0 END) AS flagged,
+          COUNT(*) AS scored
+        FROM `{catalog}`.`gold`.grant_anomaly_scores
+        """,
+    )
+
+    if grants_now.empty:
+        from utils.portfolio_data import grants_dataframe
+
+        g = grants_dataframe()
+        grants_now = (
+            g.groupby("program_area", as_index=False)
+            .agg(n=("grant_no", "count"), avg_amt=("amount_usd", "mean"))
+        )
+        grants_base = grants_now.copy()
+        rec_now = rec_base = pd.DataFrame()
+        st.caption("Warehouse drift tables unavailable — fixture has a single snapshot.")
+
+    area_now = _mix_from_df(grants_now, "program_area")
+    area_base = _mix_from_df(grants_base, "program_area") or area_now
+    rec_now_m = _mix_from_df(rec_now, "recommendation")
+    rec_base_m = _mix_from_df(rec_base, "recommendation") or rec_now_m
+
+    def _bins(df: pd.DataFrame) -> dict:
+        if df is None or df.empty:
+            return {}
+        return {
+            "under_400k": float(df["bin_s"].sum()) if "bin_s" in df.columns else 0,
+            "400k_1m": float(df["bin_m"].sum()) if "bin_m" in df.columns else 0,
+            "1m_2m": float(df["bin_l"].sum()) if "bin_l" in df.columns else 0,
+            "2m_plus": float(df["bin_xl"].sum()) if "bin_xl" in df.columns else 0,
+        }
+
+    psi_area = _psi(area_base, area_now)
+    psi_amt = _psi(_bins(grants_base), _bins(grants_now)) if "bin_s" in grants_now.columns else 0.0
+    psi_rec = _psi(rec_base_m, rec_now_m) if rec_now_m else 0.0
+
+    n_now = int(sum(area_now.values()) or 0)
+    n_base = int(sum(area_base.values()) or 0)
+    fund_now = rec_now_m.get("Fund", 0)
+    fund_base = rec_base_m.get("Fund", 0)
+    fund_now_p = 100 * fund_now / (sum(rec_now_m.values()) or 1)
+    fund_base_p = 100 * fund_base / (sum(rec_base_m.values()) or 1)
+    flagged = int(flags.iloc[0]["flagged"] or 0) if not flags.empty else None
+
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Grants", f"{n_now:,}", delta=f"{n_now - n_base:+d}" if n_base else None)
+    c2.metric("Program mix PSI", f"{psi_area:.3f}", delta=_psi_word(psi_area), delta_color="off")
+    c3.metric("Award-size PSI", f"{psi_amt:.3f}", delta=_psi_word(psi_amt), delta_color="off")
+    c4.metric(
+        "Fund share",
+        f"{fund_now_p:.0f}%",
+        delta=f"{fund_now_p - fund_base_p:+.0f} pt" if rec_now_m else None,
+    )
+    provenance_note("gold.grant_predictions", catalog)
+    st.markdown(
+        f'<div class="drift-note">Baseline: {base_how}'
+        + (f" · flagged now {flagged}" if flagged is not None else "")
+        + " · PSI &lt; 0.10 stable · 0.10–0.25 shift · ≥ 0.25 material</div>",
+        unsafe_allow_html=True,
+    )
+
+    left, right = st.columns(2)
+    if area_now:
+        rows = []
+        for area in sorted(set(area_base) | set(area_now)):
+            rows.append({"program_area": area, "slice": "Baseline", "share": area_base.get(area, 0)})
+            rows.append({"program_area": area, "slice": "Now", "share": area_now.get(area, 0)})
+        fig = px.bar(
+            pd.DataFrame(rows),
+            x="program_area",
+            y="share",
+            color="slice",
+            barmode="group",
+            title="Program mix (grant count)",
+        )
+        from utils.ui import style_fig
+
+        left.plotly_chart(style_fig(fig), use_container_width=True)
+    if rec_now_m:
+        rows = []
+        for rec in ("Fund", "Review", "Defer"):
+            rows.append({"recommendation": rec, "slice": "Baseline", "n": rec_base_m.get(rec, 0)})
+            rows.append({"recommendation": rec, "slice": "Now", "n": rec_now_m.get(rec, 0)})
+        fig = px.bar(
+            pd.DataFrame(rows),
+            x="recommendation",
+            y="n",
+            color="slice",
+            barmode="group",
+            title="Score mix (Fund / Review / Defer)",
+        )
+        from utils.ui import style_fig
+
+        right.plotly_chart(style_fig(fig), use_container_width=True)
+
+
 def render_score_controls(catalog: str = "onr_demo") -> None:
     """Score the current portfolio from registered models without leaving Analytics."""
     from utils.workspace_ops import (

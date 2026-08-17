@@ -17,12 +17,13 @@ from utils.ingestion_helpers import (
     render_stream_controls,
 )
 from utils.ui import page_header, render_architecture, live_chip
+from utils.workspace_ops import render_page_links
 
-set_page_config(page_title="Ingestion | ONR Portfolio")
+set_page_config(page_title="Element 3 · Ingestion | ONR Portfolio")
 setup_sidebar()
 
 page_header(
-    "Data operations",
+    "Element 3 · Data operations",
     "Ingestion",
     "Land grants files, apply quality gates, and refresh the serving layer.",
 )
@@ -38,6 +39,8 @@ try:
 except Exception as e:
     st.error(f"Configuration error: {str(e)}")
     st.stop()
+
+render_page_links("ingestion", onr_catalog)
 
 conn, cursor = get_connection()
 

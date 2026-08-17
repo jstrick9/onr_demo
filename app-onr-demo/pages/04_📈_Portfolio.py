@@ -17,12 +17,13 @@ from utils.dashboard_helpers import (
 )
 from utils.brief_helpers import render_daily_brief
 from utils.ui import page_header, render_architecture
+from utils.workspace_ops import render_page_links
 
-set_page_config(page_title="Portfolio | ONR Portfolio")
+set_page_config(page_title="Element 6 · Portfolio | ONR Portfolio")
 setup_sidebar()
 
 page_header(
-    "Executive view",
+    "Element 6 · Executive view",
     "Portfolio",
     "Search, filter, and extract without SQL. Daily brief, AT_RISK rows, and the anomaly queue.",
 )
@@ -38,6 +39,8 @@ try:
 except Exception as e:
     st.error(f"Configuration error: {str(e)}")
     st.stop()
+
+render_page_links("portfolio", onr_catalog)
 
 conn, cursor = get_connection()
 

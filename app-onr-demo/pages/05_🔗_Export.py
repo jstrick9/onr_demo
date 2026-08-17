@@ -18,12 +18,13 @@ from utils.export_helpers import (
 )
 from utils.api_helpers import render_live_statement_api
 from utils.ui import page_header, render_architecture
+from utils.workspace_ops import render_page_links
 
-set_page_config(page_title="Export | ONR Portfolio")
+set_page_config(page_title="Element 7 · Export | ONR Portfolio")
 setup_sidebar()
 
 page_header(
-    "Interoperability",
+    "Element 7 · Interoperability",
     "Export & APIs",
     "Filtered bulk extract in open formats. Every download is audited.",
 )
@@ -39,6 +40,8 @@ try:
 except Exception as e:
     st.error(f"Configuration error: {str(e)}")
     st.stop()
+
+render_page_links("export", onr_catalog)
 
 conn, cursor = get_connection()
 
