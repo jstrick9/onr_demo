@@ -230,6 +230,8 @@ def _candidate_paths(filename: str) -> list[str]:
     for stem in stems:
         roots.extend(
             [
+                f"/Workspace/Shared/onr-demo/notebooks/{stem}",
+                f"/Shared/onr-demo/notebooks/{stem}",
                 f"/Workspace/.bundle/onr_demo/poc/files/notebooks/{stem}",
                 f"/Workspace/.bundle/onr_demo/dev/files/notebooks/{stem}",
                 f"/Workspace/onr_demo/notebooks/{stem}",
@@ -306,6 +308,99 @@ def _search_notebook(w, filename: str, max_nodes: int = 180) -> str | None:
             if any(k in kind for k in ("DIRECTORY", "REPO", "PROJECT")):
                 if scanned < max_nodes:
                     queue.append(p)
+    return None
+
+
+def notebook_accessible(path: str | None) -> bool:
+    """True only if the *app* identity can read this workspace path."""
+    if not path:
+        return False
+    try:
+        _client().workspace.get_status(path)
+        return True
+    except Exception:
+        return False
+
+
+def _local_notebook_bytes(filename: str) -> bytes | None:
+    stem = filename.replace(".py", "")
+    here = Path(__file__).resolve()
+    for cand in (
+        here.parents[1] / "notebooks" / f"{stem}.py",
+        here.parents[2] / "notebooks" / f"{stem}.py",
+    ):
+        if cand.exists():
+            return cand.read_bytes()
+    return None
+
+
+def publish_notebook_for_app(filename: str) -> str | None:
+    """Import the packaged notebook to Shared so the app SP owns a runnable copy.
+
+    Jobs run as the app principal. That identity cannot read
+    /Workspace/Users/<human>/onr_demo/.... A Shared copy it imported itself can.
+    """
+    raw = _local_notebook_bytes(filename)
+    if not raw:
+        return None
+    import base64
+
+    stem = filename.replace(".py", "")
+    dests = [
+        f"/Workspace/Shared/onr-demo/notebooks/{stem}",
+        f"/Shared/onr-demo/notebooks/{stem}",
+    ]
+    try:
+        me = _client().current_user.me()
+        who = getattr(me, "user_name", None) or ""
+        if who:
+            dests.append(f"/Workspace/Users/{who}/onr_demo/notebooks/{stem}")
+    except Exception:
+        pass
+    w = _client()
+    payload = base64.b64encode(raw).decode("ascii")
+    try:
+        from databricks.sdk.service.workspace import ImportFormat, Language
+
+        fmt, lang = ImportFormat.SOURCE, Language.PYTHON
+    except Exception:
+        fmt, lang = "SOURCE", "PYTHON"
+    for dest in dests:
+        parent = dest.rsplit("/", 1)[0]
+        try:
+            w.workspace.mkdirs(parent)
+        except Exception:
+            pass
+        try:
+            w.workspace.import_(
+                path=dest,
+                format=fmt,
+                language=lang,
+                content=payload,
+                overwrite=True,
+            )
+            if notebook_accessible(dest):
+                return dest
+        except Exception:
+            continue
+    return None
+
+
+def runnable_notebook_path(filename: str) -> str | None:
+    """Workspace path the app SP can actually read — required for job submit."""
+    key = f"_nb_run_{filename}"
+    cached = st.session_state.get(key)
+    if cached and notebook_accessible(cached):
+        return cached
+    guessed = guessed_notebook_path(filename)
+    for path in [guessed, f"{guessed}.py" if guessed else None, *_candidate_paths(filename)]:
+        if notebook_accessible(path):
+            st.session_state[key] = path
+            return path
+    published = publish_notebook_for_app(filename)
+    if published:
+        st.session_state[key] = published
+        return published
     return None
 
 
@@ -547,15 +642,18 @@ def start_stream(catalog: str = "onr_demo") -> dict:
     INSERT the same Volume file into bronze.grants so the heartbeat ticks.
     """
     landed = copy_stream_file(catalog)
+    # Browser link can point at the human Git folder. Job submit cannot —
+    # the app SP is not that user.
     path = resolve_notebook(STREAM_NOTEBOOK)
+    run_path = runnable_notebook_path(STREAM_NOTEBOOK)
     run = None
     error = None
     via = None
     warehouse = None
-    if path:
+    if run_path:
         try:
             run = submit_notebook(
-                path,
+                run_path,
                 run_name="onr-demo-stream",
                 params={"catalog": catalog, "processing_seconds": "30", "run_for_seconds": "90"},
             )
@@ -563,7 +661,10 @@ def start_stream(catalog: str = "onr_demo") -> dict:
         except Exception as e:
             error = str(e)
     else:
-        error = "Stream notebook was not found in the workspace"
+        error = (
+            "App principal cannot read the stream notebook under the user folder. "
+            "Open stream notebook runs as you. Bronze will load on the warehouse."
+        )
 
     if run is None:
         try:
@@ -614,9 +715,10 @@ def start_score(catalog: str = "onr_demo") -> dict:
     except Exception as e:
         warehouse_error = e
 
-    if path:
+    run_path = runnable_notebook_path(SCORE_NOTEBOOK)
+    if run_path:
         try:
-            run = submit_notebook(path, run_name="onr-demo-score", params={"catalog": catalog})
+            run = submit_notebook(run_path, run_name="onr-demo-score", params={"catalog": catalog})
             return {
                 "run": run,
                 "via": "cluster",
