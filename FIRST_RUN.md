@@ -158,6 +158,7 @@ The Streamlit app authenticates as a **different** service principal. Without gr
 | App: fixture mode + warehouse error | Warehouse name mismatch, warehouse stopped too long, or app SP cannot **CAN USE** the warehouse |
 | Process files fails with permission | Re-run `sql/grant_app_principal.sql` (needs **MANAGE** on silver/gold so the app can `CREATE OR REPLACE` tables you own) |
 | Score: `Single-user check failed` / app SP `6a59e35d-…` | Score attached to **your** cluster. Create **`onr demo ml`**, Dedicated user = the **app SP**, install mlflow, start it. Keep `onr demo cluster` as yours for 04 / 04b. |
+| Score: `%pip` / `AsyncFlushFailed` / `RESOURCE_DOES_NOT_EXIST` on `/Users/…/notebooks` | MAGIC `%pip` tried to write the Git folder. Pull latest `main` — 04c no longer `%pip`s. Install **mlflow** as a library on **`onr demo ml`**. Cancel the failed run and Score again. |
 | Notebook 04: no sklearn | Re-run all cells; first cells `%pip install` then restart Python |
 | MLflow “skipped” | Optional. UC tables still write. Notebook 04 creates `/Shared/onr-demo/grant-size` and registers `onr_demo.gold.grant_large_award` when MLflow is available |
 | Governance page has no quality scores | Process a file (or Reset) — the app SQL path now writes `app.data_quality_scores`. Or run `02_silver_quality.py`. |

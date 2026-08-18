@@ -866,10 +866,29 @@ def start_stream(catalog: str = "onr_demo") -> dict:
     }
 
 
+def _is_human_git_folder(path: str | None) -> bool:
+    if not path:
+        return False
+    blob = path.replace("\\", "/").lower()
+    if "/shared/" in blob:
+        return False
+    return "/users/" in blob
+
+
 def start_score(catalog: str = "onr_demo") -> dict:
     """Score UC models by running 04c on onr demo ml. Not serverless."""
     path = resolve_notebook(SCORE_NOTEBOOK)
     run_path = runnable_notebook_path(SCORE_NOTEBOOK, refresh=True)
+    if _is_human_git_folder(run_path):
+        published = publish_notebook_for_app(SCORE_NOTEBOOK)
+        if published and not _is_human_git_folder(published):
+            run_path = published
+        else:
+            raise RuntimeError(
+                "Score will not run 04c from the user Git folder. "
+                "%pip / WSFS cannot write /Users/<you>/onr_demo/notebooks as the app. "
+                "Could not publish /Workspace/Shared/onr-demo/notebooks/04c_score_registered_models."
+            )
     if not run_path:
         raise RuntimeError(
             "App principal cannot read 04c. Grant the app CAN READ on the Shared "

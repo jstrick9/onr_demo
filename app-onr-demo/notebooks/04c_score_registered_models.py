@@ -21,8 +21,10 @@
 # MAGIC If a model is missing, this notebook **fails loudly** — do not improvise
 # MAGIC a training run on camera. Stop and open Analytics on the night-before tables.
 # MAGIC
-# MAGIC Target runtime: **30–90 seconds** if sklearn + mlflow are already on the compute.
-# MAGIC Standard DBR and Jobs serverless do **not** ship `mlflow`. First cells install it.
+# MAGIC Target runtime: **30–90 seconds** if sklearn + mlflow are already on **onr demo ml**.
+# MAGIC Do **not** `%pip` here — MAGIC pip writes the Git folder over WSFS and the
+# MAGIC app SP gets `RESOURCE_DOES_NOT_EXIST` on `/Users/<you>/onr_demo/notebooks`.
+# MAGIC Install mlflow as a **cluster library** on `onr demo ml`.
 #
 # COMMAND ----------
 
@@ -30,14 +32,7 @@ dbutils.widgets.text("catalog", "onr_demo")
 
 # COMMAND ----------
 
-# MAGIC %pip install mlflow>=2.14,<3 scikit-learn pandas --quiet
-
-# COMMAND ----------
-
-# No restartPython — scoring is driver-side (toPandas + sklearn). A restart
-# burns a minute on camera and resets the notebook. %pip above is enough on
-# most DBR; driver pip below covers Jobs serverless if the MAGIC cell did not
-# land on this process yet.
+# Cluster library first. Driver pip only if missing — never %pip (WSFS write).
 import importlib.util
 import subprocess
 import sys
@@ -47,7 +42,7 @@ def _ensure_pkg(mod: str, spec: str) -> None:
     if importlib.util.find_spec(mod) is not None:
         print(f"{mod} present")
         return
-    print(f"{mod} missing — pip install {spec}")
+    print(f"{mod} missing — driver pip {spec} (no %pip / no workspace write)")
     subprocess.check_call([sys.executable, "-m", "pip", "install", spec, "--quiet"])
     importlib.invalidate_caches()
     if importlib.util.find_spec(mod) is None:
