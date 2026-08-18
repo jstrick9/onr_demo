@@ -158,6 +158,7 @@ The Streamlit app authenticates as a **different** service principal. Without gr
 | App: fixture mode + warehouse error | Warehouse name mismatch, warehouse stopped too long, or app SP cannot **CAN USE** the warehouse |
 | Process files fails with permission | Re-run `sql/grant_app_principal.sql` (needs **MANAGE** on silver/gold so the app can `CREATE OR REPLACE` tables you own) |
 | Score: `not authorized to restart this cluster` / `0818-024751-…` | Compute → **`onr demo ml`** → Permissions → app SP **CAN RESTART** + **CAN ATTACH TO**. Dedicated user ≠ job restart right. Leave the cluster running and Score again. |
+| Score log: `CREATE MODEL` / `Register from run skipped` | **Not a fail.** 408 rows still wrote. The app must not CREATE MODEL. Refresh Analytics → Predictions. |
 | Score: `%pip` / `AsyncFlushFailed` / `RESOURCE_DOES_NOT_EXIST` on `/Users/…/notebooks` | MAGIC `%pip` tried to write the Git folder. Pull latest `main` — 04c no longer `%pip`s. Install **mlflow** as a library on **`onr demo ml`**. Cancel the failed run and Score again. |
 | Score: `Could not publish` Shared 04c | Pull **1.9.25+**. Score now publishes to Shared **or** the app SP home (`/Users/<app-sp>/onr-demo/notebooks`). Restart the app. If it still fails, the error text is the workspace import reason. |
 | Notebook 04: no sklearn | Re-run all cells; first cells `%pip install` then restart Python |

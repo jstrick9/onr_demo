@@ -73,7 +73,7 @@ catalog = dbutils.widgets.get("catalog")
 
 # COMMAND ----------
 
-from datetime import datetime as _dt
+from datetime import datetime as _dt, timezone as _tz
 
 import numpy as np
 import pandas as pd
@@ -233,7 +233,14 @@ def _maybe_register(name: str, uri: str) -> None:
         )
         print(f"Registered {name} v{mv.version} @champion from {uri}")
     except Exception as e:
-        print("Register from run skipped:", e)
+        msg = str(e).splitlines()[0]
+        if "CREATE MODEL" in msg or "PERMISSION_DENIED" in msg:
+            print(
+                "Register skipped — expected. The app scores; it does not "
+                "CREATE MODEL on gold. Night-before 04 / 04b own the registry."
+            )
+        else:
+            print("Register from run skipped:", msg)
 
 # COMMAND ----------
 
@@ -279,7 +286,7 @@ out_rf["recommendation"] = out_rf["success_probability"].map(
     lambda p: "Fund" if p >= 0.70 else ("Review" if p >= 0.45 else "Defer")
 )
 out_rf["model_name"] = "rf_large_award_v1"
-out_rf["scored_at"] = _dt.utcnow()
+out_rf["scored_at"] = _dt.now(_tz.utc).replace(tzinfo=None)
 out_rf["amount_usd"] = out_rf["amount_usd"].astype(float)
 out_rf["success_probability"] = out_rf["success_probability"].astype(float)
 
@@ -355,7 +362,7 @@ def _pred_type(row):
 out_if["predicted_type"] = out_if.apply(_pred_type, axis=1)
 out_if["model_name"] = "iforest_funding_v1"
 out_if["is_known_anomaly"] = out_if["is_known_anomaly"].fillna(0).astype(int)
-out_if["scored_at"] = _dt.utcnow()
+out_if["scored_at"] = _dt.now(_tz.utc).replace(tzinfo=None)
 for c in ("amount_usd", "execution_rate", "yoy_growth_ratio", "amount_vs_area_median", "anomaly_score"):
     out_if[c] = out_if[c].astype(float)
 out_if["fiscal_year"] = out_if["fiscal_year"].astype(int)
