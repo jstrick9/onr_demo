@@ -69,7 +69,6 @@ def setup_sidebar():
         st.markdown(
             f"""
 <div class="hud">
-  <div class="hud-scan"></div>
   <div class="hud-brand">
     {_compass_img_html()}
     <div>

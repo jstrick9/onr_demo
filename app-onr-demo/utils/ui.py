@@ -74,16 +74,6 @@ html, body, [class*="css"] {{
   margin-bottom: 10px;
   box-shadow: 0 0 24px rgba(74,144,164,0.18);
 }}
-.hud-scan {{
-  position: absolute; left: 0; right: 0; height: 2px;
-  background: linear-gradient(90deg, transparent, #7ec8e3, transparent);
-  animation: scan 2.8s linear infinite;
-}}
-@keyframes scan {{
-  0% {{ top: 0; opacity: 0; }}
-  15% {{ opacity: 1; }}
-  100% {{ top: 100%; opacity: 0; }}
-}}
 .hud-row {{
   display: flex; align-items: center; gap: 8px;
   color: #cfe6f2; font-size: 0.72rem; font-weight: 700;
