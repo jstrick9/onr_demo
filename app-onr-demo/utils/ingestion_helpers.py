@@ -562,12 +562,31 @@ def _stream_run_terminal(payload: dict) -> bool:
     return False
 
 
+def clear_stream_run_chrome() -> None:
+    """Drop Start-stream run buttons so Restore baseline does not keep the last job."""
+    st.session_state["_stream_epoch"] = int(st.session_state.get("_stream_epoch") or 0) + 1
+    st.session_state.pop("last_stream", None)
+    st.session_state.pop("last_ingest", None)
+
+
+def _stream_payload_current(payload: dict | None) -> bool:
+    if not payload:
+        return False
+    return payload.get("_epoch") == st.session_state.get("_stream_epoch")
+
+
 def _settle_stream_if_done(catalog: str) -> None:
-    payload = st.session_state.get("last_stream") or {}
+    payload = st.session_state.get("last_stream")
     if not payload or payload.get("_settled"):
         return
+    if not _stream_payload_current(payload):
+        return
     if not _stream_run_terminal(payload):
-        st.session_state["last_stream"] = payload
+        if _stream_payload_current(st.session_state.get("last_stream")):
+            st.session_state["last_stream"] = payload
+        return
+    live = st.session_state.get("last_stream")
+    if not _stream_payload_current(live):
         return
     st.session_state["last_stream"] = _apply_stream_snapshot(catalog, payload)
     st.rerun()
@@ -618,7 +637,12 @@ def render_stream_controls(catalog: str = "onr_demo") -> None:
     )
     st.session_state["_onr_stream_catalog"] = catalog
     st.session_state["_onr_hb_catalog"] = catalog
-    c1, c2 = st.columns([2, 1])
+    last_stream = st.session_state.get("last_stream")
+    show_run = _stream_payload_current(last_stream)
+    if show_run:
+        c1, c2 = st.columns([2, 1])
+    else:
+        c1, c2 = st.container(), None
     with c1:
         if st.button("Start stream", type="primary", key="start_stream"):
             try:
@@ -637,6 +661,7 @@ def render_stream_controls(catalog: str = "onr_demo") -> None:
                 result["before_silver"] = before_s
                 result["before_bronze"] = before_b
                 result["_settled"] = False
+                result["_epoch"] = int(st.session_state.get("_stream_epoch") or 0)
                 if result.get("via") == "warehouse":
                     result = _apply_stream_snapshot(catalog, result)
                 st.session_state["last_stream"] = result
@@ -658,19 +683,20 @@ def render_stream_controls(catalog: str = "onr_demo") -> None:
                     st.rerun()
             except Exception as e:
                 st.error(f"Stream did not start: {e}")
-    with c2:
-        path = resolve_notebook(STREAM_NOTEBOOK)
-        workspace_action_row("Open stream notebook", notebook_url(path))
-    render_run_status("Stream", st.session_state.get("last_stream"))
-    watched = False
-    if hasattr(st, "fragment"):
-        try:
-            _stream_watch_fragment()
-            watched = True
-        except Exception:
-            watched = False
-    if not watched:
-        _settle_stream_if_done(catalog)
+    if show_run:
+        with c2:
+            path = last_stream.get("notebook") or resolve_notebook(STREAM_NOTEBOOK)
+            workspace_action_row("Open stream notebook", notebook_url(path))
+        render_run_status("Stream", last_stream)
+        watched = False
+        if hasattr(st, "fragment"):
+            try:
+                _stream_watch_fragment()
+                watched = True
+            except Exception:
+                watched = False
+        if not watched:
+            _settle_stream_if_done(catalog)
     provenance_note("bronze.grants", catalog)
 
 
@@ -744,8 +770,7 @@ def render_file_picker_and_reset(cursor, catalog: str):
                 with st.spinner("Restoring baseline…"):
                     try:
                         result = reset_to_seed_sql(cursor, catalog)
-                        st.session_state.pop("last_ingest", None)
-                        st.session_state.pop("last_stream", None)
+                        clear_stream_run_chrome()
                         st.success(
                             f"Baseline restored. Active grants {result['before_silver']} → {result['after_silver']}. "
                             f"Silver rebuilt. Quarantine log empty."
