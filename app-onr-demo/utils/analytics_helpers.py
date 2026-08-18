@@ -285,7 +285,8 @@ def render_score_controls(catalog: str = "onr_demo") -> None:
     st.markdown("### Registered model score")
     st.caption(
         "Applies the night-before Random Forest and IsolationForest to the current silver portfolio "
-        "on onr demo cluster. Does not train. Cluster must be running (mlflow is installed there)."
+        "on onr demo cluster. Does not train. Cluster must be running, Shared/Standard "
+        "(not Single user), with mlflow installed."
     )
     c1, c2 = st.columns([2, 1])
     with c1:

@@ -594,6 +594,27 @@ def submit_notebook_serverless(path: str, run_name: str, params: dict | None = N
     raise RuntimeError("Serverless job submit failed: " + " | ".join(errors[:4]))
 
 
+def _explain_cluster_submit_error(err) -> str:
+    """Single-user / Dedicated clusters reject the app service principal."""
+    text = str(err or "")
+    blob = text.lower()
+    if (
+        "single-user check" in blob
+        or "single user of this cluster" in blob
+        or ("permission_denied" in blob and "single-user" in blob)
+        or ("permission_denied" in blob and "single user" in blob)
+    ):
+        return (
+            "onr demo cluster is Dedicated / Single user assigned to you "
+            "(joshua.strickland@satsyil.com). The app identity cannot run a command "
+            "on that cluster — CAN ATTACH TO does not override single-user mode. "
+            "Compute → onr demo cluster → Edit → Access mode → Shared (Standard). "
+            "Save, start, then Permissions → app SP CAN ATTACH TO + CAN RESTART. "
+            "Until then: Open scoring notebook and Run all as yourself."
+        )
+    return text
+
+
 def submit_notebook_cluster(path: str, run_name: str, params: dict | None = None) -> dict:
     """Submit a notebook on onr demo cluster. Never Jobs serverless."""
     from databricks.sdk.service import jobs
@@ -602,16 +623,33 @@ def submit_notebook_cluster(path: str, run_name: str, params: dict | None = None
     if not cluster_id:
         raise RuntimeError(
             f"{cluster_msg} Score registered models runs 04c on onr demo cluster "
-            "(mlflow is installed there). Start that cluster and grant the app SP "
-            "CAN ATTACH TO / CAN RESTART."
+            "(mlflow is installed there). Cluster must be Shared/Standard, not "
+            "Single user. Grant the app SP CAN ATTACH TO / CAN RESTART."
         )
     w = _client()
+    try:
+        info = w.clusters.get(cluster_id=cluster_id)
+        mode = str(getattr(info, "data_security_mode", "") or "").upper()
+        owner = str(getattr(info, "single_user_name", "") or "")
+        if "SINGLE_USER" in mode and owner:
+            raise RuntimeError(
+                f"Single-user check failed: user 'app' attempted to run a command "
+                f"on single-user cluster {cluster_id}, but the single user of this "
+                f"cluster is '{owner}'"
+            )
+    except RuntimeError as e:
+        raise RuntimeError(_explain_cluster_submit_error(e)) from e
+    except Exception:
+        pass
     task = jobs.SubmitTask(
         task_key="run",
         existing_cluster_id=cluster_id,
         notebook_task=jobs.NotebookTask(**_notebook_task_kwargs(path, params)),
     )
-    waiter = w.jobs.submit(run_name=run_name, tasks=[task])
+    try:
+        waiter = w.jobs.submit(run_name=run_name, tasks=[task])
+    except Exception as e:
+        raise RuntimeError(_explain_cluster_submit_error(e)) from e
     rec = _finish_submit(w, waiter, path, cluster_msg)
     rec["via"] = "cluster"
     return rec
@@ -649,12 +687,16 @@ def get_run_state(run_id: int | None) -> dict:
         return {}
     try:
         run = _client().jobs.get_run(run_id)
-        life = getattr(getattr(run, "state", None), "life_cycle_state", None)
-        result = getattr(getattr(run, "state", None), "result_state", None)
+        stt = getattr(run, "state", None)
+        life = getattr(stt, "life_cycle_state", None)
+        result = getattr(stt, "result_state", None)
+        raw_msg = getattr(stt, "state_message", None) or ""
+        msg = _explain_cluster_submit_error(raw_msg) if raw_msg else ""
         return {
             "run_id": run_id,
             "state": str(life or "UNKNOWN"),
             "result": str(result) if result else "",
+            "message": msg,
             "page_url": getattr(run, "run_page_url", None),
         }
     except Exception as e:
@@ -786,11 +828,7 @@ def start_score(catalog: str = "onr_demo") -> dict:
             "notebook": path,
         }
     except Exception as e:
-        raise RuntimeError(
-            f"Could not submit 04c on onr demo cluster ({e}). "
-            "Start that cluster and grant the app SP CAN ATTACH TO / CAN RESTART. "
-            "Or open the scoring notebook and Run all as yourself."
-        ) from e
+        raise RuntimeError(_explain_cluster_submit_error(e)) from e
 
 
 PAGE_LINKS = {
@@ -959,6 +997,9 @@ def render_run_status(kind: str, payload: dict | None) -> None:
     st.caption(bits)
     if page:
         st.link_button("Open run", page)
+    msg = live.get("message") or ""
+    if msg:
+        st.caption(msg)
     if payload.get("error"):
         st.caption(payload["error"])
     landed = (payload.get("file") or {}).get("dst")

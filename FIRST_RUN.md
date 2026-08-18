@@ -50,8 +50,8 @@ If they put the catalog in a different name, set the bootstrap `catalog` widget 
 1. Compute → Create compute.
 2. Name: `onr demo cluster` (exact).
 3. Runtime: Databricks Runtime **14.3 LTS or newer** (standard is fine). Notebooks `04` / `04b` / `04c` run `%pip install mlflow scikit-learn pandas` — standard DBR and Jobs serverless do not ship `mlflow`.
-4. Mode: single user or shared with your account.
-5. Start it.
+4. Access mode: **Shared** (UI label **Standard**). **Not** Dedicated / Single user. Score runs as the **app service principal**; a cluster assigned only to you rejects that identity (`Single-user check failed`).
+5. Start it. Permissions → app SP **CAN ATTACH TO** + **CAN RESTART**. Install the `mlflow` library on this cluster (you already have this).
 
 Do **not** create a second warehouse in a bundle.
 
@@ -107,6 +107,7 @@ The Streamlit app authenticates as a **different** service principal. Without gr
 3. Replace every `<APP_SERVICE_PRINCIPAL>` with that value (keep backticks).
 4. Run the script.
 5. Warehouse permissions (UI): SQL Warehouses → `onr demo warehouse` → Permissions → **CAN USE** for the same principal.
+6. Cluster permissions (UI): Compute → `onr demo cluster` → Permissions → **CAN ATTACH TO** and **CAN RESTART** for the same principal. Access mode must stay **Shared / Standard**.
 
 ---
 
@@ -122,7 +123,7 @@ The Streamlit app authenticates as a **different** service principal. Without gr
 | Integration → Execute live Statement API | `statement_id` + JSON from `/api/2.0/sql/statements` |
 | Optional: run `04` then `04b` on the cluster (night-before) | RF + IsolationForest registered with `@champion`. Score loads `@champion`, then the highest UC version — never `/latest`. |
 | Ingestion → **Start stream** | Lands `batch_live_grants_stream.csv` and submits `01b` (or **Open stream notebook**) |
-| Analytics → **Score registered models** | Submits `04c` on **`onr demo cluster`** (not Jobs serverless). Cluster must be running with mlflow. App SP needs **CAN ATTACH TO** / **CAN RESTART**. Needs `GRANT EXECUTE ON FUNCTION` for the two registered models. |
+| Analytics → **Score registered models** | Submits `04c` on **`onr demo cluster`** (not Jobs serverless). Cluster must be **Shared / Standard** (not Single user), running, with mlflow. App SP needs **CAN ATTACH TO** / **CAN RESTART**. Needs `GRANT EXECUTE ON FUNCTION` for the two registered models. |
 | Ingestion → **Start stream** | Lands the CSV. Job submit only if the **app SP** can read the notebook (Shared copy). Otherwise warehouse load. **Open stream notebook** runs as you. |
 | Ingestion → Restore baseline snapshot | Back to 400; silver rebuilt; `app.quarantine_log` empty |
 
@@ -148,6 +149,7 @@ The Streamlit app authenticates as a **different** service principal. Without gr
 | Bootstrap cannot open JSON | Set `repo_root` to the Git folder (must contain `resources/mock_data/grants_portfolio.json`) |
 | App: fixture mode + warehouse error | Warehouse name mismatch, warehouse stopped too long, or app SP cannot **CAN USE** the warehouse |
 | Process files fails with permission | Re-run `sql/grant_app_principal.sql` (needs **MANAGE** on silver/gold so the app can `CREATE OR REPLACE` tables you own) |
+| Score: `Single-user check failed` / app SP `6a59e35d-…` | Cluster is Dedicated to you. Edit **`onr demo cluster`** → Access mode **Shared (Standard)** → start → grant app SP **CAN ATTACH TO**. If Edit will not change access mode, clone the cluster with the same name as Shared. Until then: Analytics → **Open scoring notebook** → Run all as yourself. |
 | Notebook 04: no sklearn | Re-run all cells; first cells `%pip install` then restart Python |
 | MLflow “skipped” | Optional. UC tables still write. Notebook 04 creates `/Shared/onr-demo/grant-size` and registers `onr_demo.gold.grant_large_award` when MLflow is available |
 | Governance page has no quality scores | Process a file (or Reset) — the app SQL path now writes `app.data_quality_scores`. Or run `02_silver_quality.py`. |
