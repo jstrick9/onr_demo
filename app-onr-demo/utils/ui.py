@@ -36,8 +36,45 @@ html, body, [class*="css"] {{
 [data-testid="stAppViewContainer"] {{
   background: #ffffff;
 }}
-[data-testid="stHeader"] {{ background: transparent; }}
-#MainMenu, footer, [data-testid="stToolbar"] {{ visibility: hidden; height: 0; }}
+[data-testid="stHeader"] {{
+  background: transparent;
+  z-index: 999;
+}}
+#MainMenu, footer {{ visibility: hidden; height: 0; }}
+/* Keep the toolbar box so the sidebar reopen control is not height:0 clipped. */
+[data-testid="stToolbar"] {{
+  visibility: visible !important;
+  height: auto !important;
+}}
+[data-testid="stToolbar"] [data-testid="stToolbarActions"],
+[data-testid="stToolbar"] [data-testid="stAppDeployButton"],
+[data-testid="stDecoration"] {{
+  visibility: hidden !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+}}
+[data-testid="collapsedControl"],
+[data-testid="stSidebarCollapsedControl"],
+[data-testid="stExpandSidebarButton"],
+[data-testid="stSidebarCollapseButton"] {{
+  visibility: visible !important;
+  display: flex !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  height: auto !important;
+  width: auto !important;
+  z-index: 2147483646 !important;
+}}
+[data-testid="collapsedControl"] button,
+[data-testid="stSidebarCollapsedControl"] button,
+[data-testid="stExpandSidebarButton"] {{
+  background: {SIDEBAR} !important;
+  color: {GOLD_BRIGHT} !important;
+  border: 1px solid {GOLD_BRIGHT} !important;
+  border-radius: 8px !important;
+  box-shadow: 0 6px 16px rgba(11,31,58,0.35) !important;
+}}
 
 [data-testid="stSidebar"] {{
   background: {SIDEBAR};
@@ -651,8 +688,81 @@ div.stButton > button:hover {{
 """
 
 
+def _inject_sidebar_reopen() -> None:
+    """When the sidebar is closed, pin a Nav tab that clicks Streamlit's expand control."""
+    import streamlit.components.v1 as components
+
+    components.html(
+        """
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"/></head><body>
+<script>
+(function () {
+  const doc = window.parent.document;
+  function findExpand() {
+    return doc.querySelector(
+      '[data-testid="stExpandSidebarButton"],' +
+      '[data-testid="collapsedControl"] button,' +
+      '[data-testid="stSidebarCollapsedControl"] button,' +
+      '[data-testid="stSidebarCollapsedControl"]'
+    );
+  }
+  function sidebarOpen() {
+    const sb = doc.querySelector('[data-testid="stSidebar"]');
+    if (!sb) return true;
+    if (sb.getAttribute("aria-expanded") === "false") return false;
+    return sb.getBoundingClientRect().width > 48;
+  }
+  let tab = doc.getElementById("onr-nav-tab");
+  if (!tab) {
+    tab = doc.createElement("button");
+    tab.id = "onr-nav-tab";
+    tab.type = "button";
+    tab.textContent = "Nav";
+    tab.setAttribute("aria-label", "Open navigation");
+    Object.assign(tab.style, {
+      position: "fixed",
+      left: "0",
+      top: "76px",
+      zIndex: "2147483647",
+      background: "#0d2744",
+      color: "#f59e0b",
+      border: "1px solid #f59e0b",
+      borderLeft: "none",
+      borderRadius: "0 8px 8px 0",
+      padding: "12px 8px",
+      font: "800 11px/1 Segoe UI, sans-serif",
+      letterSpacing: "0.16em",
+      textTransform: "uppercase",
+      cursor: "pointer",
+      boxShadow: "0 6px 16px rgba(11,31,58,0.35)",
+      display: "none"
+    });
+    tab.onclick = function () {
+      const b = findExpand();
+      if (b) b.click();
+    };
+    doc.body.appendChild(tab);
+  }
+  function tick() {
+    tab.style.display = sidebarOpen() ? "none" : "block";
+  }
+  tick();
+  setInterval(tick, 350);
+})();
+</script>
+</body></html>
+        """,
+        height=0,
+    )
+
+
 def inject_theme() -> None:
     st.markdown(_CSS, unsafe_allow_html=True)
+    try:
+        _inject_sidebar_reopen()
+    except Exception:
+        pass
     try:
         import plotly.io as pio
         import plotly.graph_objects as go
