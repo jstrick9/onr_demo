@@ -23,11 +23,11 @@ DEMO_STATEMENT = (
 
 
 def _resolve_warehouse():
-    from databricks.sdk import WorkspaceClient
+    from utils.db_helpers import workspace_client
     from utils.workspace_names import SQL_WAREHOUSE_NAME
     import os
 
-    w = WorkspaceClient()
+    w = workspace_client()
     want = (os.getenv("DATABRICKS_WAREHOUSE_NAME") or SQL_WAREHOUSE_NAME).strip().lower()
     matches = [wh for wh in w.warehouses.list() if (wh.name or "").strip().lower() == want]
     if not matches:

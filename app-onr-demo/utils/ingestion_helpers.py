@@ -671,12 +671,6 @@ def render_stream_controls(catalog: str = "onr_demo") -> None:
     )
 
     st.markdown("### Stream")
-    st.caption(
-        "Drops a new file on the landing Volume. Prefers a serverless Auto Loader job "
-        "(availableNow — ProcessingTime is not supported on Jobs serverless). "
-        "If Jobs cannot start, the SQL warehouse appends the same file to bronze.grants. "
-        "Warehouses cannot run spark.readStream / cloudFiles."
-    )
     st.session_state["_onr_stream_catalog"] = catalog
     st.session_state["_onr_hb_catalog"] = catalog
     last_stream = st.session_state.get("last_stream")

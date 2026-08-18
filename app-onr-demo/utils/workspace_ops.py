@@ -24,9 +24,9 @@ NOTEBOOKS = {
 
 
 def _client():
-    from databricks.sdk import WorkspaceClient
+    from utils.db_helpers import workspace_client
 
-    return WorkspaceClient()
+    return workspace_client()
 
 
 def workspace_host() -> str:

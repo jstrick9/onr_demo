@@ -11,6 +11,34 @@ from databricks import sql
 from databricks.sdk import WorkspaceClient
 
 
+def workspace_client() -> WorkspaceClient:
+    """Build a WorkspaceClient with exactly one auth method.
+
+    Databricks Apps inject OAuth (client_id/secret) and often also
+    DATABRICKS_TOKEN. The SDK refuses that mix:
+    ``more than one authorization method configured: oauth and pat``.
+    Prefer the app service-principal OAuth.
+    """
+    host = os.getenv("DATABRICKS_HOST") or os.getenv("DATABRICKS_SERVER_HOSTNAME") or ""
+    host = host.strip()
+    if host and not host.startswith("http"):
+        host = "https://" + host
+    cid = (os.getenv("DATABRICKS_CLIENT_ID") or "").strip()
+    secret = (os.getenv("DATABRICKS_CLIENT_SECRET") or "").strip()
+    token = (os.getenv("DATABRICKS_TOKEN") or "").strip()
+    kwargs = {}
+    if host:
+        kwargs["host"] = host
+    if cid and secret:
+        kwargs["client_id"] = cid
+        kwargs["client_secret"] = secret
+        return WorkspaceClient(**kwargs)
+    if token:
+        kwargs["token"] = token
+        return WorkspaceClient(**kwargs)
+    return WorkspaceClient()
+
+
 # -------------------------------
 # READ CONFIG FILES
 # -------------------------------
@@ -62,7 +90,7 @@ def _create_fresh_connection():
     Create a new SQL Warehouse connection.
     Uses the app's service principal (OAuth) for auth.
     """
-    w = WorkspaceClient()
+    w = workspace_client()
 
     host = _normalize_host(w.config.host)
     if not host:

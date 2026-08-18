@@ -665,9 +665,9 @@ def reset_to_seed_sql(cursor, catalog: str) -> dict:
 
 def delete_stream_landing_files(catalog: str = "onr_demo") -> list[str]:
     """Remove every Auto Loader stream CSV so Restore is not tied to one name."""
-    from databricks.sdk import WorkspaceClient
+    from utils.db_helpers import workspace_client
 
-    w = WorkspaceClient()
+    w = workspace_client()
     root = f"/Volumes/{catalog}/bronze/landing/grants"
     removed: list[str] = []
     try:
@@ -693,9 +693,9 @@ def delete_stream_landing_files(catalog: str = "onr_demo") -> list[str]:
 
 def clear_autoloader_checkpoints() -> str:
     try:
-        from databricks.sdk import WorkspaceClient
+        from utils.db_helpers import workspace_client
 
-        w = WorkspaceClient()
+        w = workspace_client()
         root = "/Volumes/onr_demo/bronze/checkpoints"
         deleted = 0
         try:
@@ -1196,10 +1196,10 @@ def refresh_silver_gold_sql(cursor, catalog: str, quality_pipeline: str | None =
 def try_start_cluster_notebooks() -> str:
     """Best-effort: start 'onr demo cluster' so Key Personnel can run 01–04 live."""
     try:
-        from databricks.sdk import WorkspaceClient
+        from utils.db_helpers import workspace_client
         from utils.workspace_names import ALL_PURPOSE_CLUSTER_NAME
 
-        w = WorkspaceClient()
+        w = workspace_client()
         for c in w.clusters.list():
             if (c.cluster_name or "").strip().lower() == ALL_PURPOSE_CLUSTER_NAME.lower():
                 state = str(getattr(c, "state", "") or "")

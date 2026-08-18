@@ -47,23 +47,28 @@ def _query_df(cursor, sql: str) -> pd.DataFrame:
 
 
 def _configure_mlflow():
+    """Point MLflow at UC with a single auth method (token), not OAuth+PAT."""
     import mlflow
 
-    from databricks.sdk import WorkspaceClient
+    from utils.db_helpers import workspace_client
 
-    w = WorkspaceClient()
+    w = workspace_client()
     host = (w.config.host or "").strip()
     if host and not host.startswith("http"):
         host = "https://" + host
     if host:
         os.environ["DATABRICKS_HOST"] = host
+    token = ""
     try:
         headers = w.config.authenticate() or {}
         token = headers.get("Authorization", "").split(" ", 1)[-1]
-        if token:
-            os.environ["DATABRICKS_TOKEN"] = token
     except Exception:
-        pass
+        token = (os.getenv("DATABRICKS_TOKEN") or "").strip()
+    # MLflow's Databricks client also rejects oauth+pat. Give it token only.
+    if token:
+        os.environ["DATABRICKS_TOKEN"] = token
+    os.environ.pop("DATABRICKS_CLIENT_ID", None)
+    os.environ.pop("DATABRICKS_CLIENT_SECRET", None)
     mlflow.set_tracking_uri("databricks")
     mlflow.set_registry_uri("databricks-uc")
     return mlflow
@@ -73,9 +78,9 @@ def _uc_versions(name: str) -> list[int]:
     """Best-effort list of UC model versions. App SP often cannot search."""
     found: set[int] = set()
     try:
-        from databricks.sdk import WorkspaceClient
+        from utils.db_helpers import workspace_client
 
-        w = WorkspaceClient()
+        w = workspace_client()
         lister = None
         if hasattr(w, "model_versions") and hasattr(w.model_versions, "list"):
             lister = lambda: w.model_versions.list(full_name=name)
@@ -126,11 +131,25 @@ def _uc_model_uris(name: str) -> list[str]:
 
 
 def _load_sklearn(uris: list[str]):
+    saved_cid = os.environ.get("DATABRICKS_CLIENT_ID")
+    saved_secret = os.environ.get("DATABRICKS_CLIENT_SECRET")
     _configure_mlflow()
     import mlflow.sklearn
 
     errors: list[str] = []
     seen: set[str] = set()
+    try:
+        return _load_sklearn_inner(uris, errors, seen)
+    finally:
+        if saved_cid is not None:
+            os.environ["DATABRICKS_CLIENT_ID"] = saved_cid
+        if saved_secret is not None:
+            os.environ["DATABRICKS_CLIENT_SECRET"] = saved_secret
+
+
+def _load_sklearn_inner(uris: list[str], errors: list[str], seen: set[str]):
+    import mlflow.sklearn
+
     for uri in uris:
         if not uri or uri in seen:
             continue
