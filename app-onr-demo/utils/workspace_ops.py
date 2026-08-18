@@ -323,14 +323,35 @@ def notebook_accessible(path: str | None) -> bool:
 
 
 def _local_notebook_bytes(filename: str) -> bytes | None:
+    """Find a packaged notebook even when Databricks Apps remaps __file__."""
     stem = filename.replace(".py", "")
+    name = f"{stem}.py"
     here = Path(__file__).resolve()
-    for cand in (
-        here.parents[1] / "notebooks" / f"{stem}.py",
-        here.parents[2] / "notebooks" / f"{stem}.py",
-    ):
-        if cand.exists():
-            return cand.read_bytes()
+    cands: list[Path] = [
+        here.parent / "_packaged_notebooks" / name,
+        here.parent / "notebooks" / name,
+        Path.cwd() / "notebooks" / name,
+        Path.cwd() / "app-onr-demo" / "notebooks" / name,
+        Path.cwd() / "utils" / "_packaged_notebooks" / name,
+    ]
+    for parent in here.parents:
+        cands.append(parent / "notebooks" / name)
+        cands.append(parent / "app-onr-demo" / "notebooks" / name)
+        cands.append(parent / "utils" / "_packaged_notebooks" / name)
+    tried: list[str] = []
+    seen: set[str] = set()
+    for cand in cands:
+        key = str(cand)
+        if key in seen:
+            continue
+        seen.add(key)
+        tried.append(key)
+        try:
+            if cand.is_file():
+                return cand.read_bytes()
+        except Exception:
+            continue
+    st.session_state["_nb_publish_tried"] = tried[:12]
     return None
 
 
@@ -363,7 +384,11 @@ def publish_notebook_for_app(filename: str) -> str | None:
     """
     raw = _local_notebook_bytes(filename)
     if not raw:
-        st.session_state["_nb_publish_error"] = f"Packaged notebook {filename} not found next to the app."
+        tried = st.session_state.get("_nb_publish_tried") or []
+        st.session_state["_nb_publish_error"] = (
+            f"Packaged notebook {filename} not found next to the app. "
+            + (f"Tried: {tried[:6]}" if tried else "")
+        )
         return None
     import base64
 
