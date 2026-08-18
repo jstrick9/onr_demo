@@ -135,6 +135,19 @@ try:
             artifact_path="model",
             registered_model_name=registered,
         )
+    try:
+        from mlflow.tracking import MlflowClient
+
+        client = MlflowClient(registry_uri="databricks-uc")
+        found = list(client.search_model_versions(f"name='{registered}'"))
+        found.sort(key=lambda v: int(getattr(v, "version", 0) or 0), reverse=True)
+        if found:
+            client.set_registered_model_alias(
+                name=registered, alias="champion", version=str(found[0].version)
+            )
+            print(f"alias champion -> {found[0].version}")
+    except Exception as alias_e:
+        print("Could not set champion alias:", alias_e)
     print(f"Logged to MLflow and registered {registered}")
 except Exception as e:
     print("MLflow optional — skipped:", e)

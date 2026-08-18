@@ -120,7 +120,7 @@ The Streamlit app authenticates as a **different** service principal. Without gr
 | Analytics → Forecasting | `gold.funding_forecast` + `gold.program_trends` (OLS, trend IDs) after bootstrap / Process |
 | Dashboard → Generate daily brief | Row in `app.daily_briefs` (ai_query or template) |
 | Integration → Execute live Statement API | `statement_id` + JSON from `/api/2.0/sql/statements` |
-| Optional: run `04` then `04b` on the cluster (night-before) | RF + IsolationForest registered |
+| Optional: run `04` then `04b` on the cluster (night-before) | RF + IsolationForest registered with `@champion`. Score loads `@champion`, then the highest UC version — never `/latest`. |
 | Ingestion → **Start stream** | Lands `batch_live_grants_stream.csv` and submits `01b` (or **Open stream notebook**) |
 | Analytics → **Score registered models** | Scores UC models on the SQL warehouse (no cluster). Needs `GRANT EXECUTE ON FUNCTION` for the two registered models. |
 | Ingestion → **Start stream** | Lands the CSV. Job submit only if the **app SP** can read the notebook (Shared copy). Otherwise warehouse load. **Open stream notebook** runs as you. |

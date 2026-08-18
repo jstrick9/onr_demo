@@ -120,6 +120,28 @@ if n_feat < 8:
 
 # COMMAND ----------
 
+def _uc_model_uris(name: str):
+    """Unity Catalog has no models:/name/latest. Prefer @champion, then max version."""
+    uris = [f"models:/{name}@champion", f"models:/{name}@production"]
+    try:
+        from mlflow.tracking import MlflowClient
+
+        client = MlflowClient(registry_uri="databricks-uc")
+        found = list(client.search_model_versions(f"name='{name}'"))
+        found.sort(key=lambda v: int(getattr(v, "version", 0) or 0), reverse=True)
+        if found:
+            latest = str(found[0].version)
+            uris.append(f"models:/{name}/{latest}")
+            try:
+                client.set_registered_model_alias(name=name, alias="champion", version=latest)
+                print(f"Set {name}@champion -> {latest}")
+            except Exception as e:
+                print(f"Could not set {name}@champion ({e}); will load version {latest}")
+    except Exception as e:
+        print("UC version lookup skipped:", e)
+    return uris
+
+
 def _load_sklearn(uri: str):
     import mlflow
     import mlflow.sklearn
@@ -132,7 +154,11 @@ def _load_sklearn(uri: str):
 
 def _load_first(uris):
     errors = []
+    seen = set()
     for uri in uris:
+        if not uri or uri in seen:
+            continue
+        seen.add(uri)
         try:
             return _load_sklearn(uri), uri
         except Exception as e:
@@ -150,10 +176,7 @@ def _load_first(uris):
 
 # COMMAND ----------
 
-rf, rf_uri = _load_first([
-    f"models:/{catalog}.gold.grant_large_award@champion",
-    f"models:/{catalog}.gold.grant_large_award/latest",
-])
+rf, rf_uri = _load_first(_uc_model_uris(f"{catalog}.gold.grant_large_award"))
 
 pdf = spark.table(f"`{catalog}`.`silver`.grants").where("_is_active = true").toPandas()
 pdf = pdf.dropna(subset=["amount_usd", "program_area", "fiscal_year"])
@@ -205,10 +228,7 @@ print("RF source:", rf_uri)
 
 # COMMAND ----------
 
-ife, if_uri = _load_first([
-    f"models:/{catalog}.gold.funding_anomaly_detector@champion",
-    f"models:/{catalog}.gold.funding_anomaly_detector/latest",
-])
+ife, if_uri = _load_first(_uc_model_uris(f"{catalog}.gold.funding_anomaly_detector"))
 
 df = spark.table(f"`{catalog}`.`gold`.funding_features").toPandas()
 FEATURES_NUM = ["award_amount", "yoy_growth_ratio", "execution_rate", "amount_vs_area_median"]

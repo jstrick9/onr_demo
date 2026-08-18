@@ -69,12 +69,37 @@ def _configure_mlflow():
     return mlflow
 
 
+def _uc_model_uris(name: str) -> list[str]:
+    """Unity Catalog has no models:/name/latest. Prefer @champion, then max version."""
+    uris = [f"models:/{name}@champion", f"models:/{name}@production"]
+    try:
+        from mlflow.tracking import MlflowClient
+
+        client = MlflowClient(registry_uri="databricks-uc")
+        found = list(client.search_model_versions(f"name='{name}'"))
+        found.sort(key=lambda v: int(getattr(v, "version", 0) or 0), reverse=True)
+        if found:
+            latest = str(found[0].version)
+            uris.append(f"models:/{name}/{latest}")
+            try:
+                client.set_registered_model_alias(name=name, alias="champion", version=latest)
+            except Exception:
+                pass
+    except Exception:
+        pass
+    return uris
+
+
 def _load_sklearn(uris: list[str]):
     _configure_mlflow()
     import mlflow.sklearn
 
     errors: list[str] = []
+    seen: set[str] = set()
     for uri in uris:
+        if not uri or uri in seen:
+            continue
+        seen.add(uri)
         try:
             model = mlflow.sklearn.load_model(uri)
             return model, uri
@@ -131,18 +156,8 @@ def score_registered_models(cursor, catalog: str) -> dict:
     if grants.empty or len(grants) < 8:
         raise RuntimeError("silver.grants is empty — ingest the portfolio first")
 
-    rf, rf_uri = _load_sklearn(
-        [
-            f"models:/{catalog}.gold.grant_large_award@champion",
-            f"models:/{catalog}.gold.grant_large_award/latest",
-        ]
-    )
-    ife, if_uri = _load_sklearn(
-        [
-            f"models:/{catalog}.gold.funding_anomaly_detector@champion",
-            f"models:/{catalog}.gold.funding_anomaly_detector/latest",
-        ]
-    )
+    rf, rf_uri = _load_sklearn(_uc_model_uris(f"{catalog}.gold.grant_large_award"))
+    ife, if_uri = _load_sklearn(_uc_model_uris(f"{catalog}.gold.funding_anomaly_detector"))
 
     pdf = grants.dropna(subset=["amount_usd", "program_area", "fiscal_year"]).copy()
     feat_cols = ["fiscal_year", "program_area", "org_unit"]
