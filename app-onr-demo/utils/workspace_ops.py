@@ -334,14 +334,36 @@ def _local_notebook_bytes(filename: str) -> bytes | None:
     return None
 
 
-def publish_notebook_for_app(filename: str) -> str | None:
-    """Import the packaged notebook to Shared so the app SP owns a runnable copy.
+def _app_home_names() -> list[str]:
+    names: list[str] = []
+    try:
+        me = _client().current_user.me()
+        for attr in ("user_name", "userName", "display_name", "displayName", "id"):
+            val = str(getattr(me, attr, "") or "").strip()
+            if val and val not in names:
+                names.append(val)
+    except Exception:
+        pass
+    for extra in (
+        os.getenv("DATABRICKS_CLIENT_ID") or "",
+        "6a59e35d-948e-46df-892c-a34e4e3f4056",
+        "app-5ruayx onr-demo-poc",
+    ):
+        extra = extra.strip()
+        if extra and extra not in names:
+            names.append(extra)
+    return names
 
-    Jobs run as the app principal. That identity cannot read
-    /Workspace/Users/<human>/onr_demo/.... A Shared copy it imported itself can.
+
+def publish_notebook_for_app(filename: str) -> str | None:
+    """Import the packaged notebook to a folder the app SP owns.
+
+    Prefer Shared. If the app cannot write Shared, use the app home under
+    /Workspace/Users/<app-sp>/.... Never write the human Git folder.
     """
     raw = _local_notebook_bytes(filename)
     if not raw:
+        st.session_state["_nb_publish_error"] = f"Packaged notebook {filename} not found next to the app."
         return None
     import base64
 
@@ -350,13 +372,13 @@ def publish_notebook_for_app(filename: str) -> str | None:
         f"/Workspace/Shared/onr-demo/notebooks/{stem}",
         f"/Shared/onr-demo/notebooks/{stem}",
     ]
-    try:
-        me = _client().current_user.me()
-        who = getattr(me, "user_name", None) or ""
-        if who:
-            dests.append(f"/Workspace/Users/{who}/onr_demo/notebooks/{stem}")
-    except Exception:
-        pass
+    for who in _app_home_names():
+        dests.extend(
+            [
+                f"/Workspace/Users/{who}/onr-demo/notebooks/{stem}",
+                f"/Users/{who}/onr-demo/notebooks/{stem}",
+            ]
+        )
     w = _client()
     payload = base64.b64encode(raw).decode("ascii")
     try:
@@ -365,12 +387,15 @@ def publish_notebook_for_app(filename: str) -> str | None:
         fmt, lang = ImportFormat.SOURCE, Language.PYTHON
     except Exception:
         fmt, lang = "SOURCE", "PYTHON"
+    errors: list[str] = []
     for dest in dests:
+        if _is_human_git_folder(dest):
+            continue
         parent = dest.rsplit("/", 1)[0]
         try:
             w.workspace.mkdirs(parent)
-        except Exception:
-            pass
+        except Exception as e:
+            errors.append(f"mkdir {parent}: {e}")
         try:
             w.workspace.import_(
                 path=dest,
@@ -379,10 +404,12 @@ def publish_notebook_for_app(filename: str) -> str | None:
                 content=payload,
                 overwrite=True,
             )
-            if notebook_accessible(dest):
-                return dest
-        except Exception:
+            # Import succeeded — the app owns this object even if get_status lags.
+            return dest
+        except Exception as e:
+            errors.append(f"import {dest}: {e}")
             continue
+    st.session_state["_nb_publish_error"] = " | ".join(errors[:4]) or "no dest accepted"
     return None
 
 
@@ -867,12 +894,18 @@ def start_stream(catalog: str = "onr_demo") -> dict:
 
 
 def _is_human_git_folder(path: str | None) -> bool:
+    """True only for a human mailbox Git folder, not Shared and not the app home."""
     if not path:
         return False
     blob = path.replace("\\", "/").lower()
     if "/shared/" in blob:
         return False
-    return "/users/" in blob
+    if "/users/" not in blob:
+        return False
+    tokens = _app_identity_tokens()
+    if any(tok and tok in blob for tok in tokens):
+        return False
+    return "@" in blob
 
 
 def start_score(catalog: str = "onr_demo") -> dict:
@@ -884,10 +917,10 @@ def start_score(catalog: str = "onr_demo") -> dict:
         if published and not _is_human_git_folder(published):
             run_path = published
         else:
+            why = st.session_state.get("_nb_publish_error") or "publish returned nothing"
             raise RuntimeError(
-                "Score will not run 04c from the user Git folder. "
-                "%pip / WSFS cannot write /Users/<you>/onr_demo/notebooks as the app. "
-                "Could not publish /Workspace/Shared/onr-demo/notebooks/04c_score_registered_models."
+                "Score will not run 04c from your Git folder "
+                f"({run_path}). Could not publish a copy the app owns. {why}"
             )
     if not run_path:
         raise RuntimeError(
