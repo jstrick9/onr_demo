@@ -730,6 +730,14 @@ def _explain_cluster_submit_error(err) -> str:
             "Install mlflow on that cluster, start it, then Score again. "
             "Keep onr demo cluster as your training cluster for 04 / 04b."
         )
+    if "not authorized to restart" in blob or "insufficient permissions" in blob:
+        return (
+            "The Score job reached onr demo ml but the app SP cannot restart it. "
+            "Compute → onr demo ml → Permissions → add the app service principal "
+            "(onr-demo-poc / 6a59e35d-948e-46df-892c-a34e4e3f4056) with **CAN RESTART** "
+            "and **CAN ATTACH TO**. Dedicated assignment alone is not enough for Jobs. "
+            "Leave the cluster running, then Score again."
+        )
     return text
 
 

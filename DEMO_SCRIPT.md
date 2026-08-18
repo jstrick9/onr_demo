@@ -46,7 +46,7 @@
 4. If silver ≠ 400: `05_reset_demo.py` on the cluster.
 5. **Run all** `04_mlflow_grant_model.py` → `onr_demo.gold.grant_large_award`.
 6. **Run all** `04b_funding_anomaly.py` → `funding_anomaly_detector` @ `champion`. If MLflow says parent missing: create `/Shared/onr-demo`, re-run from the MLflow cell.
-7. Confirm `01b_streaming_autoloader` and `04c_score_registered_models` exist in the Git folder (the app resolves them). **Start stream** prefers Jobs serverless with `availableNow`. **Score registered models** submits `04c` on **`onr demo ml`**, Dedicated to the **app service principal** — not Jobs serverless, not `onr demo cluster`. Install mlflow on `onr demo ml`. If job submit fails, the on-page **Open scoring notebook** link is the backup.
+7. Confirm `01b_streaming_autoloader` and `04c_score_registered_models` exist in the Git folder (the app resolves them). **Start stream** prefers Jobs serverless with `availableNow`. **Score registered models** submits `04c` on **`onr demo ml`**, Dedicated to the **app service principal** — not Jobs serverless, not `onr demo cluster`. Install mlflow on `onr demo ml`. Grant the app SP **CAN RESTART** + **CAN ATTACH TO** on that cluster. If job submit fails, the on-page **Open scoring notebook** link is the backup.
 8. Volume `_staged/batch_live_grants.csv` exists (bootstrap). The app can also land the packaged CSV.
 9. Mute notifications. 1920×1080, zoom 110–125%, hide bookmarks.
 

@@ -59,7 +59,7 @@ If they put the catalog in a different name, set the bootstrap `catalog` widget 
 2. Name: `onr demo ml` (exact).
 3. Same runtime as above. Install **mlflow** + scikit-learn on this cluster too (libraries do not copy).
 4. Access mode: **Dedicated / Single user = the Databricks App service principal** (`onr-demo-poc` → Authorization). Not you.
-5. Start it. The app SP is the assigned user, so it can run 04c without CAN ATTACH TO on your cluster.
+5. Start it. The app SP is the assigned user, so it can attach. **Also** Permissions → that same app SP → **CAN RESTART** and **CAN ATTACH TO**. Jobs on an existing cluster require CAN RESTART even when the SP is the Dedicated user. You created the cluster, so you must grant this.
 
 Do **not** create a second warehouse in a bundle.
 
@@ -157,7 +157,7 @@ The Streamlit app authenticates as a **different** service principal. Without gr
 | Bootstrap cannot open JSON | Set `repo_root` to the Git folder (must contain `resources/mock_data/grants_portfolio.json`) |
 | App: fixture mode + warehouse error | Warehouse name mismatch, warehouse stopped too long, or app SP cannot **CAN USE** the warehouse |
 | Process files fails with permission | Re-run `sql/grant_app_principal.sql` (needs **MANAGE** on silver/gold so the app can `CREATE OR REPLACE` tables you own) |
-| Score: `Single-user check failed` / app SP `6a59e35d-…` | Score attached to **your** cluster. Create **`onr demo ml`**, Dedicated user = the **app SP**, install mlflow, start it. Keep `onr demo cluster` as yours for 04 / 04b. |
+| Score: `not authorized to restart this cluster` / `0818-024751-…` | Compute → **`onr demo ml`** → Permissions → app SP **CAN RESTART** + **CAN ATTACH TO**. Dedicated user ≠ job restart right. Leave the cluster running and Score again. |
 | Score: `%pip` / `AsyncFlushFailed` / `RESOURCE_DOES_NOT_EXIST` on `/Users/…/notebooks` | MAGIC `%pip` tried to write the Git folder. Pull latest `main` — 04c no longer `%pip`s. Install **mlflow** as a library on **`onr demo ml`**. Cancel the failed run and Score again. |
 | Score: `Could not publish` Shared 04c | Pull **1.9.25+**. Score now publishes to Shared **or** the app SP home (`/Users/<app-sp>/onr-demo/notebooks`). Restart the app. If it still fails, the error text is the workspace import reason. |
 | Notebook 04: no sklearn | Re-run all cells; first cells `%pip install` then restart Python |
