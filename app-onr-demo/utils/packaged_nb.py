@@ -256,10 +256,12 @@ NOTEBOOKS = {
         "ICAgICA6IHtpZl91cml9IikKcHJpbnQoZiJGdW5kL1Jldmlldy9EZWYgOiB7bl9mdW5kfSAvIHtu"
         "X3Jldmlld30gLyB7bl9kZWZlcn0iKQpwcmludChmIklGIGZsYWdnZWQgICAgICA6IHtuX2ZsYWd9"
         "IikKcHJpbnQoIk5leHQ6IEFuYWx5dGljcyDihpIgUHJlZGljdGlvbnMgKyBBbm9tYWxpZXMuIERv"
-        "IG5vdCBydW4gMDQgLyAwNGIuIikKZGlzcGxheSgKICAgIHBkLkRhdGFGcmFtZSgKICAgICAgICB7"
-        "CiAgICAgICAgICAgICJpdGVtIjogWyJyZl91cmkiLCAiaWZfdXJpIiwgInJvd3NfcmYiLCAicm93"
-        "c19pZiIsICJmbGFnZ2VkIl0sCiAgICAgICAgICAgICJ2YWx1ZSI6IFtyZl91cmksIGlmX3VyaSwg"
-        "bGVuKG91dF9yZiksIGxlbihvdXRfaWYpLCBuX2ZsYWddLAogICAgICAgIH0KICAgICkKKQo="
+        "IG5vdCBydW4gMDQgLyAwNGIuIikKIyBBbGwgc3RyaW5ncyDigJQgbWl4ZWQgaW50L3N0ciBtYWtl"
+        "cyBBcnJvdyBjcmVhdGVEYXRhRnJhbWUgd2FybiBvbiBjYW1lcmEuCmRpc3BsYXkoCiAgICBwZC5E"
+        "YXRhRnJhbWUoCiAgICAgICAgewogICAgICAgICAgICAiaXRlbSI6IFsicmZfdXJpIiwgImlmX3Vy"
+        "aSIsICJyb3dzX3JmIiwgInJvd3NfaWYiLCAiZmxhZ2dlZCJdLAogICAgICAgICAgICAidmFsdWUi"
+        "OiBbcmZfdXJpLCBpZl91cmksIHN0cihsZW4ob3V0X3JmKSksIHN0cihsZW4ob3V0X2lmKSksIHN0"
+        "cihuX2ZsYWcpXSwKICAgICAgICB9CiAgICApCikK"
     ),
     "01b_streaming_autoloader": (
         "IyBEYXRhYnJpY2tzIG5vdGVib29rIHNvdXJjZQojIE1BR0lDICVtZAojIE1BR0lDICoqQ29tcHV0"

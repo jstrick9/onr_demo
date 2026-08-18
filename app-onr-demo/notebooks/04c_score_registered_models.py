@@ -396,11 +396,12 @@ print(f"IF model        : {if_uri}")
 print(f"Fund/Review/Def : {n_fund} / {n_review} / {n_defer}")
 print(f"IF flagged      : {n_flag}")
 print("Next: Analytics → Predictions + Anomalies. Do not run 04 / 04b.")
+# All strings — mixed int/str makes Arrow createDataFrame warn on camera.
 display(
     pd.DataFrame(
         {
             "item": ["rf_uri", "if_uri", "rows_rf", "rows_if", "flagged"],
-            "value": [rf_uri, if_uri, len(out_rf), len(out_if), n_flag],
+            "value": [rf_uri, if_uri, str(len(out_rf)), str(len(out_if)), str(n_flag)],
         }
     )
 )
