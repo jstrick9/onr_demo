@@ -452,8 +452,9 @@ def render_stream_controls(catalog: str = "onr_demo") -> None:
 
     st.markdown("### Stream")
     st.caption(
-        "Drops a new file on the landing Volume. Prefers a serverless Auto Loader job; "
-        "if Jobs cannot start, the SQL warehouse appends the same file to bronze.grants. "
+        "Drops a new file on the landing Volume. Prefers a serverless Auto Loader job "
+        "(availableNow — ProcessingTime is not supported on Jobs serverless). "
+        "If Jobs cannot start, the SQL warehouse appends the same file to bronze.grants. "
         "Warehouses cannot run spark.readStream / cloudFiles."
     )
     c1, c2 = st.columns([2, 1])
@@ -568,20 +569,21 @@ def render_ingestion_demo(catalog: str, schema: str):
     st.markdown("### Auto Loader")
     st.caption(
         "cloudFiles on the landing Volume. Schema evolution is addNewColumns. "
-        "Micro-batches use processingTime 30 seconds; file-arrival jobs use availableNow."
+        "Jobs serverless uses availableNow (ProcessingTime is not supported on that cluster type). "
+        "Classic clusters can still run processingTime 30-second micro-batches."
     )
     st.code(
         f'''
 spark.readStream.format("cloudFiles")
     .option("cloudFiles.format", "csv")
-    .option("cloudFiles.schemaLocation", "/Volumes/{catalog}/bronze/landing/_schemas/grants_stream_v2")
+    .option("cloudFiles.inferColumnTypes", "true")
+    .option("cloudFiles.schemaLocation", "/Volumes/{catalog}/bronze/landing/_schemas/grants_stream_v3")
     .option("cloudFiles.schemaEvolutionMode", "addNewColumns")
-    .option("cloudFiles.schemaHints", "grant_no STRING, amount_usd DOUBLE, ...")
     .option("header", "true")
     .load("/Volumes/{catalog}/bronze/landing/grants/")
     .writeStream.format("delta")
-    .option("checkpointLocation", "/Volumes/{catalog}/bronze/checkpoints/grants_stream")
-    .trigger(processingTime="30 seconds")
+    .option("checkpointLocation", "/Volumes/{catalog}/bronze/checkpoints/grants_stream_v3")
+    .trigger(availableNow=True)  # serverless / Start stream
     .toTable("`{catalog}`.`bronze`.grants")
         '''.strip(),
         language="python",

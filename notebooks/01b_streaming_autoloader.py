@@ -1,25 +1,31 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC **Compute:** all-purpose cluster **`onr demo cluster`**
+# MAGIC **Compute:** Jobs **serverless** (app Start stream) or **`onr demo cluster`**
 # MAGIC
 # MAGIC # 01b — Live Auto Loader stream (Element 3)
 # MAGIC
-# MAGIC Same `cloudFiles` path as `01_bronze_ingestion.py`, but the trigger is
-# MAGIC **`processingTime`** (near-real-time), not `availableNow` (batch).
+# MAGIC Same `cloudFiles` path as `01_bronze_ingestion.py`. Trigger depends on
+# MAGIC compute:
+# MAGIC
+# MAGIC - **Jobs serverless / Spark Connect** — `availableNow` only.
+# MAGIC   `processingTime` raises `INFINITE_STREAMING_TRIGGER_NOT_SUPPORTED`.
+# MAGIC - **Classic `onr demo cluster`** — `processingTime` 30-second micro-batches,
+# MAGIC   auto-stop after `run_for_seconds` (default 90).
+# MAGIC
+# MAGIC The app lands `batch_live_grants_stream.csv` **before** it submits this
+# MAGIC notebook, so `availableNow` drains that file and stops. That is the
+# MAGIC Start stream path.
 # MAGIC
 # MAGIC **Recording beat (do not Reset on camera):**
 # MAGIC 1. App Process already landed Live 8 + quality-fail (silver **408**).
-# MAGIC 2. **Run all** here. 30-second micro-batches; **auto-stops** after
-# MAGIC    `run_for_seconds` (default 90).
-# MAGIC 3. While it is running, copy
-# MAGIC    `/Volumes/onr_demo/bronze/landing/_staged/batch_live_grants.csv`
-# MAGIC    → `/Volumes/onr_demo/bronze/landing/grants/batch_live_grants_stream.csv`
-# MAGIC    (new filename so Auto Loader sees a new path).
-# MAGIC 4. Watch `last_2_min` / `inputRows` tick. Silver stays 408 (dedupe). Bronze
-# MAGIC    may grow — that is the stream proof.
+# MAGIC 2. App **Start stream** (preferred) or **Run all** here.
+# MAGIC 3. File on Volume:
+# MAGIC    `/Volumes/onr_demo/bronze/landing/grants/batch_live_grants_stream.csv`
+# MAGIC 4. Watch bronze tick. Silver stays 408 (dedupe). Extra bronze rows are
+# MAGIC    the stream proof.
 # MAGIC
-# MAGIC Checkpoint is **`.../checkpoints/grants_stream`** so it does not collide with
-# MAGIC the availableNow job in notebook 01.
+# MAGIC Checkpoint is **`.../checkpoints/grants_stream_v3`** so it does not collide
+# MAGIC with the availableNow job in notebook 01.
 # MAGIC
 # MAGIC After the query stops, this notebook **publishes silver + gold** (dedupe on
 # MAGIC `grant_no`). It does **not** run 02's bronze quarantine cleanup — that would
@@ -31,7 +37,7 @@
 dbutils.widgets.text("catalog", "onr_demo")
 dbutils.widgets.text("processing_seconds", "30")
 dbutils.widgets.text("run_for_seconds", "90")
-dbutils.widgets.dropdown("trigger_mode", "processingTime", ["processingTime", "availableNow"])
+dbutils.widgets.dropdown("trigger_mode", "availableNow", ["availableNow", "processingTime"])
 
 catalog = dbutils.widgets.get("catalog")
 processing_seconds = dbutils.widgets.get("processing_seconds").strip() or "30"
@@ -58,8 +64,37 @@ print(f"catalog={catalog}  trigger={trigger_mode}  interval={processing_seconds}
 from pyspark.sql.functions import col, current_timestamp, lit
 import time
 
-QUERY_NAME = "onr_grants_processingTime"
+
+def _spark_is_connect() -> bool:
+    """Serverless Jobs and Spark Connect reject ProcessingTime triggers."""
+    try:
+        if "pyspark.sql.connect" in (type(spark).__module__ or ""):
+            return True
+    except Exception:
+        pass
+    for key in (
+        "spark.databricks.service.client.enabled",
+        "spark.databricks.remote.enabled",
+    ):
+        try:
+            if str(spark.conf.get(key, "false")).lower() == "true":
+                return True
+        except Exception:
+            pass
+    return False
+
+
+requested = (trigger_mode or "availableNow").strip()
+connect = _spark_is_connect()
+if requested == "processingTime" and connect:
+    print("01b: ProcessingTime not supported on serverless/Spark Connect — using availableNow")
+    trigger_mode = "availableNow"
+else:
+    trigger_mode = requested if requested in {"availableNow", "processingTime"} else "availableNow"
+
+QUERY_NAME = f"onr_grants_{trigger_mode}"
 print("01b cloudFiles: inferColumnTypes + addNewColumns; no .schema(); no schemaHints; ckpt=v3")
+print(f"01b trigger={trigger_mode} connect={connect}")
 
 # Stop any leftover demo query so a prior failed run cannot keep streaming.
 for active in spark.streams.active:
@@ -96,15 +131,34 @@ writer = (
 
 q = None
 last_n = None
+used_available_now = trigger_mode == "availableNow"
 try:
-    if trigger_mode == "availableNow":
+    if not used_available_now:
+        try:
+            q = writer.trigger(processingTime=f"{processing_seconds} seconds").toTable(
+                f"`{catalog}`.`bronze`.grants"
+            )
+        except Exception as e:
+            err = str(e)
+            if (
+                "INFINITE_STREAMING_TRIGGER_NOT_SUPPORTED" in err
+                or "AvailableNow" in err
+                or "Once" in err
+            ):
+                print("01b: ProcessingTime rejected — falling back to availableNow:", e)
+                used_available_now = True
+                q = None
+            else:
+                raise
+    if used_available_now:
         q = writer.trigger(availableNow=True).toTable(f"`{catalog}`.`bronze`.grants")
         q.awaitTermination()
         print("availableNow stream finished")
+        try:
+            last_n = spark.table(f"`{catalog}`.`bronze`.grants").count()
+        except Exception:
+            last_n = "?"
     else:
-        q = writer.trigger(processingTime=f"{processing_seconds} seconds").toTable(
-            f"`{catalog}`.`bronze`.grants"
-        )
         print(
             f"Stream '{q.name}' started. Drop a CSV into {landing}grants/ now. "
             f"This query is bounded — it stops itself in {run_for_seconds}s. "

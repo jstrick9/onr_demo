@@ -133,7 +133,7 @@ The Streamlit app authenticates as a **different** service principal. Without gr
 | Item | When |
 |------|------|
 | `01`–`03` on the cluster | availableNow Auto Loader on Volume files |
-| `01b_streaming_autoloader.py` | Live `processingTime('30 seconds')` stream (auto-stops). Reset first so the stream checkpoint is empty. |
+| `01b_streaming_autoloader.py` | Auto Loader on the landing Volume. Jobs serverless / Start stream uses `availableNow`. Classic cluster can still run `processingTime` 30s. Reset first so the stream checkpoint is empty. |
 | `databricks bundle deploy -t poc` | After bootstrap. Deploys paused file-arrival job **and** SDP pipeline `onr-demo-grants-stream`. Does **not** create the warehouse/cluster. |
 | [STRATEGIC_PROMPTS.md](STRATEGIC_PROMPTS.md) | Key-Personnel 60–90 s answers for 11.4 (a–e). Required for Completeness. |
 | `sql/setup_uc_objects.sql` | Only if you want empty DDL without running Spark. Skip if bootstrap already ran. |

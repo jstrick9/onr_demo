@@ -46,7 +46,7 @@
 4. If silver ≠ 400: `05_reset_demo.py` on the cluster.
 5. **Run all** `04_mlflow_grant_model.py` → `onr_demo.gold.grant_large_award`.
 6. **Run all** `04b_funding_anomaly.py` → `funding_anomaly_detector` @ `champion`. If MLflow says parent missing: create `/Shared/onr-demo`, re-run from the MLflow cell.
-7. Confirm `01b_streaming_autoloader` and `04c_score_registered_models` exist in the Git folder (the app resolves them). Optional: give the app SP **CAN ATTACH TO** / **CAN RESTART** on `onr demo cluster` so **Start stream** and **Score registered models** submit the run. If not, the on-page **Open … notebook** link is the backup.
+7. Confirm `01b_streaming_autoloader` and `04c_score_registered_models` exist in the Git folder (the app resolves them). **Start stream** prefers Jobs serverless with `availableNow` and does **not** need the classic cluster if the Shared 01b publish works. Score is on the warehouse. Optional: give the app SP **CAN ATTACH TO** / **CAN RESTART** on `onr demo cluster` so the Open-notebook fallback can Run all. If job submit fails, the on-page **Open … notebook** link is the backup.
 8. Volume `_staged/batch_live_grants.csv` exists (bootstrap). The app can also land the packaged CSV.
 9. Mute notifications. 1920×1080, zoom 110–125%, hide bookmarks.
 
@@ -96,7 +96,7 @@ Same Element three. That button was the warehouse SQL path. Next is the near-rea
 
 `[DO THIS]` Click **Start stream**. Do **not** restore the baseline. If the run does not submit, use the Workspace strip — **01b stream** — Run all there, then come straight back to this page.
 
-This is Databricks Auto Loader — `cloudFiles` — with trigger `processingTime` thirty seconds, not a batch `availableNow`. The console just wrote `batch_live_grants_stream.csv` onto the landing Volume. Schema evolution is `addNewColumns`, so a new column from a legacy extract does not break the job. The stream auto-stops at ninety seconds so we cannot leave it running.
+This is Databricks Auto Loader — `cloudFiles` — incremental ingest on the landing Volume. This job is on serverless compute, so the trigger is bounded `availableNow`. Databricks does not allow a continuous `processingTime` trigger on this cluster type. The console just wrote `batch_live_grants_stream.csv` onto the landing Volume. Schema evolution is `addNewColumns`, so a new column from a legacy extract does not break the job. The query drains what is already in the folder and stops — we cannot leave a stream running.
 
 `[DO THIS]` Point at the bronze count, **last 2 min**, and **last file … ago**. Then at **Delta time travel**.
 
@@ -231,7 +231,7 @@ Tomorrow another CSV lands on the same Volume. Same gold. Same registered models
 | If the clock says | Skip and go to |
 |-------------------|----------------|
 | 4:30 and Ingest is still spinning | Keep talking (a); do not open Quality |
-| 7:30 and bronze has not ticked | Say “waiting one thirty-second micro-batch.” If still nothing, click **Open stream notebook**, then come back. At 8:30 go to **Catalog** anyway |
+| 7:30 and bronze has not ticked | Say “waiting for availableNow to drain the landing file.” If still nothing, click **Open stream notebook**, then come back. At 8:30 go to **Catalog** anyway |
 | 11:30 still on Catalog | Skip Policies; say (e) in two sentences; go to **Analytics** |
 | 16:30 and score is still running | Stay on Analytics; skip Trends; go **Portfolio** at 18:00 |
 | 20:00 still on Analytics | Skip Anomalies **or** Forecast (keep one); go **Portfolio** search |
@@ -247,7 +247,7 @@ Tomorrow another CSV lands on the same Volume. Same gold. Same registered models
 | Home says fixture | “Warehouse or app service-principal grant is cold.” Do **not** fake Ingest. Portfolio fixture only if you must. |
 | Ingest errors | “I will not debug IAM on camera.” Skip to Catalog **Open lineage**. |
 | Start stream fails | Click **Open stream notebook**. “Same Auto Loader job — the file is already on the Volume.” Come back. |
-| Bronze does not tick | “File must sit under `landing/grants/`, not `_staged`.” Wait one micro-batch. Then **Catalog**. |
+| Bronze does not tick | “File must sit under `landing/grants/`, not `_staged`.” Wait for availableNow to finish. Then **Catalog**. |
 | Open lineage is empty | “Same graph lives on `gold.grants_summary`.” Do not rebuild it in the app. |
 | Score fails | Click **Open scoring notebook**. If champion is missing: “I will not train on camera. These are last night’s gold tables.” Stay on Analytics. |
 | Brief is the template | “Foundation Models are off; the structured brief still writes `app.daily_briefs`.” |
@@ -260,7 +260,7 @@ Tomorrow another CSV lands on the same Volume. Same gold. Same registered models
 
 - This POC is IL5 or FedRAMP High.
 - The forecast is Prophet or a neural net. It is OLS.
-- The stream is Amazon Kinesis. It is Auto Loader `processingTime`.
+- The stream is Amazon Kinesis. It is Auto Loader on a Unity Catalog Volume.
 - Lineage is drawn inside Streamlit. Native lineage is Catalog Explorer.
 - “We trained the models just now.” You scored from the registry. Training was last night.
 - Drift is accuracy decay. It is feature and score mix versus the baseline snapshot.

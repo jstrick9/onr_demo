@@ -91,7 +91,7 @@ onr_demo/
 ├── notebooks/
 │   ├── 00_bootstrap.py            # RUN FIRST
 │   ├── 01_bronze_ingestion.py     # Auto Loader (availableNow)
-│   ├── 01b_streaming_autoloader.py # Auto Loader (processingTime, live stream)
+│   ├── 01b_streaming_autoloader.py # Auto Loader (availableNow on serverless)
 │   ├── 02_silver_quality.py
 │   ├── 03_gold_aggregation.py     # includes OLS forecast + trend IDs
 │   ├── 04_mlflow_grant_model.py   # RF large-award classifier (night-before)

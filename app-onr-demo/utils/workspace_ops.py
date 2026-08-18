@@ -540,6 +540,13 @@ def submit_notebook_serverless(path: str, run_name: str, params: dict | None = N
     """Submit 01b / 04c on Jobs serverless — no classic cluster required."""
     from databricks.sdk.service import jobs
 
+    params = dict(params or {})
+    # Jobs serverless / Spark Connect rejects ProcessingTime
+    # (INFINITE_STREAMING_TRIGGER_NOT_SUPPORTED). availableNow is the
+    # only legal streaming trigger on this cluster type.
+    if "01b" in path or "streaming_autoloader" in path:
+        params.setdefault("trigger_mode", "availableNow")
+
     w = _client()
     nb = jobs.NotebookTask(**_notebook_task_kwargs(path, params))
     JobEnvironment = getattr(jobs, "JobEnvironment", None)
@@ -654,7 +661,8 @@ def start_stream(catalog: str = "onr_demo") -> dict:
     # Browser link can point at the human Git folder. Job submit cannot —
     # the app SP is not that user.
     path = resolve_notebook(STREAM_NOTEBOOK)
-    run_path = runnable_notebook_path(STREAM_NOTEBOOK)
+    # Always overwrite Shared 01b so a stale processingTime copy cannot keep failing.
+    run_path = runnable_notebook_path(STREAM_NOTEBOOK, refresh=True)
     run = None
     error = None
     via = None
@@ -664,7 +672,13 @@ def start_stream(catalog: str = "onr_demo") -> dict:
             run = submit_notebook(
                 run_path,
                 run_name="onr-demo-stream",
-                params={"catalog": catalog, "processing_seconds": "30", "run_for_seconds": "90"},
+                params={
+                    "catalog": catalog,
+                    "processing_seconds": "30",
+                    "run_for_seconds": "90",
+                    # File is already landed. Serverless cannot run ProcessingTime.
+                    "trigger_mode": "availableNow",
+                },
             )
             via = (run or {}).get("via") or "cluster"
         except Exception as e:
@@ -892,7 +906,7 @@ def render_run_status(kind: str, payload: dict | None) -> None:
         st.caption(
             "SQL warehouses cannot run Auto Loader (cloudFiles). "
             "The same Volume file was appended to bronze.grants so the landing heartbeat ticks. "
-            "Open the stream notebook for the 30-second Spark micro-batch."
+            "Open the stream notebook for the Spark Auto Loader run."
         )
         landed = (payload.get("file") or {}).get("dst")
         if landed:
