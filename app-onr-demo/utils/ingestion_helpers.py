@@ -10,10 +10,8 @@ import pandas as pd
 # -------------------------------
 # INGESTION STATUS DISPLAY
 # -------------------------------
-def render_ingestion_status(cursor, catalog: str, schema: str):
-    """Display current ingestion pipeline status."""
-    st.markdown("### Pipeline")
-
+def _pipeline_status_body(cursor, catalog: str) -> None:
+    """Live bronze/financial counts — same tables Start stream writes."""
     if not cursor:
         st.caption("Pipeline metrics appear when the warehouse is connected.")
         return
@@ -37,19 +35,55 @@ def render_ingestion_status(cursor, catalog: str, schema: str):
         """
         cursor.execute(query)
         results = cursor.fetchall()
+        stream_n = _stream_bronze_count(cursor, catalog) or 0
+        before_b = (st.session_state.get("last_stream") or {}).get("before_bronze")
 
         cols = st.columns(len(results))
         for idx, (pipeline, total, last_hour, last_ingest, files) in enumerate(results):
             with cols[idx]:
+                delta = f"+{last_hour} in last hour"
+                if pipeline == "Bronze grants":
+                    if before_b is not None and total is not None:
+                        try:
+                            delta = f"{int(total) - int(before_b):+d}"
+                        except (TypeError, ValueError):
+                            pass
+                    elif stream_n:
+                        delta = f"+{stream_n} stream"
                 st.metric(
-                    label=f"📦 {pipeline}",
-                    value=f"{total:,} records",
-                    delta=f"+{last_hour} in last hour"
+                    label=pipeline,
+                    value=f"{total:,} records" if total is not None else "—",
+                    delta=delta,
                 )
                 st.caption(f"Last ingest: {last_ingest}")
                 st.caption(f"Source files: {files}")
+                if pipeline == "Bronze grants" and stream_n:
+                    st.caption(f"Stream batch on bronze: {stream_n:,} row(s).")
     except Exception:
         st.caption("Pipeline metrics appear after the first ingest.")
+
+
+def _pipeline_status_fragment():
+    from utils.db_helpers import get_connection
+
+    catalog = st.session_state.get("_onr_hb_catalog", "onr_demo")
+    _conn, cur = get_connection()
+    _pipeline_status_body(cur, catalog)
+
+
+def render_ingestion_status(cursor, catalog: str, schema: str):
+    """Display current ingestion pipeline status."""
+    st.markdown("### Pipeline")
+    st.session_state["_onr_hb_catalog"] = catalog
+    rendered = False
+    if hasattr(st, "fragment"):
+        try:
+            _pipeline_status_fragment()
+            rendered = True
+        except Exception:
+            rendered = False
+    if not rendered:
+        _pipeline_status_body(cursor, catalog)
 
 
 # -------------------------------
@@ -616,6 +650,9 @@ if hasattr(st, "fragment"):
         )
         _stream_watch_fragment = st.fragment(run_every=timedelta(seconds=8))(
             _stream_watch_fragment
+        )
+        _pipeline_status_fragment = st.fragment(run_every=timedelta(seconds=8))(
+            _pipeline_status_fragment
         )
     except Exception:
         pass
