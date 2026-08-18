@@ -467,7 +467,7 @@ def start_named_cluster() -> tuple[str | None, str]:
     except Exception as e:
         return None, (
             f"App principal cannot list clusters ({e}). "
-            "Set workspace.cluster_id or ONR_CLUSTER_ID, or use warehouse scoring."
+            "Set workspace.cluster_id or ONR_CLUSTER_ID."
         )
 
     want = ALL_PURPOSE_CLUSTER_NAME.strip().lower()
@@ -485,7 +485,7 @@ def start_named_cluster() -> tuple[str | None, str]:
         return None, (
             f"Cluster '{ALL_PURPOSE_CLUSTER_NAME}' is not visible to the app principal "
             f"(listed {len(clusters)}: {listed}). "
-            "Set workspace.cluster_id, or score on the SQL warehouse."
+            "Set workspace.cluster_id so Score can attach to onr demo cluster."
         )
     c = picked[0]
     state = str(getattr(c, "state", "") or "").upper()
@@ -537,7 +537,7 @@ def _finish_submit(w, waiter, path: str, compute: str) -> dict:
 
 
 def submit_notebook_serverless(path: str, run_name: str, params: dict | None = None) -> dict:
-    """Submit 01b / 04c on Jobs serverless — no classic cluster required."""
+    """Submit 01b on Jobs serverless. Do not use this for 04c — Score needs the cluster."""
     from databricks.sdk.service import jobs
 
     params = dict(params or {})
@@ -592,6 +592,29 @@ def submit_notebook_serverless(path: str, run_name: str, params: dict | None = N
     except Exception as e:
         errors.append(str(e))
     raise RuntimeError("Serverless job submit failed: " + " | ".join(errors[:4]))
+
+
+def submit_notebook_cluster(path: str, run_name: str, params: dict | None = None) -> dict:
+    """Submit a notebook on onr demo cluster. Never Jobs serverless."""
+    from databricks.sdk.service import jobs
+
+    cluster_id, cluster_msg = start_named_cluster()
+    if not cluster_id:
+        raise RuntimeError(
+            f"{cluster_msg} Score registered models runs 04c on onr demo cluster "
+            "(mlflow is installed there). Start that cluster and grant the app SP "
+            "CAN ATTACH TO / CAN RESTART."
+        )
+    w = _client()
+    task = jobs.SubmitTask(
+        task_key="run",
+        existing_cluster_id=cluster_id,
+        notebook_task=jobs.NotebookTask(**_notebook_task_kwargs(path, params)),
+    )
+    waiter = w.jobs.submit(run_name=run_name, tasks=[task])
+    rec = _finish_submit(w, waiter, path, cluster_msg)
+    rec["via"] = "cluster"
+    return rec
 
 
 def submit_notebook(path: str, run_name: str, params: dict | None = None) -> dict:
@@ -745,44 +768,29 @@ def start_stream(catalog: str = "onr_demo") -> dict:
 
 
 def start_score(catalog: str = "onr_demo") -> dict:
-    """Score UC models on the SQL warehouse. Cluster notebook is fallback only."""
+    """Score UC models by running 04c on onr demo cluster. Not serverless."""
     path = resolve_notebook(SCORE_NOTEBOOK)
-    warehouse_error = None
+    run_path = runnable_notebook_path(SCORE_NOTEBOOK, refresh=True)
+    if not run_path:
+        raise RuntimeError(
+            "App principal cannot read 04c. Open the scoring notebook on "
+            "onr demo cluster and Run all, or grant the app CAN READ on the Shared copy."
+        )
     try:
-        from utils.db_helpers import get_connection
-        from utils.score_models import score_registered_models
-
-        _conn, cursor = get_connection()
-        if not cursor:
-            raise RuntimeError("SQL warehouse is not connected")
-        scored = score_registered_models(cursor, catalog)
+        run = submit_notebook_cluster(
+            run_path, run_name="onr-demo-score", params={"catalog": catalog}
+        )
         return {
-            "run": None,
-            "via": "warehouse",
+            "run": run,
+            "via": "cluster",
             "notebook": path,
-            "scored": scored,
         }
     except Exception as e:
-        warehouse_error = e
-
-    run_path = runnable_notebook_path(SCORE_NOTEBOOK, refresh=True)
-    if run_path:
-        try:
-            run = submit_notebook(run_path, run_name="onr-demo-score", params={"catalog": catalog})
-            return {
-                "run": run,
-                "via": "cluster",
-                "notebook": path,
-                "warehouse_error": str(warehouse_error),
-            }
-        except Exception as e2:
-            raise RuntimeError(
-                f"Warehouse scoring failed ({warehouse_error}). "
-                f"Cluster job also failed ({e2}). "
-                "Open the scoring notebook on **onr demo cluster**, or grant the app "
-                "EXECUTE ON FUNCTION for the UC models and CAN ATTACH TO the cluster."
-            ) from e2
-    raise RuntimeError(str(warehouse_error))
+        raise RuntimeError(
+            f"Could not submit 04c on onr demo cluster ({e}). "
+            "Start that cluster and grant the app SP CAN ATTACH TO / CAN RESTART. "
+            "Or open the scoring notebook and Run all as yourself."
+        ) from e
 
 
 PAGE_LINKS = {
@@ -944,6 +952,10 @@ def render_run_status(kind: str, payload: dict | None) -> None:
         bits += f" · {result}"
     if run_id:
         bits += f" · run {run_id}"
+    cluster = (run.get("cluster") or payload.get("cluster") or "")
+    if payload.get("via") == "cluster" or (cluster and "serverless" not in str(cluster).lower()):
+        if cluster:
+            bits += f" · {cluster}"
     st.caption(bits)
     if page:
         st.link_button("Open run", page)
