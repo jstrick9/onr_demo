@@ -123,32 +123,30 @@ try:
             print("Fell back to", experiment_path)
 
     registered = f"{catalog}.gold.grant_large_award"
-    with mlflow.start_run(run_name="rf-large-award"):
+    run_id = None
+    with mlflow.start_run(run_name="rf-large-award") as run:
         mlflow.log_params({
             "n_estimators": 80,
             "max_depth": 8,
             "threshold_usd": 1_000_000,
         })
         mlflow.log_metrics({"accuracy": acc, "f1": f1})
-        mlflow.sklearn.log_model(
-            clf,
-            artifact_path="model",
-            registered_model_name=registered,
-        )
+        mlflow.sklearn.log_model(clf, artifact_path="model")
+        run_id = run.info.run_id
+    print("MLflow run", run_id)
     try:
         from mlflow.tracking import MlflowClient
 
+        mv = mlflow.register_model(f"runs:/{run_id}/model", registered)
         client = MlflowClient(registry_uri="databricks-uc")
-        found = list(client.search_model_versions(f"name='{registered}'"))
-        found.sort(key=lambda v: int(getattr(v, "version", 0) or 0), reverse=True)
-        if found:
-            client.set_registered_model_alias(
-                name=registered, alias="champion", version=str(found[0].version)
-            )
-            print(f"alias champion -> {found[0].version}")
+        client.set_registered_model_alias(
+            name=registered, alias="champion", version=str(mv.version)
+        )
+        print(f"Registered {registered} v{mv.version} @champion")
     except Exception as alias_e:
-        print("Could not set champion alias:", alias_e)
-    print(f"Logged to MLflow and registered {registered}")
+        print("UC register / champion alias skipped:", alias_e)
+        print(f"Score can still load runs:/{run_id}/model")
+    print(f"Logged to MLflow experiment {experiment_path}")
 except Exception as e:
     print("MLflow optional — skipped:", e)
     print("gold.grant_predictions / gold.model_metrics still written above.")

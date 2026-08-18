@@ -123,10 +123,29 @@ def _uc_model_uris(name: str) -> list[str]:
             )
         except Exception:
             pass
-    else:
-        versions = list(range(1, 9))
     for ver in versions:
         uris.append(f"models:/{name}/{ver}")
+    return uris
+
+
+def _experiment_run_uris(experiment_paths: list[str], artifact: str = "model") -> list[str]:
+    """Load the night-before run when UC has a name but no versions."""
+    import mlflow
+
+    uris: list[str] = []
+    for path in experiment_paths:
+        try:
+            df = mlflow.search_runs(
+                experiment_names=[path],
+                order_by=["start_time DESC"],
+                max_results=8,
+            )
+        except Exception:
+            continue
+        if df is None or getattr(df, "empty", True):
+            continue
+        for run_id in df["run_id"].tolist():
+            uris.append(f"runs:/{run_id}/{artifact}")
     return uris
 
 
@@ -218,8 +237,27 @@ def score_registered_models(cursor, catalog: str) -> dict:
     if grants.empty or len(grants) < 8:
         raise RuntimeError("silver.grants is empty — ingest the portfolio first")
 
-    rf, rf_uri = _load_sklearn(_uc_model_uris(f"{catalog}.gold.grant_large_award"))
-    ife, if_uri = _load_sklearn(_uc_model_uris(f"{catalog}.gold.funding_anomaly_detector"))
+    _configure_mlflow()
+    rf, rf_uri = _load_sklearn(
+        _uc_model_uris(f"{catalog}.gold.grant_large_award")
+        + _experiment_run_uris(
+            [
+                "/Shared/onr-demo/grant-size",
+                "/Workspace/Shared/onr-demo/grant-size",
+                "/Shared/grant-size-onr-demo",
+            ]
+        )
+    )
+    ife, if_uri = _load_sklearn(
+        _uc_model_uris(f"{catalog}.gold.funding_anomaly_detector")
+        + _experiment_run_uris(
+            [
+                "/Shared/onr-demo/funding-anomaly",
+                "/Workspace/Shared/onr-demo/funding-anomaly",
+                "/Shared/funding-anomaly-onr-demo",
+            ]
+        )
+    )
 
     pdf = grants.dropna(subset=["amount_usd", "program_area", "fiscal_year"]).copy()
     feat_cols = ["fiscal_year", "program_area", "org_unit"]

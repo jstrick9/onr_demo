@@ -120,6 +120,30 @@ if n_feat < 8:
 
 # COMMAND ----------
 
+def _run_uris(experiment_paths, artifact="model"):
+    """Night-before 04 / 04b log runs even when UC register creates no version."""
+    import mlflow
+
+    mlflow.set_registry_uri("databricks-uc")
+    uris = []
+    for path in experiment_paths:
+        try:
+            df = mlflow.search_runs(
+                experiment_names=[path],
+                order_by=["start_time DESC"],
+                max_results=8,
+            )
+        except Exception as e:
+            print("experiment search", path, e)
+            continue
+        if df is None or getattr(df, "empty", True):
+            continue
+        for run_id in df["run_id"].tolist():
+            uris.append(f"runs:/{run_id}/{artifact}")
+            print(f"Candidate {path} -> runs:/{run_id}/{artifact}")
+    return uris
+
+
 def _uc_model_uris(name: str):
     """Unity Catalog has no models:/name/latest. Aliases, then numeric versions."""
     uris = [f"models:/{name}@champion", f"models:/{name}@production"]
@@ -141,9 +165,6 @@ def _uc_model_uris(name: str):
                 print(f"Could not set {name}@champion ({e}); will load version {versions[0]}")
     except Exception as e:
         print("UC version lookup skipped:", e)
-    if not versions:
-        versions = list(range(1, 9))
-        print(f"No version list for {name}; trying models:/{name}/1..8")
     for ver in versions:
         uris.append(f"models:/{name}/{ver}")
     return uris
@@ -169,12 +190,29 @@ def _load_first(uris):
         try:
             return _load_sklearn(uri), uri
         except Exception as e:
-            errors.append(f"{uri}: {e}")
+            errors.append(f"{uri}: {str(e).splitlines()[0]}")
     raise RuntimeError(
-        "Could not load a registered model. Night-before 04 / 04b did not register. "
+        "Could not load a registered model or a night-before MLflow run. "
         "Do not train on camera. Open Analytics on the existing gold tables.\n"
         + "\n".join(errors)
     )
+
+
+def _maybe_register(name: str, uri: str) -> None:
+    if not uri.startswith("runs:/"):
+        return
+    try:
+        import mlflow
+        from mlflow.tracking import MlflowClient
+
+        mlflow.set_registry_uri("databricks-uc")
+        mv = mlflow.register_model(uri, name)
+        MlflowClient(registry_uri="databricks-uc").set_registered_model_alias(
+            name=name, alias="champion", version=str(mv.version)
+        )
+        print(f"Registered {name} v{mv.version} @champion from {uri}")
+    except Exception as e:
+        print("Register from run skipped:", e)
 
 # COMMAND ----------
 
@@ -183,7 +221,17 @@ def _load_first(uris):
 
 # COMMAND ----------
 
-rf, rf_uri = _load_first(_uc_model_uris(f"{catalog}.gold.grant_large_award"))
+rf, rf_uri = _load_first(
+    _uc_model_uris(f"{catalog}.gold.grant_large_award")
+    + _run_uris(
+        [
+            "/Shared/onr-demo/grant-size",
+            "/Workspace/Shared/onr-demo/grant-size",
+            "/Shared/grant-size-onr-demo",
+        ]
+    )
+)
+_maybe_register(f"{catalog}.gold.grant_large_award", rf_uri)
 
 pdf = spark.table(f"`{catalog}`.`silver`.grants").where("_is_active = true").toPandas()
 pdf = pdf.dropna(subset=["amount_usd", "program_area", "fiscal_year"])
@@ -235,7 +283,17 @@ print("RF source:", rf_uri)
 
 # COMMAND ----------
 
-ife, if_uri = _load_first(_uc_model_uris(f"{catalog}.gold.funding_anomaly_detector"))
+ife, if_uri = _load_first(
+    _uc_model_uris(f"{catalog}.gold.funding_anomaly_detector")
+    + _run_uris(
+        [
+            "/Shared/onr-demo/funding-anomaly",
+            "/Workspace/Shared/onr-demo/funding-anomaly",
+            "/Shared/funding-anomaly-onr-demo",
+        ]
+    )
+)
+_maybe_register(f"{catalog}.gold.funding_anomaly_detector", if_uri)
 
 df = spark.table(f"`{catalog}`.`gold`.funding_features").toPandas()
 FEATURES_NUM = ["award_amount", "yoy_growth_ratio", "execution_rate", "amount_vs_area_median"]
