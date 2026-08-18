@@ -325,6 +325,16 @@ def notebook_accessible(path: str | None) -> bool:
 def _local_notebook_bytes(filename: str) -> bytes | None:
     """Find a packaged notebook even when Databricks Apps remaps __file__."""
     stem = filename.replace(".py", "")
+    try:
+        import base64
+
+        from utils.packaged_nb import NOTEBOOKS
+
+        blob = NOTEBOOKS.get(stem)
+        if blob:
+            return base64.b64decode(blob)
+    except Exception:
+        pass
     name = f"{stem}.py"
     here = Path(__file__).resolve()
     cands: list[Path] = [
