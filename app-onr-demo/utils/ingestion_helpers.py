@@ -13,14 +13,13 @@ import pandas as pd
 def render_ingestion_status(cursor, catalog: str, schema: str):
     """Display current ingestion pipeline status."""
     st.markdown("### Pipeline")
-    
+
     if not cursor:
         st.caption("Pipeline metrics appear when the warehouse is connected.")
         return
     try:
-        # Get ingestion metrics
         query = f"""
-        SELECT 
+        SELECT
             'Bronze grants' as pipeline,
             COUNT(*) as total_records,
             SUM(CASE WHEN _ingest_time >= CURRENT_TIMESTAMP() - INTERVAL 1 HOUR THEN 1 ELSE 0 END) as last_hour,
@@ -28,7 +27,7 @@ def render_ingestion_status(cursor, catalog: str, schema: str):
             COUNT(DISTINCT _source_file) as source_files
         FROM `{catalog}`.`bronze`.grants
         UNION ALL
-        SELECT 
+        SELECT
             'Financial' as pipeline,
             COUNT(*) as total_records,
             SUM(CASE WHEN _ingest_time >= CURRENT_TIMESTAMP() - INTERVAL 1 HOUR THEN 1 ELSE 0 END) as last_hour,
@@ -38,7 +37,7 @@ def render_ingestion_status(cursor, catalog: str, schema: str):
         """
         cursor.execute(query)
         results = cursor.fetchall()
-        
+
         cols = st.columns(len(results))
         for idx, (pipeline, total, last_hour, last_ingest, files) in enumerate(results):
             with cols[idx]:
@@ -49,7 +48,7 @@ def render_ingestion_status(cursor, catalog: str, schema: str):
                 )
                 st.caption(f"Last ingest: {last_ingest}")
                 st.caption(f"Source files: {files}")
-    except Exception as e:
+    except Exception:
         st.caption("Pipeline metrics appear after the first ingest.")
 
 
@@ -167,7 +166,7 @@ def render_quality_checks(cursor, catalog: str, schema: str):
 def render_schema_evolution(cursor, catalog: str, schema: str):
     """Display schema evolution history."""
     st.markdown("### 🔄 Schema Evolution")
-    
+
     if not cursor:
         st.info("Schema evolution tracking requires Delta table history access.")
         return
@@ -177,7 +176,7 @@ def render_schema_evolution(cursor, catalog: str, schema: str):
         """
         cursor.execute(query)
         history = cursor.fetchall()
-        
+
         if history:
             colnames = [str(d[0]).lower() for d in (cursor.description or [])]
 
@@ -201,7 +200,7 @@ def render_schema_evolution(cursor, catalog: str, schema: str):
                         st.json(params)
         else:
             st.info("No schema evolution history available.")
-    except Exception as e:
+    except Exception:
         st.info("Schema evolution tracking requires Delta table history access.")
 
 
@@ -230,6 +229,21 @@ def _human_ago(ts) -> str:
         return f"{sec // 3600}h ago"
     except Exception:
         return str(ts)[:19]
+
+
+def _stream_bronze_count(cursor, catalog: str):
+    if not cursor:
+        return None
+    try:
+        cursor.execute(
+            f"""
+            SELECT COUNT(*) FROM `{catalog}`.`bronze`.grants
+            WHERE coalesce(_batch_id, batch_id) = 'stream-demo-2026'
+            """
+        )
+        return int(cursor.fetchone()[0])
+    except Exception:
+        return None
 
 
 def _bronze_pulse(cursor, catalog: str) -> dict:
@@ -267,7 +281,8 @@ def _heartbeat_body(cursor, catalog: str) -> None:
     last2 = pulse["last2"]
     n = pulse["n"]
     silver_n = grant_count(cursor, catalog) if cursor else None
-    streaming = bool(st.session_state.get("last_stream"))
+    stream_n = _stream_bronze_count(cursor, catalog)
+    streaming = bool(st.session_state.get("last_stream")) or bool(stream_n)
     try:
         streaming = streaming or (last2 not in {None, "—"} and int(last2) > 0)
     except (TypeError, ValueError):
@@ -288,15 +303,21 @@ def _heartbeat_body(cursor, catalog: str) -> None:
         delta = None
     c1.metric("Bronze", f"{n}")
     c2.metric("Silver", f"{silver_n:,}" if silver_n is not None else "—")
-    held = None
-    if isinstance(n, int) and silver_n is not None:
+    if stream_n:
+        c3.metric("Stream rows", f"{stream_n:,}", delta=f"+{stream_n}")
+    elif isinstance(n, int) and silver_n is not None:
         held = n - int(silver_n)
         c3.metric("Quarantine gap", f"{held}", help="Bronze minus silver. Should be 0 — quarantine never lands in bronze.")
     else:
         c3.metric("Last 2 min", f"{last2}", delta=delta)
     c4.metric("Last file", pulse["ago"])
     provenance_note("bronze.grants", catalog, when=pulse["last"])
-    if isinstance(n, int) and silver_n is not None:
+    if isinstance(n, int) and silver_n is not None and stream_n:
+        st.caption(
+            f"Bronze {n:,} includes {stream_n:,} stream-demo-2026 proof row(s). "
+            f"Silver {silver_n:,} after grant_no dedupe."
+        )
+    elif isinstance(n, int) and silver_n is not None:
         st.caption(
             f"Bronze {n:,} and silver {silver_n:,} should match. "
             "Quarantine (empty / dup / amt) never enters bronze — see Quality / app.quarantine_log."
@@ -325,17 +346,6 @@ def _streaming_heartbeat_fragment():
     catalog = st.session_state.get("_onr_hb_catalog", "onr_demo")
     _conn, cur = get_connection()
     _heartbeat_body(cur, catalog)
-
-
-if hasattr(st, "fragment"):
-    try:
-        from datetime import timedelta
-
-        _streaming_heartbeat_fragment = st.fragment(run_every=timedelta(seconds=8))(
-            _streaming_heartbeat_fragment
-        )
-    except Exception:
-        pass
 
 
 def render_time_travel_compare(cursor=None, catalog: str = "onr_demo"):
@@ -405,37 +415,186 @@ def render_time_travel_compare(cursor=None, catalog: str = "onr_demo"):
 
 
 def _show_ingest_pulse(cursor, catalog: str) -> None:
-    from utils.demo_actions import grant_count, load_hold_queue
+    from utils.demo_actions import bronze_count, grant_count, load_hold_queue
     from utils.ui import hold_tray, provenance_note
 
     now = grant_count(cursor, catalog)
-    last = st.session_state.get("last_ingest") or {}
+    bronze_n = None
+    if cursor:
+        try:
+            bronze_n = bronze_count(cursor, catalog)
+        except Exception:
+            bronze_n = None
+    stream = st.session_state.get("last_stream") or {}
+    last = dict(st.session_state.get("last_ingest") or {})
+    if last.get("before") is None and stream.get("before_silver") is not None:
+        last["before"] = stream.get("before_silver")
+        last["after"] = stream.get("after_silver")
     holds = last.get("holds") or load_hold_queue(cursor, catalog)
     held = last.get("held")
     if held is None:
         held = len(holds) if holds else None
-    c1, c2 = st.columns(2)
+    stream_n = _stream_bronze_count(cursor, catalog)
+    if stream_n is None:
+        stream_n = stream.get("stream_rows")
+    c1, c2, c3 = st.columns(3)
     delta = None
     if now is not None and last.get("before") is not None:
         try:
             delta = f"{int(now) - int(last['before']):+d}"
         except (TypeError, ValueError):
             delta = None
-    with c1:
-        c1.metric("Active grants", f"{now:,}" if now is not None else "—", delta=delta)
+    bronze_delta = None
+    if bronze_n is not None and stream.get("before_bronze") is not None:
+        try:
+            bronze_delta = f"{int(bronze_n) - int(stream['before_bronze']):+d}"
+        except (TypeError, ValueError):
+            bronze_delta = None
+    elif bronze_n is not None and last.get("bronze") is not None:
+        try:
+            bronze_delta = f"{int(bronze_n) - int(last['bronze']):+d}"
+        except (TypeError, ValueError):
+            bronze_delta = None
+    c1.metric("Active grants", f"{now:,}" if now is not None else "—", delta=delta)
+    c2.metric("Bronze", f"{bronze_n:,}" if bronze_n is not None else "—", delta=bronze_delta)
+    if held:
+        c3.metric("Quarantined", f"{int(held):,}", delta=f"+{int(held)}")
+    else:
+        c3.metric("Quarantined", "0")
     warns = last.get("warnings") or []
-    with c2:
-        if held:
-            c2.metric("Quarantined", f"{int(held):,}", delta=f"+{int(held)}")
-        else:
-            c2.metric("Quarantined", "0")
     if warns:
         st.caption(f"{len(warns)} warning(s) published with a finding — see Quality.")
     provenance_note("silver.grants", catalog)
     if last.get("before") is not None and last.get("after") is not None:
         st.caption(f"Active grants {last['before']} → {last['after']}")
+    if stream_n:
+        before_s = stream.get("before_silver")
+        after_s = stream.get("after_silver") if stream.get("after_silver") is not None else now
+        if before_s is not None and after_s is not None and int(after_s) == int(before_s):
+            if bronze_n is not None:
+                st.caption(
+                    f"Stream published. Silver {after_s:,} unchanged (dedupe on grant_no). "
+                    f"Bronze {bronze_n:,}."
+                )
+            else:
+                st.caption(f"Stream published. Silver {after_s:,} unchanged (dedupe on grant_no).")
+        elif after_s is not None and before_s is not None:
+            st.caption(f"Stream published. Active grants {before_s} → {after_s}.")
+        else:
+            st.caption(f"Stream batch on bronze: {stream_n:,} row(s).")
     if holds:
         hold_tray(holds)
+
+
+def _ingest_pulse_fragment():
+    from utils.db_helpers import get_connection
+
+    catalog = st.session_state.get("_onr_hb_catalog", "onr_demo")
+    _conn, cur = get_connection()
+    _show_ingest_pulse(cur, catalog)
+
+
+def _apply_stream_snapshot(catalog: str, payload: dict) -> dict:
+    """Write live silver/bronze counts onto last_stream and last_ingest."""
+    from utils.db_helpers import get_connection
+    from utils.demo_actions import bronze_count, grant_count
+
+    _conn, cur = get_connection()
+    after_s = grant_count(cur, catalog) if cur else None
+    after_b = None
+    stream_n = None
+    if cur:
+        try:
+            after_b = bronze_count(cur, catalog)
+        except Exception:
+            after_b = None
+        stream_n = _stream_bronze_count(cur, catalog)
+    payload["after_silver"] = after_s
+    payload["after_bronze"] = after_b
+    payload["stream_rows"] = stream_n
+    payload["_settled"] = True
+    li = dict(st.session_state.get("last_ingest") or {})
+    if li.get("before") is None:
+        li["before"] = payload.get("before_silver")
+    li["after"] = after_s
+    if after_b is not None:
+        li["bronze"] = after_b
+    li.setdefault("holds", [])
+    li.setdefault("held", 0)
+    li.setdefault("warnings", [])
+    if not li.get("via"):
+        li["via"] = "stream"
+    st.session_state["last_ingest"] = li
+    return payload
+
+
+def _stream_run_terminal(payload: dict) -> bool:
+    from utils.workspace_ops import get_run_state
+
+    if payload.get("_settled"):
+        return True
+    if payload.get("via") == "warehouse" or (
+        payload.get("warehouse") and not (payload.get("run") or {}).get("run_id")
+    ):
+        return True
+    run = payload.get("run") or {}
+    run_id = run.get("run_id")
+    if not run_id:
+        return bool(payload.get("file"))
+    live = get_run_state(run_id)
+    result = (live.get("result") or "").upper()
+    state = (live.get("state") or "").upper()
+    payload["_run_state"] = state
+    payload["_run_result"] = result
+    if result in {
+        "SUCCESS",
+        "SUCCEEDED",
+        "FAILED",
+        "CANCELED",
+        "CANCELLED",
+        "TIMEDOUT",
+        "TIMED_OUT",
+        "EXCLUDED",
+    }:
+        return True
+    if state in {"TERMINATED", "SKIPPED", "INTERNAL_ERROR"} and result:
+        return True
+    return False
+
+
+def _settle_stream_if_done(catalog: str) -> None:
+    payload = st.session_state.get("last_stream") or {}
+    if not payload or payload.get("_settled"):
+        return
+    if not _stream_run_terminal(payload):
+        st.session_state["last_stream"] = payload
+        return
+    st.session_state["last_stream"] = _apply_stream_snapshot(catalog, payload)
+    st.rerun()
+
+
+def _stream_watch_fragment():
+    catalog = st.session_state.get("_onr_stream_catalog") or st.session_state.get(
+        "_onr_hb_catalog", "onr_demo"
+    )
+    _settle_stream_if_done(catalog)
+
+
+if hasattr(st, "fragment"):
+    try:
+        from datetime import timedelta
+
+        _streaming_heartbeat_fragment = st.fragment(run_every=timedelta(seconds=8))(
+            _streaming_heartbeat_fragment
+        )
+        _ingest_pulse_fragment = st.fragment(run_every=timedelta(seconds=8))(
+            _ingest_pulse_fragment
+        )
+        _stream_watch_fragment = st.fragment(run_every=timedelta(seconds=8))(
+            _stream_watch_fragment
+        )
+    except Exception:
+        pass
 
 
 def render_stream_controls(catalog: str = "onr_demo") -> None:
@@ -457,17 +616,35 @@ def render_stream_controls(catalog: str = "onr_demo") -> None:
         "If Jobs cannot start, the SQL warehouse appends the same file to bronze.grants. "
         "Warehouses cannot run spark.readStream / cloudFiles."
     )
+    st.session_state["_onr_stream_catalog"] = catalog
+    st.session_state["_onr_hb_catalog"] = catalog
     c1, c2 = st.columns([2, 1])
     with c1:
         if st.button("Start stream", type="primary", key="start_stream"):
             try:
+                from utils.db_helpers import get_connection
+                from utils.demo_actions import bronze_count, grant_count
+
+                _conn, cur = get_connection()
+                before_s = grant_count(cur, catalog) if cur else None
+                before_b = None
+                if cur:
+                    try:
+                        before_b = bronze_count(cur, catalog)
+                    except Exception:
+                        before_b = None
                 result = start_stream(catalog)
+                result["before_silver"] = before_s
+                result["before_bronze"] = before_b
+                result["_settled"] = False
+                if result.get("via") == "warehouse":
+                    result = _apply_stream_snapshot(catalog, result)
                 st.session_state["last_stream"] = result
                 if result.get("error") and not result.get("file") and not result.get("warehouse"):
                     st.error(result["error"])
                 elif result.get("via") == "warehouse":
                     ins = result.get("inserted")
-                    bronze = result.get("bronze")
+                    bronze = result.get("after_bronze") or result.get("bronze")
                     st.success(
                         f"File landed and loaded on the SQL warehouse. "
                         f"Bronze {bronze} · +{ins}."
@@ -475,14 +652,25 @@ def render_stream_controls(catalog: str = "onr_demo") -> None:
                     st.rerun()
                 elif result.get("run"):
                     st.success("Stream file is on the Volume. Auto Loader job submitted.")
+                    st.rerun()
                 else:
                     st.success("Stream file is on the Volume.")
+                    st.rerun()
             except Exception as e:
                 st.error(f"Stream did not start: {e}")
     with c2:
         path = resolve_notebook(STREAM_NOTEBOOK)
         workspace_action_row("Open stream notebook", notebook_url(path))
     render_run_status("Stream", st.session_state.get("last_stream"))
+    watched = False
+    if hasattr(st, "fragment"):
+        try:
+            _stream_watch_fragment()
+            watched = True
+        except Exception:
+            watched = False
+    if not watched:
+        _settle_stream_if_done(catalog)
     provenance_note("bronze.grants", catalog)
 
 
@@ -496,7 +684,16 @@ def render_file_picker_and_reset(cursor, catalog: str):
     import pandas as pd
 
     st.markdown("### Inbound files")
-    _show_ingest_pulse(cursor, catalog)
+    st.session_state["_onr_hb_catalog"] = catalog
+    pulsed = False
+    if hasattr(st, "fragment"):
+        try:
+            _ingest_pulse_fragment()
+            pulsed = True
+        except Exception:
+            pulsed = False
+    if not pulsed:
+        _show_ingest_pulse(cursor, catalog)
 
     packs = st.multiselect(
         "Queued files",
@@ -548,6 +745,7 @@ def render_file_picker_and_reset(cursor, catalog: str):
                     try:
                         result = reset_to_seed_sql(cursor, catalog)
                         st.session_state.pop("last_ingest", None)
+                        st.session_state.pop("last_stream", None)
                         st.success(
                             f"Baseline restored. Active grants {result['before_silver']} → {result['after_silver']}. "
                             f"Silver rebuilt. Quarantine log empty."

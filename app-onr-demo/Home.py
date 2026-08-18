@@ -61,6 +61,9 @@ try:
     from utils.ui import provenance_note
 
     last = st.session_state.get("last_ingest") or {}
+    stream = st.session_state.get("last_stream") or {}
+    if last.get("before") is None and stream.get("before_silver") is not None:
+        last = {**last, "before": stream.get("before_silver")}
     grant_delta = None
     if last.get("before") is not None and n_grants is not None:
         try:
