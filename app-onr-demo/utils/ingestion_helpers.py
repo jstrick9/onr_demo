@@ -564,15 +564,20 @@ def _stream_run_terminal(payload: dict) -> bool:
 
 def clear_stream_run_chrome() -> None:
     """Drop Start-stream run buttons so Restore baseline does not keep the last job."""
-    st.session_state["_stream_epoch"] = int(st.session_state.get("_stream_epoch") or 0) + 1
+    st.session_state["_stream_epoch"] = _current_stream_epoch() + 1
     st.session_state.pop("last_stream", None)
     st.session_state.pop("last_ingest", None)
 
 
+def _current_stream_epoch() -> int:
+    return int(st.session_state.get("_stream_epoch") or 0)
+
+
 def _stream_payload_current(payload: dict | None) -> bool:
+    """True when last_stream belongs to this console session (not a pre-reset job)."""
     if not payload:
         return False
-    return payload.get("_epoch") == st.session_state.get("_stream_epoch")
+    return int(payload.get("_epoch") or 0) == _current_stream_epoch()
 
 
 def _settle_stream_if_done(catalog: str) -> None:
@@ -661,7 +666,7 @@ def render_stream_controls(catalog: str = "onr_demo") -> None:
                 result["before_silver"] = before_s
                 result["before_bronze"] = before_b
                 result["_settled"] = False
-                result["_epoch"] = int(st.session_state.get("_stream_epoch") or 0)
+                result["_epoch"] = _current_stream_epoch()
                 if result.get("via") == "warehouse":
                     result = _apply_stream_snapshot(catalog, result)
                 st.session_state["last_stream"] = result
