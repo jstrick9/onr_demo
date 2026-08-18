@@ -69,24 +69,59 @@ def _configure_mlflow():
     return mlflow
 
 
-def _uc_model_uris(name: str) -> list[str]:
-    """Unity Catalog has no models:/name/latest. Prefer @champion, then max version."""
-    uris = [f"models:/{name}@champion", f"models:/{name}@production"]
+def _uc_versions(name: str) -> list[int]:
+    """Best-effort list of UC model versions. App SP often cannot search."""
+    found: set[int] = set()
+    try:
+        from databricks.sdk import WorkspaceClient
+
+        w = WorkspaceClient()
+        lister = None
+        if hasattr(w, "model_versions") and hasattr(w.model_versions, "list"):
+            lister = lambda: w.model_versions.list(full_name=name)
+        elif hasattr(w, "registered_models") and hasattr(w.registered_models, "list_versions"):
+            lister = lambda: w.registered_models.list_versions(full_name=name)
+        if lister:
+            for rec in lister() or []:
+                ver = getattr(rec, "version", None)
+                if ver is not None:
+                    found.add(int(ver))
+    except Exception:
+        pass
     try:
         from mlflow.tracking import MlflowClient
 
         client = MlflowClient(registry_uri="databricks-uc")
-        found = list(client.search_model_versions(f"name='{name}'"))
-        found.sort(key=lambda v: int(getattr(v, "version", 0) or 0), reverse=True)
-        if found:
-            latest = str(found[0].version)
-            uris.append(f"models:/{name}/{latest}")
+        for filt in (f"name='{name}'", f"name = '{name}'"):
             try:
-                client.set_registered_model_alias(name=name, alias="champion", version=latest)
+                for rec in client.search_model_versions(filt) or []:
+                    ver = getattr(rec, "version", None)
+                    if ver is not None:
+                        found.add(int(ver))
             except Exception:
-                pass
+                continue
     except Exception:
         pass
+    return sorted(found, reverse=True)
+
+
+def _uc_model_uris(name: str) -> list[str]:
+    """Unity Catalog has no models:/name/latest. Aliases, then numeric versions."""
+    uris = [f"models:/{name}@champion", f"models:/{name}@production"]
+    versions = _uc_versions(name)
+    if versions:
+        try:
+            from mlflow.tracking import MlflowClient
+
+            MlflowClient(registry_uri="databricks-uc").set_registered_model_alias(
+                name=name, alias="champion", version=str(versions[0])
+            )
+        except Exception:
+            pass
+    else:
+        versions = list(range(1, 9))
+    for ver in versions:
+        uris.append(f"models:/{name}/{ver}")
     return uris
 
 
@@ -104,7 +139,15 @@ def _load_sklearn(uris: list[str]):
             model = mlflow.sklearn.load_model(uri)
             return model, uri
         except Exception as e:
-            errors.append(f"{uri}: {e}")
+            try:
+                import mlflow.pyfunc
+
+                wrapped = mlflow.pyfunc.load_model(uri)
+                inner = getattr(wrapped, "_model_impl", None)
+                model = getattr(inner, "sklearn_model", None) or getattr(inner, "_model_impl", None) or wrapped
+                return model, uri
+            except Exception:
+                errors.append(f"{uri}: {str(e).splitlines()[0]}")
     raise RuntimeError(
         "Could not load a registered Unity Catalog model. "
         "Night-before 04 / 04b must have registered the models, and the app "

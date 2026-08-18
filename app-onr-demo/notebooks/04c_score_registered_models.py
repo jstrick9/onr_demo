@@ -121,24 +121,31 @@ if n_feat < 8:
 # COMMAND ----------
 
 def _uc_model_uris(name: str):
-    """Unity Catalog has no models:/name/latest. Prefer @champion, then max version."""
+    """Unity Catalog has no models:/name/latest. Aliases, then numeric versions."""
     uris = [f"models:/{name}@champion", f"models:/{name}@production"]
+    versions = []
     try:
         from mlflow.tracking import MlflowClient
 
         client = MlflowClient(registry_uri="databricks-uc")
-        found = list(client.search_model_versions(f"name='{name}'"))
-        found.sort(key=lambda v: int(getattr(v, "version", 0) or 0), reverse=True)
-        if found:
-            latest = str(found[0].version)
-            uris.append(f"models:/{name}/{latest}")
+        found = list(client.search_model_versions(f"name='{name}'") or [])
+        versions = sorted(
+            {int(getattr(v, "version", 0) or 0) for v in found if getattr(v, "version", None)},
+            reverse=True,
+        )
+        if versions:
             try:
-                client.set_registered_model_alias(name=name, alias="champion", version=latest)
-                print(f"Set {name}@champion -> {latest}")
+                client.set_registered_model_alias(name=name, alias="champion", version=str(versions[0]))
+                print(f"Set {name}@champion -> {versions[0]}")
             except Exception as e:
-                print(f"Could not set {name}@champion ({e}); will load version {latest}")
+                print(f"Could not set {name}@champion ({e}); will load version {versions[0]}")
     except Exception as e:
         print("UC version lookup skipped:", e)
+    if not versions:
+        versions = list(range(1, 9))
+        print(f"No version list for {name}; trying models:/{name}/1..8")
+    for ver in versions:
+        uris.append(f"models:/{name}/{ver}")
     return uris
 
 
