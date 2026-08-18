@@ -84,12 +84,14 @@ workspace:
   # app source path. Override if notebook chips do not open.
   # Example: /Workspace/Users/you@org/onr_demo
   repo_root: ""
-  # Required for Score registered models (04c on onr demo cluster).
-  # Optional for Start stream. Score does not use Jobs serverless.
+  # Optional. Night-before 04 / 04b on onr demo cluster (you, Dedicated).
   cluster_id: ""
+  # Score registered models (04c) on onr demo ml — Dedicated to the app SP.
+  # Leave blank to resolve by exact name. Set if the app cannot list clusters.
+  ml_cluster_id: ""
 
 app:
-  version: "1.9.22"
+  version: "1.9.23"
   environment: "poc"
   max_file_size_mb: 50
   session_timeout_minutes: 60

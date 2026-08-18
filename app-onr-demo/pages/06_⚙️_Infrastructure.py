@@ -7,7 +7,7 @@ from utils.page_config_helpers import setup_sidebar, set_page_config
 from utils.runtime_env import get_runtime_env
 from utils.db_helpers import get_connection, read_yaml
 from utils.user_helpers import init_user_session_state
-from utils.workspace_names import SQL_WAREHOUSE_NAME, ALL_PURPOSE_CLUSTER_NAME
+from utils.workspace_names import SQL_WAREHOUSE_NAME, ALL_PURPOSE_CLUSTER_NAME, ML_CLUSTER_NAME
 from utils.ui import page_header, render_architecture, fit_metrics, provenance_note
 from utils.workspace_ops import render_page_links
 
@@ -55,6 +55,7 @@ fit_metrics(
         ("UC tables", f"{n_tables}" if n_tables is not None else "—"),
         ("Warehouse", SQL_WAREHOUSE_NAME),
         ("Cluster", ALL_PURPOSE_CLUSTER_NAME),
+        ("Score cluster", ML_CLUSTER_NAME),
     ]
 )
 provenance_note("app inventory", onr_catalog)
@@ -70,7 +71,8 @@ with tab1:
     st.dataframe(
         [
             {"kind": "SQL warehouse", "name": SQL_WAREHOUSE_NAME, "role": "App and SQL path · serverless"},
-            {"kind": "Cluster", "name": ALL_PURPOSE_CLUSTER_NAME, "role": "Streaming and model jobs"},
+            {"kind": "Cluster", "name": ALL_PURPOSE_CLUSTER_NAME, "role": "Night-before 04 / 04b · your Dedicated cluster"},
+            {"kind": "Cluster", "name": ML_CLUSTER_NAME, "role": "Score 04c · Dedicated to the app SP"},
             {"kind": "App", "name": "onr-demo-poc", "role": "This console · source app-onr-demo/"},
             {"kind": "Catalog", "name": onr_catalog, "role": "Unity Catalog · mock data"},
         ],

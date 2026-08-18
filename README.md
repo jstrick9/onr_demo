@@ -36,7 +36,7 @@ Landing path: `/Volumes/onr_demo/bronze/landing/`
 
 Follow **[FIRST_RUN.md](FIRST_RUN.md)** in order. Short version:
 
-1. Create compute with **exact** names: SQL warehouse `onr demo warehouse`, cluster `onr demo cluster`.
+1. Create compute with **exact** names: SQL warehouse `onr demo warehouse`, cluster `onr demo cluster` (you · 04/04b), cluster `onr demo ml` (app SP · Score).
 2. Add this Git repo to the workspace.
 3. Run **`notebooks/00_bootstrap.py`** on that cluster (creates `onr_demo` + 400/1,200 rows).
 4. Create Databricks App from `app-onr-demo/` (`onr-demo-poc`).

@@ -285,8 +285,8 @@ def render_score_controls(catalog: str = "onr_demo") -> None:
     st.markdown("### Registered model score")
     st.caption(
         "Applies the night-before Random Forest and IsolationForest to the current silver portfolio "
-        "on onr demo cluster. Does not train. Cluster must be running, Shared/Standard "
-        "(not Single user), with mlflow installed."
+        "on onr demo ml (Dedicated to this app). Does not train. That cluster must be running "
+        "with mlflow. onr demo cluster stays yours for 04 / 04b."
     )
     c1, c2 = st.columns([2, 1])
     with c1:
@@ -295,7 +295,7 @@ def render_score_controls(catalog: str = "onr_demo") -> None:
                 result = start_score(catalog)
                 st.session_state["last_score"] = result
                 if result.get("via") == "cluster":
-                    st.success("Scoring run submitted on onr demo cluster.")
+                    st.success("Scoring run submitted on onr demo ml.")
                 else:
                     st.success("Scoring run submitted.")
             except Exception as e:

@@ -41,12 +41,12 @@
 ## Night before (not recorded)
 
 1. Workspace Git folder: `git pull` `main`. Redeploy / restart `onr-demo-poc`.
-2. Start **`onr demo warehouse`** and **`onr demo cluster`**. Leave them running.
+2. Start **`onr demo warehouse`**, **`onr demo cluster`** (your 04 / 04b), and **`onr demo ml`** (app Score). Leave them running.
 3. Home = live **400**, not “fixture.” If fixture: `sql/grant_app_principal.sql` + warehouse **CAN USE** for the **app service principal**.
 4. If silver ≠ 400: `05_reset_demo.py` on the cluster.
 5. **Run all** `04_mlflow_grant_model.py` → `onr_demo.gold.grant_large_award`.
 6. **Run all** `04b_funding_anomaly.py` → `funding_anomaly_detector` @ `champion`. If MLflow says parent missing: create `/Shared/onr-demo`, re-run from the MLflow cell.
-7. Confirm `01b_streaming_autoloader` and `04c_score_registered_models` exist in the Git folder (the app resolves them). **Start stream** prefers Jobs serverless with `availableNow` and does **not** need the classic cluster if the Shared 01b publish works. **Score registered models** submits `04c` on **`onr demo cluster`** — not Jobs serverless, not the warehouse. That cluster must be **Shared / Standard**, not Dedicated / Single user assigned to you. Give the app SP **CAN ATTACH TO** / **CAN RESTART**. If job submit fails, the on-page **Open scoring notebook** link is the backup (Run all as you).
+7. Confirm `01b_streaming_autoloader` and `04c_score_registered_models` exist in the Git folder (the app resolves them). **Start stream** prefers Jobs serverless with `availableNow`. **Score registered models** submits `04c` on **`onr demo ml`**, Dedicated to the **app service principal** — not Jobs serverless, not `onr demo cluster`. Install mlflow on `onr demo ml`. If job submit fails, the on-page **Open scoring notebook** link is the backup.
 8. Volume `_staged/batch_live_grants.csv` exists (bootstrap). The app can also land the packaged CSV.
 9. Mute notifications. 1920×1080, zoom 110–125%, hide bookmarks.
 
@@ -68,7 +68,7 @@ That is the only window you need. Do **not** open MFA, Terraform, GitHub Actions
 
 This is the ONR Code 08 portfolio on Databricks. Everything on this screen is mock, synthetic Compass data — four hundred S-and-T grants and twelve hundred derived ERP lines. No CUI, no PII, no classified.
 
-You are looking at catalog `onr_demo`, medallion layers bronze, silver, gold, and app. SQL runs on the serverless warehouse named `onr demo warehouse`. Jobs run on `onr demo cluster`. The product in front of you is the Databricks App `onr-demo-poc`.
+You are looking at catalog `onr_demo`, medallion layers bronze, silver, gold, and app. SQL runs on the serverless warehouse named `onr demo warehouse`. Training jobs run on `onr demo cluster`. Score runs on `onr demo ml`, dedicated to the app. The product in front of you is the Databricks App `onr-demo-poc`.
 
 This recording is the data-and-analytics path — Elements three through seven. Secure access and infrastructure-as-code are the companion tape. Each page kicker is the Element number. The Workspace strip on every page opens the live notebook or Unity Catalog table for that Element.
 
@@ -218,7 +218,7 @@ Strategic prompt (c). Three planes, same identity. The app has its **own** servi
 
 ### 24:20–25:00 — Close
 
-Ten seconds. Warehouse `onr demo warehouse`, cluster `onr demo cluster`, app `onr-demo-poc`, paused file-arrival job, SDP pipeline — all named in `databricks.yml`. Full IaC and CI-CD are the companion tape.
+Ten seconds. Warehouse `onr demo warehouse`, cluster `onr demo cluster`, score cluster `onr demo ml`, app `onr-demo-poc`, paused file-arrival job, SDP pipeline — all named in `databricks.yml`. Full IaC and CI-CD are the companion tape.
 
 Tomorrow another CSV lands on the same Volume. Same gold. Same registered models — we rescore from this console. Mock data only.
 

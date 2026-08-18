@@ -1,6 +1,7 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC **Compute:** all-purpose cluster **`onr demo cluster`**
+# MAGIC **Compute:** app Score uses **`onr demo ml`** (Dedicated to the app SP).
+# MAGIC Night-before 04 / 04b stay on **`onr demo cluster`**.
 # MAGIC
 # MAGIC # 04c — Score from registered models (Element 5, camera beat)
 # MAGIC
@@ -52,7 +53,7 @@ def _ensure_pkg(mod: str, spec: str) -> None:
     if importlib.util.find_spec(mod) is None:
         raise RuntimeError(
             f"Could not import {mod} after pip install {spec}. "
-            "Off camera: Compute → onr demo cluster → Libraries → install "
+            "Off camera: Compute → onr demo ml → Libraries → install "
             "mlflow and scikit-learn, then restart the cluster and re-run 04c."
         )
 

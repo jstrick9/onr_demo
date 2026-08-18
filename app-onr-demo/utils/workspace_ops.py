@@ -417,10 +417,7 @@ def _norm_name(s: str) -> str:
     return "".join(ch for ch in (s or "").lower() if ch.isalnum())
 
 
-def _configured_cluster_id() -> str:
-    env = (os.getenv("ONR_CLUSTER_ID") or os.getenv("DATABRICKS_CLUSTER_ID") or "").strip()
-    if env:
-        return env
+def _yaml_workspace_key(key: str) -> str:
     try:
         from utils.db_helpers import read_yaml
 
@@ -431,61 +428,120 @@ def _configured_cluster_id() -> str:
         ):
             if cand.exists():
                 cfg = read_yaml(str(cand)) or {}
-                cid = ((cfg.get("workspace") or {}).get("cluster_id") or "").strip()
-                if cid:
-                    return cid
+                val = ((cfg.get("workspace") or {}).get(key) or "").strip()
+                if val:
+                    return val
     except Exception:
         pass
     return ""
 
 
-def start_named_cluster() -> tuple[str | None, str]:
-    from utils.workspace_names import ALL_PURPOSE_CLUSTER_NAME
+def _configured_cluster_id() -> str:
+    return (
+        os.getenv("ONR_CLUSTER_ID")
+        or os.getenv("DATABRICKS_CLUSTER_ID")
+        or _yaml_workspace_key("cluster_id")
+        or ""
+    ).strip()
 
-    configured = _configured_cluster_id()
+
+def _configured_ml_cluster_id() -> str:
+    return (os.getenv("ONR_ML_CLUSTER_ID") or _yaml_workspace_key("ml_cluster_id") or "").strip()
+
+
+def _app_identity_tokens() -> set[str]:
+    """Names / ids that mean 'this is the app service principal'."""
+    out: set[str] = set()
+    for envk in ("DATABRICKS_CLIENT_ID", "DATABRICKS_APP_NAME"):
+        val = (os.getenv(envk) or "").strip().lower()
+        if val:
+            out.add(val)
+    try:
+        me = _client().current_user.me()
+        for attr in ("user_name", "userName", "id", "display_name", "displayName"):
+            val = str(getattr(me, attr, "") or "").strip().lower()
+            if val:
+                out.add(val)
+    except Exception:
+        pass
+    # Known app SP for this POC — extra match if /me is sparse.
+    out.update(
+        {
+            "6a59e35d-948e-46df-892c-a34e4e3f4056",
+            "app-5ruayx onr-demo-poc",
+        }
+    )
+    return {x for x in out if x}
+
+
+def _single_user_is_app(info) -> bool:
+    owner = str(getattr(info, "single_user_name", "") or "").strip().lower()
+    if not owner:
+        return False
+    tokens = _app_identity_tokens()
+    if owner in tokens:
+        return True
+    return any(tok and tok in owner for tok in tokens)
+
+
+def start_named_cluster(
+    name: str | None = None,
+    configured_id: str | None = None,
+) -> tuple[str | None, str]:
+    from utils.workspace_names import ALL_PURPOSE_CLUSTER_NAME, ML_CLUSTER_NAME
+
+    want_name = (name or ALL_PURPOSE_CLUSTER_NAME).strip()
+    if configured_id is None:
+        if _norm_name(want_name) == _norm_name(ML_CLUSTER_NAME):
+            configured_id = _configured_ml_cluster_id()
+        else:
+            configured_id = _configured_cluster_id()
+
     try:
         w = _client()
     except Exception as e:
         return None, f"Cannot reach cluster API ({e})"
 
-    if configured:
+    if configured_id:
         try:
-            info = w.clusters.get(cluster_id=configured)
+            info = w.clusters.get(cluster_id=configured_id)
             state = str(getattr(info, "state", "") or "").upper()
             if "RUNNING" not in state:
                 try:
-                    w.clusters.start(configured)
+                    w.clusters.start(configured_id)
                 except Exception as e:
-                    return configured, f"Cluster start requested ({e})"
-                return configured, f"Starting configured cluster {configured}"
-            return configured, f"Configured cluster {configured} is running"
+                    return configured_id, f"Cluster start requested ({e})"
+                return configured_id, f"Starting configured cluster {configured_id}"
+            return configured_id, f"Configured cluster {configured_id} is running"
         except Exception as e:
-            return None, f"Configured cluster id {configured} is not usable ({e})"
+            return None, f"Configured cluster id {configured_id} is not usable ({e})"
 
     try:
         clusters = list(w.clusters.list())
     except Exception as e:
-        return None, (
-            f"App principal cannot list clusters ({e}). "
-            "Set workspace.cluster_id or ONR_CLUSTER_ID."
+        hint = (
+            "Set workspace.ml_cluster_id or ONR_ML_CLUSTER_ID."
+            if _norm_name(want_name) == _norm_name(ML_CLUSTER_NAME)
+            else "Set workspace.cluster_id or ONR_CLUSTER_ID."
         )
+        return None, f"App principal cannot list clusters ({e}). {hint}"
 
-    want = ALL_PURPOSE_CLUSTER_NAME.strip().lower()
-    want_n = _norm_name(ALL_PURPOSE_CLUSTER_NAME)
+    want = want_name.lower()
+    want_n = _norm_name(want_name)
     exact, fuzzy = [], []
     for c in clusters:
-        name = (c.cluster_name or "").strip()
-        if name.lower() == want:
+        cname = (c.cluster_name or "").strip()
+        if cname.lower() == want:
             exact.append(c)
-        elif want_n and want_n in _norm_name(name):
+        elif want_n and want_n in _norm_name(cname):
             fuzzy.append(c)
-    picked = (exact or fuzzy)
+    picked = exact or fuzzy
     if not picked:
         listed = ", ".join((c.cluster_name or c.cluster_id or "?") for c in clusters[:8]) or "none"
         return None, (
-            f"Cluster '{ALL_PURPOSE_CLUSTER_NAME}' is not visible to the app principal "
+            f"Cluster '{want_name}' is not visible to the app principal "
             f"(listed {len(clusters)}: {listed}). "
-            "Set workspace.cluster_id so Score can attach to onr demo cluster."
+            "Create it, assign the app SP as the Dedicated user, and start it."
         )
     c = picked[0]
     state = str(getattr(c, "state", "") or "").upper()
@@ -605,33 +661,34 @@ def _explain_cluster_submit_error(err) -> str:
         or ("permission_denied" in blob and "single user" in blob)
     ):
         return (
-            "onr demo cluster is Dedicated / Single user assigned to you "
-            "(joshua.strickland@satsyil.com). The app identity cannot run a command "
-            "on that cluster — CAN ATTACH TO does not override single-user mode. "
-            "Compute → onr demo cluster → Edit → Access mode → Shared (Standard). "
-            "Save, start, then Permissions → app SP CAN ATTACH TO + CAN RESTART. "
-            "Until then: Open scoring notebook and Run all as yourself."
+            "Score must run on **onr demo ml**, Dedicated to the app service principal. "
+            "This job hit a cluster assigned to a different user (usually "
+            "onr demo cluster → you). Create Compute → onr demo ml → Dedicated / "
+            "Single user = the app SP (App → onr-demo-poc → Authorization). "
+            "Install mlflow on that cluster, start it, then Score again. "
+            "Keep onr demo cluster as your training cluster for 04 / 04b."
         )
     return text
 
 
 def submit_notebook_cluster(path: str, run_name: str, params: dict | None = None) -> dict:
-    """Submit a notebook on onr demo cluster. Never Jobs serverless."""
+    """Submit 04c on onr demo ml (Dedicated to the app SP). Never Jobs serverless."""
     from databricks.sdk.service import jobs
+    from utils.workspace_names import ML_CLUSTER_NAME
 
-    cluster_id, cluster_msg = start_named_cluster()
+    cluster_id, cluster_msg = start_named_cluster(ML_CLUSTER_NAME)
     if not cluster_id:
         raise RuntimeError(
-            f"{cluster_msg} Score registered models runs 04c on onr demo cluster "
-            "(mlflow is installed there). Cluster must be Shared/Standard, not "
-            "Single user. Grant the app SP CAN ATTACH TO / CAN RESTART."
+            f"{cluster_msg} Score registered models runs 04c on **{ML_CLUSTER_NAME}**, "
+            "Dedicated to the app service principal, with mlflow installed. "
+            "Do not use onr demo cluster (that one is yours for 04 / 04b)."
         )
     w = _client()
     try:
         info = w.clusters.get(cluster_id=cluster_id)
         mode = str(getattr(info, "data_security_mode", "") or "").upper()
         owner = str(getattr(info, "single_user_name", "") or "")
-        if "SINGLE_USER" in mode and owner:
+        if "SINGLE_USER" in mode and owner and not _single_user_is_app(info):
             raise RuntimeError(
                 f"Single-user check failed: user 'app' attempted to run a command "
                 f"on single-user cluster {cluster_id}, but the single user of this "
@@ -810,13 +867,13 @@ def start_stream(catalog: str = "onr_demo") -> dict:
 
 
 def start_score(catalog: str = "onr_demo") -> dict:
-    """Score UC models by running 04c on onr demo cluster. Not serverless."""
+    """Score UC models by running 04c on onr demo ml. Not serverless."""
     path = resolve_notebook(SCORE_NOTEBOOK)
     run_path = runnable_notebook_path(SCORE_NOTEBOOK, refresh=True)
     if not run_path:
         raise RuntimeError(
-            "App principal cannot read 04c. Open the scoring notebook on "
-            "onr demo cluster and Run all, or grant the app CAN READ on the Shared copy."
+            "App principal cannot read 04c. Grant the app CAN READ on the Shared "
+            "copy, or open the scoring notebook on onr demo ml and Run all."
         )
     try:
         run = submit_notebook_cluster(
