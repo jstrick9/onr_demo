@@ -20,7 +20,8 @@
 # MAGIC If a model is missing, this notebook **fails loudly** — do not improvise
 # MAGIC a training run on camera. Stop and open Analytics on the night-before tables.
 # MAGIC
-# MAGIC Target runtime: **30–90 seconds** if sklearn is already on the cluster.
+# MAGIC Target runtime: **30–90 seconds** if sklearn + mlflow are already on the compute.
+# MAGIC Standard DBR and Jobs serverless do **not** ship `mlflow`. First cells install it.
 #
 # COMMAND ----------
 
@@ -28,18 +29,42 @@ dbutils.widgets.text("catalog", "onr_demo")
 
 # COMMAND ----------
 
-# Do not %pip / restartPython on camera — that costs a minute and resets the notebook.
-# Night-before 04 / 04b already installed sklearn on this cluster.
-try:
-    import sklearn  # noqa: F401
-    import pandas  # noqa: F401
-except Exception as e:
-    raise RuntimeError(
-        "sklearn/pandas missing on this cluster. Stop the recording beat. "
-        "Off camera: run 04 then 04b (they %pip install), then re-run 04c. "
-        f"Import error: {e}"
-    ) from e
-print("sklearn + pandas present — scoring only, no training")
+# MAGIC %pip install mlflow>=2.14,<3 scikit-learn pandas --quiet
+
+# COMMAND ----------
+
+# No restartPython — scoring is driver-side (toPandas + sklearn). A restart
+# burns a minute on camera and resets the notebook. %pip above is enough on
+# most DBR; driver pip below covers Jobs serverless if the MAGIC cell did not
+# land on this process yet.
+import importlib.util
+import subprocess
+import sys
+
+
+def _ensure_pkg(mod: str, spec: str) -> None:
+    if importlib.util.find_spec(mod) is not None:
+        print(f"{mod} present")
+        return
+    print(f"{mod} missing — pip install {spec}")
+    subprocess.check_call([sys.executable, "-m", "pip", "install", spec, "--quiet"])
+    importlib.invalidate_caches()
+    if importlib.util.find_spec(mod) is None:
+        raise RuntimeError(
+            f"Could not import {mod} after pip install {spec}. "
+            "Off camera: Compute → onr demo cluster → Libraries → install "
+            "mlflow and scikit-learn, then restart the cluster and re-run 04c."
+        )
+
+
+_ensure_pkg("sklearn", "scikit-learn")
+_ensure_pkg("pandas", "pandas")
+_ensure_pkg("mlflow", "mlflow>=2.14,<3")
+import mlflow  # noqa: F401
+import pandas  # noqa: F401
+import sklearn  # noqa: F401
+
+print("sklearn + pandas + mlflow present — scoring only, no training")
 
 # COMMAND ----------
 

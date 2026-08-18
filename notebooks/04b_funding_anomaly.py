@@ -19,7 +19,8 @@
 # MAGIC - **This notebook** — unsupervised award-level anomaly flags
 # MAGIC
 # MAGIC Run **after** 00/03 (or app Process) so `gold.funding_features` exists.
-# MAGIC First cells install scikit-learn (standard DBR does not ship it).
+# MAGIC First cells install **mlflow** + scikit-learn (standard DBR / Jobs serverless
+# MAGIC do not ship them).
 # MAGIC
 # MAGIC Experiment: `/Shared/onr-demo/funding-anomaly`  
 # MAGIC Registry: `onr_demo.gold.funding_anomaly_detector`
@@ -30,7 +31,7 @@ dbutils.widgets.text("catalog", "onr_demo")
 
 # COMMAND ----------
 
-# MAGIC %pip install scikit-learn pandas --quiet
+# MAGIC %pip install mlflow>=2.14,<3 scikit-learn pandas --quiet
 
 # COMMAND ----------
 

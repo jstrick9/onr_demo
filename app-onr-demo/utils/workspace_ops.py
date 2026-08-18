@@ -551,11 +551,22 @@ def submit_notebook_serverless(path: str, run_name: str, params: dict | None = N
     nb = jobs.NotebookTask(**_notebook_task_kwargs(path, params))
     JobEnvironment = getattr(jobs, "JobEnvironment", None)
     Environment = getattr(jobs, "Environment", None)
+    # 04c needs mlflow on Jobs serverless (standard env does not ship it).
+    # 01b does not. Extra deps are ignored if the Environment ctor rejects them.
+    score_deps = None
+    if "04c" in path or "score_registered" in path:
+        score_deps = ["mlflow>=2.14,<3", "scikit-learn", "pandas"]
     errors: list[str] = []
     if JobEnvironment and Environment:
         for version in ("3", "2", "1"):
             try:
-                spec = Environment(environment_version=version)
+                spec_kwargs = {"environment_version": version}
+                if score_deps:
+                    spec_kwargs["dependencies"] = score_deps
+                try:
+                    spec = Environment(**spec_kwargs)
+                except TypeError:
+                    spec = Environment(environment_version=version)
                 waiter = w.jobs.submit(
                     run_name=run_name,
                     tasks=[
@@ -754,7 +765,7 @@ def start_score(catalog: str = "onr_demo") -> dict:
     except Exception as e:
         warehouse_error = e
 
-    run_path = runnable_notebook_path(SCORE_NOTEBOOK)
+    run_path = runnable_notebook_path(SCORE_NOTEBOOK, refresh=True)
     if run_path:
         try:
             run = submit_notebook(run_path, run_name="onr-demo-score", params={"catalog": catalog})

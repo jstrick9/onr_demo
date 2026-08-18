@@ -8,7 +8,9 @@
 # MAGIC shows the same scores. Logs to MLflow experiment `/Shared/onr-demo/grant-size` and
 # MAGIC registers the model to Unity Catalog as `{catalog}.gold.grant_large_award`.
 # MAGIC
-# MAGIC First cells install scikit-learn (standard DBR does not ship it).
+# MAGIC First cells install **mlflow** + scikit-learn (standard DBR / Jobs serverless
+# MAGIC do not ship them). Without mlflow this notebook still writes gold tables but
+# MAGIC prints `MLflow optional — skipped` and 04c / Score have no run to load.
 
 # COMMAND ----------
 
@@ -16,7 +18,7 @@ dbutils.widgets.text("catalog", "onr_demo")
 
 # COMMAND ----------
 
-# MAGIC %pip install scikit-learn pandas --quiet
+# MAGIC %pip install mlflow>=2.14,<3 scikit-learn pandas --quiet
 
 # COMMAND ----------
 

@@ -49,7 +49,7 @@ If they put the catalog in a different name, set the bootstrap `catalog` widget 
 
 1. Compute → Create compute.
 2. Name: `onr demo cluster` (exact).
-3. Runtime: Databricks Runtime **14.3 LTS or newer** (standard is fine). Notebook `04` runs `%pip install scikit-learn pandas`.
+3. Runtime: Databricks Runtime **14.3 LTS or newer** (standard is fine). Notebooks `04` / `04b` / `04c` run `%pip install mlflow scikit-learn pandas` — standard DBR and Jobs serverless do not ship `mlflow`.
 4. Mode: single user or shared with your account.
 5. Start it.
 
