@@ -610,11 +610,7 @@ def reset_to_seed_sql(cursor, catalog: str) -> dict:
     _ensure_app_tables(cursor, catalog)
     delete_non_seed_bronze(cursor, catalog)
     try:
-        from databricks.sdk import WorkspaceClient
-
-        w = WorkspaceClient()
-        stream_csv = f"/Volumes/{catalog}/bronze/landing/grants/batch_live_grants_stream.csv"
-        w.files.delete(stream_csv)
+        delete_stream_landing_files(catalog)
     except Exception:
         pass
     # Safety: leftover quarantine-class rows must not sit in bronze after restore.
@@ -665,6 +661,34 @@ def reset_to_seed_sql(cursor, catalog: str) -> dict:
         "reloaded_fixture": reloaded,
         "checkpoints": clear_autoloader_checkpoints(),
     }
+
+
+def delete_stream_landing_files(catalog: str = "onr_demo") -> list[str]:
+    """Remove every Auto Loader stream CSV so Restore is not tied to one name."""
+    from databricks.sdk import WorkspaceClient
+
+    w = WorkspaceClient()
+    root = f"/Volumes/{catalog}/bronze/landing/grants"
+    removed: list[str] = []
+    try:
+        for entry in w.files.list_directory_contents(root):
+            path = str(getattr(entry, "path", "") or "")
+            name = path.rsplit("/", 1)[-1]
+            if name.startswith("batch_live_grants_stream"):
+                try:
+                    w.files.delete(path)
+                    removed.append(path)
+                except Exception:
+                    pass
+    except Exception:
+        for name in ("batch_live_grants_stream.csv",):
+            path = f"{root}/{name}"
+            try:
+                w.files.delete(path)
+                removed.append(path)
+            except Exception:
+                pass
+    return removed
 
 
 def clear_autoloader_checkpoints() -> str:

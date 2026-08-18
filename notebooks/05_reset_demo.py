@@ -36,9 +36,12 @@ for table in ("grants", "financial"):
        OR batch_id IN ({demo_sql})
        OR _batch_id IN ({demo_sql})
     """)
+landing = f"/Volumes/{catalog}/bronze/landing/grants"
 try:
-    dbutils.fs.rm(f"/Volumes/{catalog}/bronze/landing/grants/batch_live_grants_stream.csv", True)
-    print("Removed stream landing file")
+    for info in dbutils.fs.ls(landing):
+        if "batch_live_grants_stream" in (info.name or info.path or ""):
+            dbutils.fs.rm(info.path, True)
+            print("Removed stream landing file", info.path)
 except Exception as e:
     print("Stream file rm:", e)
 spark.sql(f"""

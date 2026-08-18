@@ -628,9 +628,17 @@ def get_run_state(run_id: int | None) -> dict:
 
 
 def copy_stream_file(catalog: str = "onr_demo") -> dict:
-    """Place a new Auto Loader path on the landing Volume."""
+    """Place a *new* Auto Loader path on the landing Volume.
+
+    Auto Loader checkpoints by file path. Overwriting
+    ``batch_live_grants_stream.csv`` after Restore looks like the same file,
+    so availableNow loads 0 rows. A timestamped name is always new.
+    """
+    from datetime import datetime, timezone
+
     src_vol = f"/Volumes/{catalog}/bronze/landing/_staged/batch_live_grants.csv"
-    dst = f"/Volumes/{catalog}/bronze/landing/grants/batch_live_grants_stream.csv"
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+    dst = f"/Volumes/{catalog}/bronze/landing/grants/batch_live_grants_stream_{stamp}.csv"
     w = _client()
     data = None
     via = "volume"

@@ -96,7 +96,7 @@ Same Element three. That button was the warehouse SQL path. Next is the near-rea
 
 `[DO THIS]` Click **Start stream**. Do **not** restore the baseline. If the run does not submit, use the Workspace strip — **01b stream** — Run all there, then come straight back to this page.
 
-This is Databricks Auto Loader — `cloudFiles` — incremental ingest on the landing Volume. This job is on serverless compute, so the trigger is bounded `availableNow`. Databricks does not allow a continuous `processingTime` trigger on this cluster type. The console just wrote `batch_live_grants_stream.csv` onto the landing Volume. Schema evolution is `addNewColumns`, so a new column from a legacy extract does not break the job. The query drains what is already in the folder and stops — we cannot leave a stream running.
+This is Databricks Auto Loader — `cloudFiles` — incremental ingest on the landing Volume. This job is on serverless compute, so the trigger is bounded `availableNow`. Databricks does not allow a continuous `processingTime` trigger on this cluster type. The console just wrote a new `batch_live_grants_stream_*.csv` onto the landing Volume. Schema evolution is `addNewColumns`, so a new column from a legacy extract does not break the job. The query drains what is already in the folder and stops — we cannot leave a stream running.
 
 `[DO THIS]` Point at the bronze count, **last 2 min**, and **last file … ago**. Then at **Delta time travel**.
 

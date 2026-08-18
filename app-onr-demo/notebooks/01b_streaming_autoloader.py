@@ -12,15 +12,15 @@
 # MAGIC - **Classic `onr demo cluster`** — `processingTime` 30-second micro-batches,
 # MAGIC   auto-stop after `run_for_seconds` (default 90).
 # MAGIC
-# MAGIC The app lands `batch_live_grants_stream.csv` **before** it submits this
-# MAGIC notebook, so `availableNow` drains that file and stops. That is the
-# MAGIC Start stream path.
+# MAGIC The app lands a **new** `batch_live_grants_stream_*.csv` **before** it
+# MAGIC submits this notebook, so `availableNow` always sees a fresh Auto Loader
+# MAGIC path (checkpoints key by file path). That is the Start stream path.
 # MAGIC
 # MAGIC **Recording beat (do not Reset on camera):**
 # MAGIC 1. App Process already landed Live 8 + quality-fail (silver **408**).
 # MAGIC 2. App **Start stream** (preferred) or **Run all** here.
 # MAGIC 3. File on Volume:
-# MAGIC    `/Volumes/onr_demo/bronze/landing/grants/batch_live_grants_stream.csv`
+# MAGIC    `/Volumes/onr_demo/bronze/landing/grants/batch_live_grants_stream_*.csv`
 # MAGIC 4. Watch bronze tick. Silver stays 408 (dedupe). Extra bronze rows are
 # MAGIC    the stream proof.
 # MAGIC
