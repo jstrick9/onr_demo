@@ -22,6 +22,50 @@ DEMO_STATEMENT = (
 )
 
 
+def _as_plain(v):
+    """SDK enums expose .value; Apps sometimes hands us a bare str."""
+    if v is None:
+        return None
+    if isinstance(v, (str, int, float, bool)):
+        return v
+    if hasattr(v, "value"):
+        try:
+            return v.value
+        except Exception:
+            pass
+    return str(v)
+
+
+def _execute_statement_rest(w, host: str, warehouse_id: str, statement: str, catalog: str) -> dict:
+    """POST /api/2.0/sql/statements with a single OAuth header. No SDK enums."""
+    import json
+    import urllib.error
+    import urllib.request
+
+    headers = dict(w.config.authenticate() or {})
+    headers["Content-Type"] = "application/json"
+    headers["Accept"] = "application/json"
+    body = json.dumps(
+        {
+            "warehouse_id": warehouse_id,
+            "catalog": catalog,
+            "schema": "gold",
+            "statement": statement,
+            "wait_timeout": "30s",
+            "disposition": "INLINE",
+            "format": "JSON_ARRAY",
+        }
+    ).encode("utf-8")
+    url = f"https://{host}/api/2.0/sql/statements"
+    req = urllib.request.Request(url, data=body, headers=headers, method="POST")
+    try:
+        with urllib.request.urlopen(req, timeout=45) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        detail = e.read().decode("utf-8", errors="replace")[:400]
+        raise RuntimeError(f"HTTP {e.code} {detail}") from e
+
+
 def _resolve_warehouse():
     from utils.db_helpers import workspace_client
     from utils.workspace_names import SQL_WAREHOUSE_NAME
@@ -78,31 +122,53 @@ def render_live_statement_api(cursor=None, catalog: str = "onr_demo"):
 
             w, host, warehouse_id, wname = _resolve_warehouse()
             t0 = time.perf_counter()
-            resp = w.statement_execution.execute_statement(
-                warehouse_id=warehouse_id,
-                statement=statement,
-                catalog=catalog,
-                schema="gold",
-                wait_timeout="30s",
-                disposition="INLINE",
-            )
-            elapsed_ms = int((time.perf_counter() - t0) * 1000)
-            # SDK object → json-friendly dict
-            dumped = resp.as_dict() if hasattr(resp, "as_dict") else None
+            dumped = None
+            rest_error = None
+            try:
+                dumped = _execute_statement_rest(w, host, warehouse_id, statement, catalog)
+            except Exception as rest_e:
+                rest_error = rest_e
             if dumped is None:
-                dumped = {
-                    "statement_id": getattr(resp, "statement_id", None),
-                    "status": str(getattr(resp, "status", None)),
-                    "manifest": str(getattr(resp, "manifest", None))[:500],
-                }
+                try:
+                    from databricks.sdk.service.sql import Disposition, Format
+
+                    resp = w.statement_execution.execute_statement(
+                        warehouse_id=warehouse_id,
+                        statement=statement,
+                        catalog=catalog,
+                        schema="gold",
+                        wait_timeout="30s",
+                        disposition=Disposition.INLINE,
+                        format=Format.JSON_ARRAY,
+                    )
+                except TypeError:
+                    resp = w.statement_execution.execute_statement(
+                        warehouse_id=warehouse_id,
+                        statement=statement,
+                        catalog=catalog,
+                        schema="gold",
+                        wait_timeout="30s",
+                    )
+                elapsed_ms = int((time.perf_counter() - t0) * 1000)
+                dumped = resp.as_dict() if hasattr(resp, "as_dict") else None
+                if dumped is None:
+                    dumped = {
+                        "statement_id": getattr(resp, "statement_id", None),
+                        "status": str(getattr(resp, "status", None)),
+                        "manifest": str(getattr(resp, "manifest", None))[:500],
+                    }
+                if rest_error:
+                    dumped["_rest_note"] = f"REST first attempt: {rest_error}"
+            else:
+                elapsed_ms = int((time.perf_counter() - t0) * 1000)
             # Never render secrets if the SDK echoed auth
             dumped.pop("access_token", None)
-            sid = dumped.get("statement_id") or getattr(resp, "statement_id", "?")
+            sid = dumped.get("statement_id") or "?"
             status = dumped.get("status") or {}
             if isinstance(status, dict):
-                state = status.get("state") or status.get("status") or "SUCCEEDED"
+                state = _as_plain(status.get("state") or status.get("status")) or "SUCCEEDED"
             else:
-                state = str(status or "SUCCEEDED")
+                state = _as_plain(status) or "SUCCEEDED"
             manifest = dumped.get("manifest") or {}
             row_count = None
             if isinstance(manifest, dict):
