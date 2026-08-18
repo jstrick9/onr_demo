@@ -95,12 +95,12 @@ render_architecture("home")
 
 capability_cards(
     [
+        {"title": "Element 2 · Infrastructure", "body": "Deployed catalog, compute, and bundle inventory. Companion tape."},
         {"title": "Element 3 · Ingestion", "body": "Land files, apply quality gates, refresh silver and gold."},
         {"title": "Element 4 · Catalog", "body": "Registry, health scores, lineage, and classification tags."},
         {"title": "Element 5 · Analytics", "body": "Fund / Review / Defer, anomaly queue, FY forecast, drift, and trend IDs."},
         {"title": "Element 6 · Portfolio", "body": "Search, filter, daily brief, and AT_RISK execution."},
         {"title": "Element 7 · Export", "body": "CSV, JSON, Parquet, and Statement Execution API."},
-        {"title": "Element 2 · Infrastructure", "body": "Deployed catalog, compute, and bundle inventory. Companion tape."},
     ]
 )
 

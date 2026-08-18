@@ -1361,19 +1361,22 @@ def _diagram_infrastructure() -> tuple[str, int, int, str, str]:
 def _diagram_home() -> tuple[str, int, int, str, str]:
     body = "".join(
         [
-            _box(20, 36, 188, 140, "Ingest", "Volume + quality", "", BRONZE),
-            _box(256, 36, 188, 140, "Catalog", "UC + lineage", "", SILVER),
-            _box(492, 36, 188, 140, "Analytics", "RF · IF · OLS", "", NAVY),
-            _box(728, 36, 188, 140, "Portfolio", "search · brief", "", TEAL),
-            _box(964, 36, 216, 140, "Export", "open formats + API", "", GOLD_LANE),
-            _arrow(208, 106, 256, 106),
-            _arrow(444, 106, 492, 106),
-            _arrow(680, 106, 728, 106),
-            _arrow(916, 106, 964, 106),
-            _box(256, 214, 688, 116, "Unity Catalog  onr_demo", "bronze to silver to gold to app", "one identity plane", OK),
-            _arrow(350, 176, 350, 214),
-            _arrow(586, 176, 586, 214),
-            _arrow(822, 176, 822, 214),
+            _box(16, 36, 168, 140, "Infra", "warehouse · cluster", "Element 2", NAVY),
+            _box(208, 36, 168, 140, "Ingest", "Volume + quality", "Element 3", BRONZE),
+            _box(400, 36, 168, 140, "Catalog", "UC + lineage", "Element 4", SILVER),
+            _box(592, 36, 168, 140, "Analytics", "RF · IF · OLS", "Element 5", TEAL),
+            _box(784, 36, 168, 140, "Portfolio", "search · brief", "Element 6", APP_LANE),
+            _box(976, 36, 204, 140, "Export", "open formats + API", "Element 7", GOLD_LANE),
+            _arrow(184, 106, 208, 106),
+            _arrow(376, 106, 400, 106),
+            _arrow(568, 106, 592, 106),
+            _arrow(760, 106, 784, 106),
+            _arrow(952, 106, 976, 106),
+            _box(208, 214, 776, 116, "Unity Catalog  onr_demo", "bronze to silver to gold to app", "one identity plane", OK),
+            _arrow(292, 176, 292, 214),
+            _arrow(484, 176, 484, 214),
+            _arrow(676, 176, 676, 214),
+            _arrow(868, 176, 868, 214),
         ]
     )
     return (
