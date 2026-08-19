@@ -197,9 +197,13 @@ html, body, [class*="css"] {{
 [data-testid="stSidebar"] .hud-word {{ color: #f59e0b !important; }}
 [data-testid="stSidebar"] .hud-sub {{ color: #8b9bb4 !important; }}
 [data-testid="stSidebar"] .hud-user {{ color: #f59e0b !important; }}
-[data-testid="stSidebar"] .hud-foot {{ color: #8b9bb4 !important; }}
+[data-testid="stSidebar"] .hud-user-label {{ color: #8b9bb4 !important; }}
+.hud-user-label {{
+  color: #8b9bb4; font-size: 0.66rem; letter-spacing: 0.12em;
+  text-transform: uppercase; margin-top: 8px; font-weight: 700;
+}}
 .hud-user {{
-  color: {GOLD_BRIGHT}; font-size: 0.82rem; margin-top: 6px; font-weight: 700;
+  color: {GOLD_BRIGHT}; font-size: 0.82rem; margin-top: 2px; font-weight: 700;
 }}
 .hud-foot {{
   color: #8b9bb4; font-size: 0.68rem; letter-spacing: 0.12em;

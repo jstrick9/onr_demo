@@ -64,13 +64,7 @@ def setup_sidebar():
     with st.sidebar:
         user = get_current_user() or {}
         who = html.escape(
-            str(user.get("display_name") or user.get("email") or "Workspace session")
-        )
-        app_name = html.escape(
-            str(
-                __import__("os").getenv("DATABRICKS_APP_NAME")
-                or "onr-demo-poc"
-            )
+            str(user.get("email") or user.get("display_name") or "Workspace session")
         )
         st.markdown(
             f"""
@@ -84,8 +78,8 @@ def setup_sidebar():
   </div>
   <div class="hud-row"><span class="hud-orb"></span> IdP session</div>
   <div class="hud-row"><span class="hud-orb gold"></span> Console live</div>
+  <div class="hud-user-label">Logged in User:</div>
   <div class="hud-user">{who}</div>
-  <div class="hud-foot">App SP · {app_name} · not your token</div>
 </div>
             """,
             unsafe_allow_html=True,
