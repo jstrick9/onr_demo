@@ -230,7 +230,7 @@ def render_dataset_selection(cursor, catalog: str, schema: str):
             raise RuntimeError("no warehouse")
         cursor.execute(query)
         count = cursor.fetchone()[0]
-        st.info(f"📊 **{selected_dataset}**: {count:,} records available for export")
+        st.info(f"**{selected_dataset}**: {count:,} records available for export")
     except Exception:
         st.info("Dataset count will appear once data is loaded.")
 
@@ -400,7 +400,7 @@ def render_secure_export(cursor, catalog: str, schema: str, dataset_table: str, 
                 with col1:
                     if "csv" in exports:
                         st.download_button(
-                            label="📥 Download CSV",
+                            label="Download CSV",
                             data=exports["csv"],
                             file_name=f"onr_export_{timestamp}.csv",
                             mime="text/csv",
@@ -409,7 +409,7 @@ def render_secure_export(cursor, catalog: str, schema: str, dataset_table: str, 
                 with col2:
                     if "json" in exports:
                         st.download_button(
-                            label="📥 Download JSON",
+                            label="Download JSON",
                             data=exports["json"],
                             file_name=f"onr_export_{timestamp}.json",
                             mime="application/json",
@@ -418,7 +418,7 @@ def render_secure_export(cursor, catalog: str, schema: str, dataset_table: str, 
                 with col3:
                     if "parquet" in exports:
                         st.download_button(
-                            label="📥 Download Parquet",
+                            label="Download Parquet",
                             data=exports["parquet"],
                             file_name=f"onr_export_{timestamp}.parquet",
                             mime="application/octet-stream",
@@ -476,7 +476,7 @@ def render_interoperability():
         st.dataframe(pd.DataFrame(integrations), use_container_width=True)
 
     with col2:
-        st.markdown("#### 🏗️ Architecture Principles")
+        st.markdown("#### Architecture principles")
         st.markdown(
             """
         - **Open Standards**: CSV, JSON, Parquet, SQL
@@ -494,7 +494,7 @@ def render_interoperability():
 # -------------------------------
 def render_export_history(cursor=None, catalog: str = "onr_demo"):
     """Display export history from this session and from Unity Catalog."""
-    st.markdown("### 📜 Export History")
+    st.markdown("### Export history")
 
     session_hist = st.session_state.get("export_history", [])
     if session_hist:
@@ -531,7 +531,7 @@ def render_export_history(cursor=None, catalog: str = "onr_demo"):
 # -------------------------------
 def render_schema_documentation():
     """Display schema documentation for portability."""
-    st.markdown("### 📖 Schema Documentation")
+    st.markdown("### Schema documentation")
 
     st.markdown(
         """

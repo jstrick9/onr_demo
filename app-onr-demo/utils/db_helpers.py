@@ -158,7 +158,7 @@ def get_connection(max_retries: int = 4, retry_delay_seconds: int = 4):
     last_error = None
     for attempt in range(1, max_retries + 1):
         try:
-            status_placeholder.info(f"🔄 Connecting to SQL Warehouse... (attempt {attempt}/{max_retries})")
+            status_placeholder.info(f"Connecting to SQL Warehouse... (attempt {attempt}/{max_retries})")
 
             conn = _create_fresh_connection()
 

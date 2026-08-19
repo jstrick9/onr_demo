@@ -232,7 +232,7 @@ SET MASK mask_awardee;
 # -------------------------------
 def render_lineage_tracking(cursor, catalog: str, schema: str):
     """Display lineage tracking records."""
-    st.markdown("### 📝 Lineage Tracking Records")
+    st.markdown("### Lineage tracking records")
     
     try:
         query = f"""

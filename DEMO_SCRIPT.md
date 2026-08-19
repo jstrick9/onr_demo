@@ -65,7 +65,7 @@ That is the only window you need. Do **not** open MFA, Terraform, GitHub Actions
 
 ## Word-for-word script
 
-### 0:00–1:20 — Home
+### 0:00–1:00 — Home
 
 `[DO THIS]` App on **Home**. Cursor on **Active grants = 400**. Then on **Access**.
 
@@ -242,7 +242,7 @@ Tomorrow another CSV lands on the same Volume. Same gold. Same registered models
 | 4:30 and Ingest is still spinning | Keep talking (a); do not open Quality |
 | 7:30 and bronze has not ticked | Say “waiting for availableNow to drain the landing file.” If still nothing, click **Open stream notebook**, then come back. At 8:30 go to **Catalog** anyway |
 | 11:30 still on Catalog | Skip Policies; say (e) in two sentences; go to **Analytics** |
-| 16:30 and score is still running | Stay on Analytics; skip Trends; go **Portfolio** at 18:00 |
+| 16:30 and score is still running | Stay on Analytics; skip Metrics; go **Portfolio** at 18:00 |
 | 20:00 still on Analytics | Skip Anomalies **or** Forecast (keep one); go **Portfolio** search |
 | 22:30 still on Portfolio | Skip Budget; go **Export** |
 | 24:00 and no API yet | Skip download; **Execute live Statement API** immediately; say (c) in four sentences |

@@ -199,7 +199,7 @@ def render_quality_checks(cursor, catalog: str, schema: str):
 # -------------------------------
 def render_schema_evolution(cursor, catalog: str, schema: str):
     """Display schema evolution history."""
-    st.markdown("### 🔄 Schema Evolution")
+    st.markdown("### Schema evolution")
 
     if not cursor:
         st.info("Schema evolution tracking requires Delta table history access.")

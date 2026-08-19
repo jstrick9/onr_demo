@@ -292,6 +292,28 @@ def render_budget_execution(cursor=None, catalog: str = "onr_demo"):
     """Budget vs actual from gold (falls back to derived ERP fixture)."""
     st.markdown("### Budget execution")
 
+    risk = pd.DataFrame()
+    if cursor:
+        try:
+            cursor.execute(
+                f"""
+                SELECT fiscal_year, quarter, category, execution_rate, status
+                FROM `{catalog}`.`gold`.budget_execution
+                WHERE status IN ('WARNING', 'AT_RISK')
+                ORDER BY execution_rate
+                LIMIT 12
+                """
+            )
+            cols = [str(d[0]).lower() for d in (cursor.description or [])]
+            risk = pd.DataFrame(cursor.fetchall() or [], columns=cols)
+        except Exception:
+            risk = pd.DataFrame()
+    st.markdown("#### Not ON_TARGET")
+    if risk.empty:
+        st.caption("No WARNING / AT_RISK rows (or gold.budget_execution is not built).")
+    else:
+        st.dataframe(risk, use_container_width=True, hide_index=True)
+
     categories, budget, actual = None, None, None
     if cursor:
         try:
@@ -377,7 +399,7 @@ def render_budget_execution(cursor=None, catalog: str = "onr_demo"):
         st.plotly_chart(fig_gauge, use_container_width=True)
     
     with col2:
-        st.markdown("#### 📊 Category Performance")
+        st.markdown("#### Category performance")
         for cat, b, a in zip(categories[:3], budget[:3], actual[:3]):
             rate = (a / b) * 100 if b else 0
             st.progress(min(rate / 100, 1.0), text=f"{cat}: {rate:.1f}%")
@@ -646,7 +668,7 @@ def render_search_extract(cursor, catalog: str, schema: str):
                     # Export button
                     csv = df.to_csv(index=False)
                     st.download_button(
-                        label="📥 Download Results (CSV)",
+                        label="Download results (CSV)",
                         data=csv,
                         file_name=f"grants_search_{datetime.now().strftime('%Y%m%d')}.csv",
                         mime="text/csv"
@@ -675,7 +697,7 @@ def render_search_extract(cursor, catalog: str, schema: str):
     
     with col2:
         st.markdown("#### Quick Filters")
-        if st.button("📋 Clear search"):
+        if st.button("Clear search"):
             st.session_state["clear_exec_search"] = True
             st.rerun()
 

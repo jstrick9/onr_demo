@@ -54,15 +54,8 @@ if cursor:
         uc_ok = False
 
 render_estate()
-fit_metrics(
-    [
-        ("Catalog", onr_catalog),
-        ("UC tables", f"{n_tables}" if n_tables is not None else "—"),
-        ("Warehouse", SQL_WAREHOUSE_NAME),
-        ("Cluster", ALL_PURPOSE_CLUSTER_NAME),
-        ("Score cluster", ML_CLUSTER_NAME),
-    ]
-)
+if n_tables is not None:
+    st.caption(f"Catalog `{onr_catalog}` · {n_tables} Unity Catalog tables.")
 provenance_note("app inventory", onr_catalog)
 if cursor and not uc_ok:
     st.caption("Warehouse is up but information_schema was not readable.")
