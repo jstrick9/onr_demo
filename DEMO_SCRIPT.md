@@ -29,7 +29,7 @@
 | Clock | Page | Live action | Must say |
 |------:|------|-------------|----------|
 | 0:00–1:00 | Home | Point at **400**, then **Access** | Mock data; **Element 1** result (IdP + app SP) |
-| 1:00–1:40 | Infrastructure | Estate + **Bundle** | **Element 2** inventory; no deploy button |
+| 1:00–1:40 | Infrastructure | Estate | **Element 2** inventory; no deploy button |
 | 1:40–8:30 | Ingestion | **Ingest selected files** then **Start stream** | **Element 3**; 400→408; Hold; **(a)**; **(d)** |
 | 8:30–12:00 | Catalog | **Open lineage** | **Element 4**; **(e)** |
 | 12:00–18:00 | Analytics | **Score registered models**; point at **Drift** | **Element 5**; **(b)**; Resource action |
@@ -85,7 +85,7 @@ Each page kicker is the Element number. The Workspace strip opens the live noteb
 
 **Element two: infrastructure as code.**
 
-`[DO THIS]` Point at **Estate**, then **Bundle**. Do not click a deploy control — there is not one.
+`[DO THIS]` Point at **Estate**. Do not click a deploy control — there is not one. Full bundle YAML is in the **Full bundle** tab if a reviewer asks.
 
 Warehouse `onr demo warehouse`, score cluster `onr demo ml`, app `onr-demo-poc`, paused file-arrival job, SDP pipeline. Volumes, this app, that job, and that pipeline are in `databricks.yml`. Deploy is `databricks bundle deploy -t poc` from the repo — not a button on this console. The warehouse and clusters are pre-existing. This page is the inventory of what that deploy produced.
 

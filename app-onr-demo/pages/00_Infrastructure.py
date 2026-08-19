@@ -11,7 +11,7 @@ from utils.workspace_names import SQL_WAREHOUSE_NAME, ALL_PURPOSE_CLUSTER_NAME, 
 from utils.ui import page_header, render_architecture, provenance_note
 from utils.workspace_ops import render_page_links
 from utils.mission_themes import render_mission_ribbon
-from utils.infra_estate import render_estate, render_bundle, bundle_excerpt
+from utils.infra_estate import render_estate, bundle_excerpt
 
 set_page_config(page_title="Element 2 · Infrastructure | ONR Portfolio")
 setup_sidebar()
@@ -19,7 +19,7 @@ setup_sidebar()
 page_header(
     "Element 2 · Inventory",
     "Infrastructure",
-    "Estate + Bundle. No deploy control. Warehouse and clusters are pre-existing.",
+    "Estate inventory. No deploy control. Warehouse and clusters are pre-existing.",
 )
 render_mission_ribbon("infrastructure")
 render_page_links("infrastructure", "onr_demo")
@@ -65,8 +65,6 @@ elif not cursor:
     st.caption("Warehouse not connected — inventory is the intended deployment.")
 else:
     provenance_note("app inventory", onr_catalog)
-
-render_bundle()
 
 tab1, tab2, tab3 = st.tabs(["Inventory", "Identity", "Full bundle"])
 
@@ -118,9 +116,9 @@ with tab2:
     )
 
 with tab3:
-    st.caption("Full bundle definition packaged next to the app, or the repo-root databricks.yml.")
     label, text = bundle_excerpt()
-    st.caption(f"Source · {label}")
+    st.caption("Read-only. There is no deploy control on this console.")
+    st.caption(f"Source · {label} · [GitHub repo](https://github.com/jstrick9/onr_demo)")
     dab_candidates = [
         app_root / "config" / "databricks.yml",
         app_root.parent / "databricks.yml",
