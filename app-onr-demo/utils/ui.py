@@ -54,26 +54,28 @@ html, body, [class*="css"] {{
   height: 0 !important;
   overflow: hidden !important;
 }}
+/* Native expand chevron stays in the DOM so #onr-nav-tab can click it.
+   Do not show it — Nav is the only reopen control. */
 [data-testid="collapsedControl"],
 [data-testid="stSidebarCollapsedControl"],
-[data-testid="stExpandSidebarButton"],
-[data-testid="stSidebarCollapseButton"] {{
-  visibility: visible !important;
-  display: flex !important;
-  opacity: 1 !important;
-  pointer-events: auto !important;
-  height: auto !important;
-  width: auto !important;
-  z-index: 2147483646 !important;
+[data-testid="stExpandSidebarButton"] {{
+  opacity: 0 !important;
+  pointer-events: none !important;
+  width: 0 !important;
+  min-width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  border: none !important;
+  box-shadow: none !important;
 }}
 [data-testid="collapsedControl"] button,
 [data-testid="stSidebarCollapsedControl"] button,
 [data-testid="stExpandSidebarButton"] {{
-  background: {SIDEBAR} !important;
-  color: {GOLD_BRIGHT} !important;
-  border: 1px solid {GOLD_BRIGHT} !important;
-  border-radius: 8px !important;
-  box-shadow: 0 6px 16px rgba(11,31,58,0.35) !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
 }}
 
 [data-testid="stSidebar"] {{
