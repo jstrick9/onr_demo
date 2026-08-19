@@ -26,7 +26,7 @@ setup_sidebar()
 page_header(
     "Element 6 · Executive view",
     "Portfolio",
-    "Officer view. Search, route, brief, and AT_RISK. Model scores and the resource action live on Analytics.",
+    "Officer view. Search, route, then generate the daily brief. AT_RISK is on Budget. Model scores live on Analytics.",
 )
 render_mission_ribbon("portfolio")
 
@@ -49,18 +49,18 @@ conn, cursor = get_connection()
 render_executive_kpis(cursor, onr_catalog)
 render_search_extract(cursor, onr_catalog, onr_schema)
 render_routing(cursor, onr_catalog)
-filters = render_dashboard_filters()
-render_grants_overview(cursor, onr_catalog, onr_schema, filters)
+render_daily_brief(cursor, onr_catalog)
 
-tab1, tab2, tab3 = st.tabs(["Budget", "Automation", "Activity"])
+tab1, tab2 = st.tabs(["Budget", "Activity"])
 
 with tab1:
     render_budget_execution(cursor, onr_catalog)
 
 with tab2:
-    render_daily_brief(cursor, onr_catalog)
-
-with tab3:
     render_activity_log(cursor, onr_catalog)
+
+with st.expander("Filters and overview"):
+    filters = render_dashboard_filters()
+    render_grants_overview(cursor, onr_catalog, onr_schema, filters)
 
 render_architecture("portfolio")

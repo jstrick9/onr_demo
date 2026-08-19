@@ -1487,12 +1487,13 @@ _DIAGRAMS = {
 
 
 def render_architecture(kind: str) -> None:
-    """Draw.io-style SVG architecture for a page."""
+    """Draw.io-style SVG architecture. Closed by default so live actions stay on screen."""
     builder = _DIAGRAMS.get(kind)
     if not builder:
         return
-    title, body, w, h, note = builder()
-    _wrap(title, body, w, h, note)
+    with st.expander("Architecture", expanded=False):
+        title, body, w, h, note = builder()
+        _wrap(title, body, w, h, note)
 
 
 def render_how_it_works(title: str, steps: list[dict] | None = None, note: str = "", kind: str | None = None) -> None:

@@ -8,7 +8,7 @@ from utils.runtime_env import get_runtime_env
 from utils.db_helpers import get_connection, read_yaml
 from utils.user_helpers import init_user_session_state
 from utils.workspace_names import SQL_WAREHOUSE_NAME, ALL_PURPOSE_CLUSTER_NAME, ML_CLUSTER_NAME
-from utils.ui import page_header, render_architecture, fit_metrics, provenance_note
+from utils.ui import page_header, render_architecture, provenance_note
 from utils.workspace_ops import render_page_links
 from utils.mission_themes import render_mission_ribbon
 from utils.infra_estate import render_estate, render_bundle, bundle_excerpt

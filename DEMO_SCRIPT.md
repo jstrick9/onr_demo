@@ -199,7 +199,7 @@ A non-technical leader does not need SQL. Active grants is still four hundred an
 
 Search is live against gold. It is also written to `app.search_history`. That is the audit Zero Trust asked for, and it is the usage meter for prompt (e).
 
-`[DO THIS]` **Automation** → **Generate daily brief**. Wait for the letterhead.
+`[DO THIS]` Click **Generate daily brief**. Wait for the letterhead. Stay on this page.
 
 Automated summary. Classification banner, three bullets, one recommended action. If Foundation Model serving is on, this is `ai_query`. If not, it is the structured template. Either way a row lands in `app.daily_briefs`. That is process automation — not a staffer writing the morning book.
 
