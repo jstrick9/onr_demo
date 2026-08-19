@@ -10,7 +10,7 @@ from utils.user_helpers import init_user_session_state
 from utils.workspace_names import SQL_WAREHOUSE_NAME, ALL_PURPOSE_CLUSTER_NAME, ML_CLUSTER_NAME
 from utils.ui import page_header, render_architecture, fit_metrics, provenance_note
 from utils.workspace_ops import render_page_links
-from utils.mission_themes import render_mission_ribbon, theme_chip
+from utils.mission_themes import render_mission_ribbon
 from utils.infra_estate import render_estate, render_bundle, bundle_excerpt
 
 set_page_config(page_title="Element 2 · Infrastructure | ONR Portfolio")
@@ -53,7 +53,6 @@ if cursor:
     except Exception:
         uc_ok = False
 
-theme_chip("recover", "infrastructure", "inventory")
 render_estate()
 fit_metrics(
     [
@@ -114,7 +113,6 @@ with tab1:
     )
 
 with tab2:
-    theme_chip("boundary", "infrastructure", "identity")
     st.caption(
         "The signed-in IdP session is on Home → Access. "
         "This app authenticates as its own service principal. "

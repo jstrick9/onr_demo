@@ -91,7 +91,7 @@ workspace:
   ml_cluster_id: ""
 
 app:
-  version: "1.9.38"
+  version: "1.9.39"
   environment: "poc"
   max_file_size_mb: 50
   session_timeout_minutes: 60

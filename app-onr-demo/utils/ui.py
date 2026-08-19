@@ -334,47 +334,60 @@ div.stButton > button:hover {{
   margin: 8px 0 18px 0;
 }}
 
-.mission-kicker {{
-  color: {MUTED};
+.se-bar {{
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px 0;
+  padding: 8px 12px;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  overflow: visible;
+}}
+.se-label {{
+  color: {GOLD};
   font-size: 0.68rem;
   font-weight: 800;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  margin: 2px 0 8px 0;
+  margin-right: 4px;
 }}
-.mission-hint {{
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: none;
-  color: #8b9bb4;
-  margin-left: 10px;
+.se-chip {{
+  position: relative;
 }}
-[data-testid="column"]:has(.mission-pri) [data-testid="stPopover"] button,
-[data-testid="stVerticalBlock"]:has(> div .mission-pri) [data-testid="stPopover"] button {{
-  background: #fffbeb !important;
-  color: {GOLD} !important;
-  border: 1.5px solid {GOLD} !important;
-  box-shadow: 0 4px 12px rgba(180,83,9,0.18) !important;
+.se-chip summary {{
+  list-style: none;
+  cursor: pointer;
+  border: 1.5px solid {GOLD};
+  background: #fffbeb;
+  color: {GOLD};
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  box-shadow: 0 2px 8px rgba(180,83,9,0.12);
 }}
-[data-testid="column"]:has(.mission-sec) [data-testid="stPopover"] button,
-[data-testid="stVerticalBlock"]:has(> div .mission-sec) [data-testid="stPopover"] button {{
-  background: #ffffff !important;
-  color: {NAVY} !important;
-  border: 1.5px solid #475569 !important;
-  box-shadow: none !important;
+.se-chip summary::-webkit-details-marker {{ display: none; }}
+.se-chip summary::marker {{ content: ""; }}
+.se-chip[open] summary {{
+  background: {GOLD};
+  color: #fff7ed;
 }}
-[data-testid="stPopover"] button {{
-  border-radius: 999px !important;
-  font-size: 0.72rem !important;
-  font-weight: 800 !important;
-  letter-spacing: 0.08em !important;
-  text-transform: uppercase !important;
-  min-height: 34px !important;
-  padding: 4px 10px !important;
-}}
-[data-testid="stPopover"] button:hover {{
-  border-color: {GOLD} !important;
-  color: {GOLD} !important;
+.se-pop {{
+  position: absolute;
+  z-index: 30;
+  left: 0;
+  top: calc(100% + 8px);
+  width: min(380px, 78vw);
+  background: #ffffff;
+  border: 1.5px solid #475569;
+  border-radius: 12px;
+  box-shadow: 0 10px 24px rgba(15,23,42,0.14);
+  padding: 12px 14px;
 }}
 .theme-title {{
   color: {NAVY};

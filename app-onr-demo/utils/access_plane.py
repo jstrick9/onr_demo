@@ -79,10 +79,9 @@ def _last_audit(cursor, catalog: str, table: str) -> str | None:
 
 def render_access_plane(cursor=None, catalog: str = "onr_demo") -> None:
     """Four tiles: signed-in user, IdP, app SP, gold-only scope."""
-    from utils.mission_themes import themed_heading
     from utils.ui import fit_metrics
 
-    themed_heading("Access", "boundary", "home", "access")
+    st.markdown("### Access")
     st.caption(
         "Workspace IdP session. This app has its own service principal. "
         "MFA is the identity provider, not this form. "

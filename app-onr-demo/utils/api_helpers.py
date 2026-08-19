@@ -83,9 +83,7 @@ def _resolve_warehouse():
 
 def render_live_statement_api(cursor=None, catalog: str = "onr_demo"):
     """Show a real Statement Execution REST call + live response."""
-    from utils.mission_themes import themed_heading
-
-    themed_heading("Statement Execution API", "boundary", "export", "statement")
+    st.markdown("### Statement Execution API")
     st.caption(
         "POST /api/2.0/sql/statements — OAuth, same warehouse as this console. Token redacted."
     )

@@ -19,7 +19,7 @@ from utils.export_helpers import (
 from utils.api_helpers import render_live_statement_api
 from utils.ui import page_header, render_architecture
 from utils.workspace_ops import render_page_links
-from utils.mission_themes import render_mission_ribbon, themed_heading, theme_chip
+from utils.mission_themes import render_mission_ribbon
 
 set_page_config(page_title="Element 7 · Export | ONR Portfolio")
 setup_sidebar()
@@ -47,7 +47,7 @@ render_page_links("export", onr_catalog)
 
 conn, cursor = get_connection()
 
-themed_heading("Bulk extract", "coexist", "export", "bulk")
+st.markdown("### Bulk extract")
 formats = render_export_options()
 dataset_name, dataset_table = render_dataset_selection(cursor, onr_catalog, onr_schema)
 filters = render_export_filters()
@@ -59,7 +59,6 @@ else:
 render_live_statement_api(cursor, onr_catalog)
 
 with st.expander("History"):
-    theme_chip("vendor", "export", "history")
     render_export_history(cursor, onr_catalog)
 with st.expander("Schema"):
     render_schema_documentation()

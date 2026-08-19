@@ -385,7 +385,6 @@ def _streaming_heartbeat_fragment():
 def render_time_travel_compare(cursor=None, catalog: str = "onr_demo"):
     """Gold/silver as of the previous Delta version vs now. No reset."""
     from utils.ui import time_travel_strip
-    from utils.mission_themes import theme_chip
 
     if not cursor:
         return
@@ -434,7 +433,6 @@ def render_time_travel_compare(cursor=None, catalog: str = "onr_demo"):
     base_n = _count_at(baseline["version"]) if baseline["version"] != current["version"] else now_n
     if now_n is None:
         return
-    theme_chip("recover", "ingestion", "time_travel")
     time_travel_strip(
         {
             "label": "Baseline snapshot",
@@ -747,9 +745,7 @@ def render_file_picker_and_reset(cursor, catalog: str):
     )
     import pandas as pd
 
-    from utils.mission_themes import themed_heading
-
-    themed_heading("Inbound files", "coexist", "ingestion", "inbound")
+    st.markdown("### Inbound files")
     st.session_state["_onr_hb_catalog"] = catalog
     pulsed = False
     if hasattr(st, "fragment"):

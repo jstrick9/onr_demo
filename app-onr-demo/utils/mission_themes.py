@@ -1,8 +1,4 @@
-"""Operating themes — only the chips that connect to the current page.
-
-Chips use operator names. Official prompt letters live only inside the
-popover footer. Copy is operator rationale plus this page's live artifact.
-"""
+"""Strategic-element chips — one compact strip at the top of each page."""
 
 from __future__ import annotations
 
@@ -10,19 +6,6 @@ import html
 
 import streamlit as st
 
-THEME_ORDER = ("coexist", "budget", "boundary", "recover", "vendor")
-
-PAGE_LABEL = {
-    "home": "Home",
-    "infrastructure": "Infrastructure",
-    "ingestion": "Ingestion",
-    "catalog": "Catalog",
-    "analytics": "Analytics",
-    "portfolio": "Portfolio",
-    "export": "Export",
-}
-
-# Themes that have a live artifact on this page. Nothing else is rendered.
 PAGE_THEMES: dict[str, tuple[str, ...]] = {
     "home": ("boundary",),
     "infrastructure": ("recover", "boundary"),
@@ -35,7 +18,6 @@ PAGE_THEMES: dict[str, tuple[str, ...]] = {
 
 THEMES: dict[str, dict] = {
     "coexist": {
-        "id": "coexist",
         "label": "Coexist",
         "letter": "a",
         "title": "Legacy coexistence",
@@ -50,7 +32,6 @@ THEMES: dict[str, dict] = {
         },
     },
     "budget": {
-        "id": "budget",
         "label": "Budget",
         "letter": "b",
         "title": "Budget formulation",
@@ -65,7 +46,6 @@ THEMES: dict[str, dict] = {
         },
     },
     "boundary": {
-        "id": "boundary",
         "label": "Boundary",
         "letter": "c",
         "title": "Least-privilege boundary",
@@ -82,7 +62,6 @@ THEMES: dict[str, dict] = {
         },
     },
     "recover": {
-        "id": "recover",
         "label": "Recover",
         "letter": "d",
         "title": "Recoverable serving path",
@@ -97,7 +76,6 @@ THEMES: dict[str, dict] = {
         },
     },
     "vendor": {
-        "id": "vendor",
         "label": "Vendor",
         "letter": "e",
         "title": "Licensed feed",
@@ -115,66 +93,30 @@ THEMES: dict[str, dict] = {
 }
 
 
-def page_has_theme(page: str, theme_id: str) -> bool:
-    return theme_id in PAGE_THEMES.get(page, ())
-
-
-def _body_html(theme: dict, page: str) -> str:
-    artifact = (theme.get("on_page") or {}).get(page) or ""
-    on_page = (
-        f'<div class="theme-on">On this page · {html.escape(artifact)}</div>'
-        if artifact
-        else ""
-    )
-    return (
-        f'<div class="theme-title">{html.escape(theme["title"])}</div>'
-        f'<div class="theme-body">{html.escape(theme["body"])}</div>'
-        f"{on_page}"
-        f'<div class="theme-letter">Theme ({html.escape(theme["letter"])})</div>'
-    )
-
-
-def _open_popover(theme: dict, page: str, key: str, wide: bool = False) -> None:
-    with st.popover(theme["label"], use_container_width=wide, key=key):
-        st.markdown(_body_html(theme, page), unsafe_allow_html=True)
-
-
-def theme_chip(theme_id: str, page: str, slot: str = "chip") -> None:
-    """One click-to-open chip next to a live artifact. No-op if it does not apply."""
-    if not page_has_theme(page, theme_id):
-        return
-    theme = THEMES[theme_id]
-    st.markdown('<div class="mission-pri"></div>', unsafe_allow_html=True)
-    _open_popover(theme, page, key=f"mt_{page}_{theme_id}_{slot}", wide=False)
-
-
-def themed_heading(title: str, theme_id: str, page: str, slot: str | None = None) -> None:
-    """Section title with the matching theme chip on the right."""
-    if not page_has_theme(page, theme_id):
-        st.markdown(f"### {title}")
-        return
-    left, right = st.columns([5.4, 1.15])
-    with left:
-        st.markdown(f"### {title}")
-    with right:
-        theme_chip(theme_id, page, slot or title.lower().replace(" ", "_"))
-
-
 def render_mission_ribbon(page: str) -> None:
-    """Chips that connect to this page only."""
+    """One compact strip. Only themes that connect to this page."""
     themes = PAGE_THEMES.get(page) or ()
     if not themes:
         return
-    st.markdown(
-        '<div class="mission-kicker">On this page</div>',
-        unsafe_allow_html=True,
-    )
-    if len(themes) == 1:
-        theme_chip(themes[0], page, "ribbon")
-        return
-    cols = st.columns(len(themes), gap="small")
-    for col, theme_id in zip(cols, themes):
+    chips = [
+        '<div class="se-bar">',
+        '<span class="se-label">Strategic Elements on this page</span>',
+    ]
+    for theme_id in themes:
         theme = THEMES[theme_id]
-        with col:
-            st.markdown('<div class="mission-pri"></div>', unsafe_allow_html=True)
-            _open_popover(theme, page, key=f"mt_{page}_{theme_id}_ribbon", wide=True)
+        artifact = (theme.get("on_page") or {}).get(page) or ""
+        pop = (
+            f'<div class="theme-title">{html.escape(theme["title"])}</div>'
+            f'<div class="theme-body">{html.escape(theme["body"])}</div>'
+        )
+        if artifact:
+            pop += f'<div class="theme-on">On this page · {html.escape(artifact)}</div>'
+        pop += f'<div class="theme-letter">Theme ({html.escape(theme["letter"])})</div>'
+        chips.append(
+            f'<details class="se-chip">'
+            f'<summary>{html.escape(theme["label"])}</summary>'
+            f'<div class="se-pop">{pop}</div>'
+            f"</details>"
+        )
+    chips.append("</div>")
+    st.markdown("".join(chips), unsafe_allow_html=True)

@@ -12,7 +12,7 @@
 - Clock marks are the latest you should still be on that beat. If you are late, jump to the next **[CATCH-UP]** line.
 
 **On screen:** gold kicker is the Element number (`Element 3 · Data operations`); the title stays the product name (`Ingestion`). Sidebar nav stays product names.  
-**Operating-theme chips** under the kicker show only the themes that connect to **this** page. Do **not** read them. Click a chip only if a reviewer asks; the popover names the live artifact on this page. Letters (a)–(e) are inside the popover footer, not on the chip.  
+**Strategic Elements on this page** is the compact chip strip under the kicker. Only themes that connect to this page. Do **not** read them. Click a chip only if a reviewer asks. Letters (a)–(e) are inside the chip, not on the label.  
  
 **Out loud, still say “Element 3” through “Element 7.”**
 

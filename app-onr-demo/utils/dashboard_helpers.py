@@ -290,9 +290,7 @@ def render_simulated_overview():
 # -------------------------------
 def render_budget_execution(cursor=None, catalog: str = "onr_demo"):
     """Budget vs actual from gold (falls back to derived ERP fixture)."""
-    from utils.mission_themes import themed_heading
-
-    themed_heading("Budget execution", "budget", "portfolio", "budget")
+    st.markdown("### Budget execution")
 
     categories, budget, actual = None, None, None
     if cursor:
@@ -592,9 +590,7 @@ def render_routing(cursor=None, catalog: str = "onr_demo") -> None:
 
 def render_search_extract(cursor, catalog: str, schema: str):
     """Display search and extract functionality for non-technical users."""
-    from utils.mission_themes import themed_heading
-
-    themed_heading("Search", "vendor", "portfolio", "search")
+    st.markdown("### Search")
     st.caption("No SQL. Search gold-backed silver.grants. Writes app.search_history.")
     
     # Clear must happen *before* the widget is instantiated
