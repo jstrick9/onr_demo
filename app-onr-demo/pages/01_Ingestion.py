@@ -26,7 +26,7 @@ setup_sidebar()
 page_header(
     "Element 3 · Data operations",
     "Ingestion",
-    "Data operations. Ingest the files, read Hold, then Start stream. Schema notes are in the expander.",
+    "Ingest selected files → Hold → Start stream. Quality and schema are in the tabs.",
 )
 render_mission_ribbon("ingestion")
 

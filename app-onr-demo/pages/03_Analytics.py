@@ -26,7 +26,7 @@ setup_sidebar()
 page_header(
     "Element 5 · Decision support",
     "Analytics",
-    "Scientist view. Score the registered models. Fund / Review / Defer, flags, forecast, and the resource action live here — not on Portfolio.",
+    "Score registered models. Scores, Resource action, and Drift stay on this screen.",
 )
 render_mission_ribbon("analytics")
 

@@ -26,7 +26,7 @@ setup_sidebar()
 page_header(
     "Element 6 · Executive view",
     "Portfolio",
-    "Officer view. Search, route, then generate the daily brief. AT_RISK is on Budget. Model scores live on Analytics.",
+    "Search quantum → Accept / Defer → Generate daily brief. AT_RISK is on Budget.",
 )
 render_mission_ribbon("portfolio")
 

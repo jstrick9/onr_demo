@@ -86,10 +86,7 @@ def render_drift(cursor=None, catalog: str = "onr_demo") -> None:
     from utils.ui import provenance_note
 
     st.markdown("### Drift")
-    st.caption(
-        "Feature and score mix versus the baseline snapshot. "
-        "This is not accuracy — there are no ground-truth labels on mock data."
-    )
+    st.caption("Feature and score mix vs baseline snapshot. Not accuracy.")
 
     cur_v, prior_v = _prior_table_version(cursor, catalog, "silver", "grants")
     pred_cur, pred_prior = _prior_table_version(cursor, catalog, "gold", "grant_predictions")
@@ -236,39 +233,40 @@ def render_drift(cursor=None, catalog: str = "onr_demo") -> None:
         unsafe_allow_html=True,
     )
 
-    left, right = st.columns(2)
-    if area_now:
-        rows = []
-        for area in sorted(set(area_base) | set(area_now)):
-            rows.append({"program_area": area, "slice": "Baseline", "share": area_base.get(area, 0)})
-            rows.append({"program_area": area, "slice": "Now", "share": area_now.get(area, 0)})
-        fig = px.bar(
-            pd.DataFrame(rows),
-            x="program_area",
-            y="share",
-            color="slice",
-            barmode="group",
-            title="Program mix (grant count)",
-        )
-        from utils.ui import style_fig
+    with st.expander("Drift charts"):
+        left, right = st.columns(2)
+        if area_now:
+            rows = []
+            for area in sorted(set(area_base) | set(area_now)):
+                rows.append({"program_area": area, "slice": "Baseline", "share": area_base.get(area, 0)})
+                rows.append({"program_area": area, "slice": "Now", "share": area_now.get(area, 0)})
+            fig = px.bar(
+                pd.DataFrame(rows),
+                x="program_area",
+                y="share",
+                color="slice",
+                barmode="group",
+                title="Program mix (grant count)",
+            )
+            from utils.ui import style_fig
 
-        left.plotly_chart(style_fig(fig), use_container_width=True)
-    if rec_now_m:
-        rows = []
-        for rec in ("Fund", "Review", "Defer"):
-            rows.append({"recommendation": rec, "slice": "Baseline", "n": rec_base_m.get(rec, 0)})
-            rows.append({"recommendation": rec, "slice": "Now", "n": rec_now_m.get(rec, 0)})
-        fig = px.bar(
-            pd.DataFrame(rows),
-            x="recommendation",
-            y="n",
-            color="slice",
-            barmode="group",
-            title="Score mix (Fund / Review / Defer)",
-        )
-        from utils.ui import style_fig
+            left.plotly_chart(style_fig(fig), use_container_width=True)
+        if rec_now_m:
+            rows = []
+            for rec in ("Fund", "Review", "Defer"):
+                rows.append({"recommendation": rec, "slice": "Baseline", "n": rec_base_m.get(rec, 0)})
+                rows.append({"recommendation": rec, "slice": "Now", "n": rec_now_m.get(rec, 0)})
+            fig = px.bar(
+                pd.DataFrame(rows),
+                x="recommendation",
+                y="n",
+                color="slice",
+                barmode="group",
+                title="Score mix (Fund / Review / Defer)",
+            )
+            from utils.ui import style_fig
 
-        right.plotly_chart(style_fig(fig), use_container_width=True)
+            right.plotly_chart(style_fig(fig), use_container_width=True)
 
 
 def render_score_strip(cursor=None, catalog: str = "onr_demo") -> None:
@@ -312,7 +310,6 @@ def render_score_strip(cursor=None, catalog: str = "onr_demo") -> None:
     rf_model = str(models.iloc[0]["model_name"] or "—") if not models.empty else "—"
     if_model = str(flags.iloc[0].get("model_name") or "—") if not flags.empty else "—"
     st.markdown("### Scores")
-    st.caption("Output of Score registered models — gold.grant_predictions and gold.grant_anomaly_scores.")
     c1, c2, c3, c4, c5 = st.columns(5)
     c1.metric("Scored", f"{n_rf:,}")
     c2.metric("Fund", f"{fund:,}")
@@ -320,7 +317,7 @@ def render_score_strip(cursor=None, catalog: str = "onr_demo") -> None:
     c4.metric("Defer", f"{defer:,}")
     c5.metric("Flagged", f"{flagged:,}")
     provenance_note("gold.grant_predictions", catalog)
-    st.caption(f"RF `{rf_model}` · IF `{if_model}` · open Predictions / Anomalies for the rows.")
+    st.caption(f"RF `{rf_model}` · IF `{if_model}`")
 
 
 def render_score_controls(catalog: str = "onr_demo") -> None:

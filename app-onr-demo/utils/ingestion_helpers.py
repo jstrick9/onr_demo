@@ -328,40 +328,23 @@ def _heartbeat_body(cursor, catalog: str) -> None:
         pulse["ago"],
         kicker=kicker,
     )
-    c1, c2, c3, c4 = st.columns(4)
-    delta = None
-    try:
-        if last2 not in {None, "—"} and int(last2) > 0:
-            delta = f"+{int(last2)}"
-    except (TypeError, ValueError):
-        delta = None
-    c1.metric("Bronze", f"{n}")
-    c2.metric("Silver", f"{silver_n:,}" if silver_n is not None else "—")
+    bits = []
+    if silver_n is not None:
+        bits.append(f"silver {silver_n:,}")
     if stream_n:
-        c3.metric("Stream rows", f"{stream_n:,}", delta=f"+{stream_n}")
-    elif isinstance(n, int) and silver_n is not None:
-        held = n - int(silver_n)
-        c3.metric("Quarantine gap", f"{held}", help="Bronze minus silver. Should be 0 — quarantine never lands in bronze.")
-    else:
-        c3.metric("Last 2 min", f"{last2}", delta=delta)
-    c4.metric("Last file", pulse["ago"])
+        bits.append(f"stream {stream_n:,}")
     provenance_note("bronze.grants", catalog, when=pulse["last"])
-    if isinstance(n, int) and silver_n is not None and stream_n:
-        st.caption(
-            f"Bronze {n:,} includes {stream_n:,} stream-demo-2026 proof row(s). "
-            f"Silver {silver_n:,} after grant_no dedupe."
-        )
-    elif isinstance(n, int) and silver_n is not None:
-        st.caption(
-            f"Bronze {n:,} and silver {silver_n:,} should match. "
-            "Quarantine (empty / dup / amt) never enters bronze — see Quality / app.quarantine_log."
-        )
+    if bits:
+        extra = " · ".join(bits)
+        if stream_n and silver_n is not None:
+            st.caption(f"{extra} · silver unchanged after grant_no dedupe.")
+        else:
+            st.caption(extra)
 
 
 def render_streaming_metrics(cursor=None, catalog: str = "onr_demo"):
     """Landing health from bronze. Stream kicker only after Start stream / recent files."""
     st.markdown("### Landing")
-    st.caption("Bronze is the landing table. Silver is what leadership reads.")
     st.session_state["_onr_hb_catalog"] = catalog
     rendered = False
     if hasattr(st, "fragment"):
@@ -764,40 +747,52 @@ def render_file_picker_and_reset(cursor, catalog: str):
         default=["live", "quality_fail"],
         key="ingest_packs",
     )
-    uploaded = st.file_uploader(
-        "Or upload a grants CSV",
-        type=["csv"],
-        key="ingest_multi_upload",
-    )
-    extra_rows = None
-    extra_name = "upload.csv"
-    if uploaded:
-        extra_rows = pd.read_csv(uploaded).to_dict(orient="records")
-        extra_name = uploaded.name
-        st.caption(f"{len(extra_rows)} rows loaded")
+    if st.button("Ingest selected files", type="primary", key="process_files"):
+        if not cursor:
+            st.error("Warehouse is not connected.")
+        elif not packs:
+            st.warning("Select a queued file or upload a CSV under Restore baseline / upload.")
+        else:
+            with st.spinner("Landing files…"):
+                try:
+                    result = process_selected_files(cursor, catalog, packs)
+                    st.session_state["last_ingest"] = result
+                    before_n = result.get("before")
+                    after_n = result.get("after")
+                    landed = sum(int(f.get("landed") or 0) for f in result["files"])
+                    st.success(f"Active grants {before_n} → {after_n} · landed {landed}")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Ingest failed: {e}")
 
-    c1, c2 = st.columns(2)
-    with c1:
-        if st.button("Ingest selected files", type="primary", key="process_files"):
-            if not cursor:
-                st.error("Warehouse is not connected.")
-            elif not packs and not extra_rows:
-                st.warning("Select a queued file or upload a CSV.")
-            else:
-                with st.spinner("Landing files…"):
-                    try:
-                        result = process_selected_files(
-                            cursor, catalog, packs, extra_rows=extra_rows, extra_name=extra_name
-                        )
-                        st.session_state["last_ingest"] = result
-                        before_n = result.get("before")
-                        after_n = result.get("after")
-                        landed = sum(int(f.get("landed") or 0) for f in result["files"])
-                        st.success(f"Active grants {before_n} → {after_n} · landed {landed}")
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Ingest failed: {e}")
-    with c2:
+    with st.expander("Restore baseline / upload"):
+        uploaded = st.file_uploader(
+            "Or upload a grants CSV",
+            type=["csv"],
+            key="ingest_multi_upload",
+        )
+        extra_rows = None
+        extra_name = "upload.csv"
+        if uploaded:
+            extra_rows = pd.read_csv(uploaded).to_dict(orient="records")
+            extra_name = uploaded.name
+            st.caption(f"{len(extra_rows)} rows loaded")
+            if st.button("Ingest uploaded CSV", key="process_upload"):
+                if not cursor:
+                    st.error("Warehouse is not connected.")
+                else:
+                    with st.spinner("Landing files…"):
+                        try:
+                            result = process_selected_files(
+                                cursor, catalog, [], extra_rows=extra_rows, extra_name=extra_name
+                            )
+                            st.session_state["last_ingest"] = result
+                            st.success(
+                                f"Active grants {result.get('before')} → {result.get('after')}"
+                            )
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Ingest failed: {e}")
         confirm = st.checkbox("Confirm restore of the baseline snapshot", key="confirm_reset")
         if st.button("Restore baseline snapshot", key="reset_seed", disabled=not confirm):
             if not cursor:
@@ -817,9 +812,8 @@ def render_file_picker_and_reset(cursor, catalog: str):
                     except Exception as e:
                         st.error(f"Restore failed: {e}")
         st.caption(
-            "Removes inbound and stream batches (live-demo-2026, quality-fail-2026, "
-            "stream-demo-2026), rebuilds silver and gold, and clears the quarantine "
-            "error log plus quality findings."
+            "Removes inbound and stream batches, rebuilds silver and gold, "
+            "and clears the quarantine log. Do not restore on camera."
         )
 
 

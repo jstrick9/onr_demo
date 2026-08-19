@@ -24,7 +24,7 @@ setup_sidebar()
 page_header(
     "Element 4 · Governance",
     "Catalog",
-    "Governance view. Click Open lineage after ingest so the native graph is populated.",
+    "Open lineage after ingest. Registry, Quality, and tags are on the tabs.",
 )
 render_mission_ribbon("catalog")
 

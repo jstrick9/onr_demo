@@ -274,11 +274,7 @@ def _persist(cursor, catalog: str, rec: dict) -> None:
 def render_daily_brief(cursor=None, catalog: str = "onr_demo"):
     """On-demand automated summary for Element 6 + Strategic Prompt (b)."""
     st.markdown("### Daily Portfolio Brief")
-    st.caption(
-        "Process automation: an on-demand (and schedulable) summary from gold tables. "
-        "Uses `ai_query` when Foundation Model APIs are enabled; otherwise a structured template. "
-        "Persisted to `app.daily_briefs`."
-    )
+    st.caption("On-demand summary from gold. `ai_query` if enabled; else the structured template.")
 
     if st.button("Generate daily brief", type="primary", key="gen_daily_brief"):
         ctx = _context_from_uc(cursor, catalog) if cursor else {}
@@ -334,5 +330,5 @@ def render_daily_brief(cursor=None, catalog: str = "onr_demo"):
         """,
     ) if cursor else pd.DataFrame()
     if not hist.empty:
-        st.markdown("#### Recent briefs (`app.daily_briefs`)")
-        st.dataframe(hist, use_container_width=True)
+        with st.expander("Recent briefs"):
+            st.dataframe(hist, use_container_width=True, hide_index=True)

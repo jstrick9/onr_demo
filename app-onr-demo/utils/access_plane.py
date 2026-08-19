@@ -82,11 +82,7 @@ def render_access_plane(cursor=None, catalog: str = "onr_demo") -> None:
     from utils.ui import fit_metrics
 
     st.markdown("### Access")
-    st.caption(
-        "Workspace IdP session. This app has its own service principal. "
-        "MFA is the identity provider, not this form. "
-        "This cell is unclassified mock on commercial AWS — not IL5."
-    )
+    st.caption("IdP session · app SP is a different identity · gold SELECT · not IL5.")
     fit_metrics(
         [
             ("Signed in", signed_in_label()),

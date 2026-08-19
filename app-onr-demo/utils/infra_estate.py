@@ -190,9 +190,11 @@ def render_bundle() -> None:
     label, text = bundle_excerpt()
     st.markdown("### Bundle")
     st.caption(
-        f"`databricks bundle deploy -t poc` · source `{label}`. "
-        "Read-only inventory. There is no deploy control on this console."
+        f"`databricks bundle deploy -t poc` · `{label}` · read-only. "
+        "[GitHub repo](https://github.com/jstrick9/onr_demo). Full file is in the Full bundle tab."
     )
-    shown = text if len(text) <= 2800 else text[:2800] + "\n# … truncated — full file in the expander\n"
+    lines = text.splitlines()
+    shown = "\n".join(lines[:14])
+    if len(lines) > 14:
+        shown += "\n# … full file in the Full bundle tab"
     st.code(shown, language="yaml")
-    st.link_button("Open GitHub repo", "https://github.com/jstrick9/onr_demo")

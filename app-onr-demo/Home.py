@@ -17,7 +17,7 @@ setup_sidebar()
 page_header(
     "ONR · Code 08",
     "ONR Portfolio",
-    "Self-service grants and ERP on catalog onr_demo. Access is the IdP session on this page. Infrastructure is the live bundle inventory.",
+    "Mock Compass grants on catalog onr_demo. Point at Active grants, then Access.",
 )
 render_mission_ribbon("home")
 render_page_links("home", "onr_demo")
@@ -41,8 +41,6 @@ except Exception as e:
 conn, cursor = get_connection()
 st.session_state["onr_conn"] = conn
 st.session_state["onr_cursor"] = cursor
-
-st.markdown("")
 
 try:
     if not cursor:
@@ -97,20 +95,20 @@ except Exception:
 
 render_access_plane(_access_cursor, onr_catalog)
 
-st.markdown("")
 render_architecture("home")
 
-capability_cards(
-    [
-        {"title": "Element 1 · Access", "body": "Workspace IdP session. App has its own principal. MFA is the IdP, not this form."},
-        {"title": "Element 2 · Infrastructure", "body": "Live bundle inventory. Warehouse and clusters are pre-existing."},
-        {"title": "Element 3 · Ingestion", "body": "Land files, apply quality gates, refresh silver and gold."},
-        {"title": "Element 4 · Catalog", "body": "Registry, health scores, lineage, and classification tags."},
-        {"title": "Element 5 · Analytics", "body": "Fund / Review / Defer, anomaly queue, FY forecast, drift, and trend IDs."},
-        {"title": "Element 6 · Portfolio", "body": "Search, filter, daily brief, and AT_RISK execution."},
-        {"title": "Element 7 · Export", "body": "CSV, JSON, Parquet, and Statement Execution API."},
-    ]
-)
+with st.expander("Element map"):
+    capability_cards(
+        [
+            {"title": "Element 1 · Access", "body": "Workspace IdP session. App has its own principal. MFA is the IdP, not this form."},
+            {"title": "Element 2 · Infrastructure", "body": "Live bundle inventory. Warehouse and clusters are pre-existing."},
+            {"title": "Element 3 · Ingestion", "body": "Land files, apply quality gates, refresh silver and gold."},
+            {"title": "Element 4 · Catalog", "body": "Registry, health scores, lineage, and classification tags."},
+            {"title": "Element 5 · Analytics", "body": "Fund / Review / Defer, anomaly queue, FY forecast, drift, and trend IDs."},
+            {"title": "Element 6 · Portfolio", "body": "Search, filter, daily brief, and AT_RISK execution."},
+            {"title": "Element 7 · Export", "body": "CSV, JSON, Parquet, and Statement Execution API."},
+        ]
+    )
 
 with st.expander("Source tables"):
     if cursor:

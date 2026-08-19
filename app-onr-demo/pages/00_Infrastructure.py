@@ -19,7 +19,7 @@ setup_sidebar()
 page_header(
     "Element 2 · Inventory",
     "Infrastructure",
-    "Live estate and the Asset Bundle that manages volumes, this app, the paused file-arrival job, and the SDP pipeline. Warehouse and clusters are pre-existing. There is no deploy control here.",
+    "Estate + Bundle. No deploy control. Warehouse and clusters are pre-existing.",
 )
 render_mission_ribbon("infrastructure")
 render_page_links("infrastructure", "onr_demo")
@@ -55,12 +55,16 @@ if cursor:
 
 render_estate()
 if n_tables is not None:
+    provenance_note("app inventory", onr_catalog)
     st.caption(f"Catalog `{onr_catalog}` · {n_tables} Unity Catalog tables.")
-provenance_note("app inventory", onr_catalog)
-if cursor and not uc_ok:
+elif cursor and not uc_ok:
+    provenance_note("app inventory", onr_catalog)
     st.caption("Warehouse is up but information_schema was not readable.")
 elif not cursor:
-    st.caption("Warehouse not connected — inventory below is the intended deployment.")
+    provenance_note("app inventory", onr_catalog)
+    st.caption("Warehouse not connected — inventory is the intended deployment.")
+else:
+    provenance_note("app inventory", onr_catalog)
 
 render_bundle()
 

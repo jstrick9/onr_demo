@@ -84,18 +84,16 @@ def _resolve_warehouse():
 def render_live_statement_api(cursor=None, catalog: str = "onr_demo"):
     """Show a real Statement Execution REST call + live response."""
     st.markdown("### Statement Execution API")
-    st.caption(
-        "POST /api/2.0/sql/statements — OAuth, same warehouse as this console. Token redacted."
-    )
+    st.caption("POST /api/2.0/sql/statements — OAuth, same warehouse. Token redacted.")
 
     statement = DEMO_STATEMENT.format(catalog=catalog)
     host = "<workspace>"
     warehouse_id = "<warehouse_id>"
     try:
         _w, host, warehouse_id, wname = _resolve_warehouse()
-        st.caption(f"Resolved warehouse **{wname}** (`{warehouse_id}`) on `{host}`.")
+        st.caption(f"{wname} · `{host}`")
     except Exception as e:
-        st.caption(f"Warehouse lookup deferred — curl still shows the contract. ({e})")
+        st.caption(f"Warehouse lookup deferred. ({e})")
 
     payload = {
         "warehouse_id": warehouse_id,
@@ -105,14 +103,14 @@ def render_live_statement_api(cursor=None, catalog: str = "onr_demo"):
         "wait_timeout": "30s",
         "disposition": "INLINE",
     }
-    st.markdown("#### curl (token redacted)")
-    st.code(
-        f"""curl -sS -X POST 'https://{host}/api/2.0/sql/statements' \\
+    with st.expander("curl (token redacted)"):
+        st.code(
+            f"""curl -sS -X POST 'https://{host}/api/2.0/sql/statements' \\
   -H "Authorization: Bearer $DATABRICKS_TOKEN" \\
   -H "Content-Type: application/json" \\
   -d '{json.dumps(payload, indent=2)}'""",
-        language="bash",
-    )
+            language="bash",
+        )
 
     if st.button("Execute live Statement API call", type="primary", key="live_stmt_api"):
         try:

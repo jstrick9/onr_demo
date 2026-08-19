@@ -27,7 +27,7 @@ setup_sidebar()
 page_header(
     "Element 7 · Interoperability",
     "Export & APIs",
-    "Integrator view. Execute export and the live Statement API on this screen. History is below.",
+    "Execute export, then Execute live Statement API. History is in the expander.",
 )
 render_mission_ribbon("export")
 
@@ -48,9 +48,13 @@ render_page_links("export", onr_catalog)
 conn, cursor = get_connection()
 
 st.markdown("### Bulk extract")
-formats = render_export_options()
-dataset_name, dataset_table = render_dataset_selection(cursor, onr_catalog, onr_schema)
-filters = render_export_filters()
+left, mid, right = st.columns([1.1, 1.4, 1.5])
+with left:
+    formats = render_export_options()
+with mid:
+    dataset_name, dataset_table = render_dataset_selection(cursor, onr_catalog, onr_schema)
+with right:
+    filters = render_export_filters()
 if dataset_table and formats:
     render_secure_export(cursor, onr_catalog, onr_schema, dataset_table, formats, filters)
 else:
@@ -62,7 +66,7 @@ with st.expander("History"):
     render_export_history(cursor, onr_catalog)
 with st.expander("Schema"):
     render_schema_documentation()
-with st.expander("Interoperability and Advana contract"):
+with st.expander("Interoperability"):
     render_interoperability()
     render_api_documentation()
 

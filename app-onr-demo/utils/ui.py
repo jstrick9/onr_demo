@@ -207,7 +207,21 @@ html, body, [class*="css"] {{
 }}
 
 h1, h2, h3 {{ letter-spacing: 0.01em; color: {NAVY} !important; }}
-.stCaption, [data-testid="stCaption"] {{ color: {MUTED} !important; }}
+h3 {{ font-size: 1.05rem !important; margin: 0.3rem 0 0.2rem 0 !important; }}
+.page-title {{
+  font-size: 1.48rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  color: {NAVY};
+  margin: 0;
+  line-height: 1.15;
+}}
+.stCaption, [data-testid="stCaption"] {{ color: {MUTED} !important; margin-bottom: 0.15rem !important; }}
+.block-container {{
+  padding-top: 1.05rem !important;
+  padding-bottom: 1.2rem !important;
+  max-width: 1180px;
+}}
 
 div[data-testid="stHorizontalBlock"] > div,
 div[data-testid="column"] {{
@@ -216,9 +230,9 @@ div[data-testid="column"] {{
 [data-testid="stMetric"] {{
   background: #ffffff;
   border: 1.5px solid #475569;
-  border-radius: 12px;
-  padding: 14px 16px;
-  box-shadow: 0 8px 22px rgba(15,23,42,0.12);
+  border-radius: 10px;
+  padding: 8px 10px;
+  box-shadow: 0 6px 16px rgba(15,23,42,0.10);
   transition: transform 0.18s ease, box-shadow 0.18s ease;
   min-width: 0;
   overflow: visible;
@@ -359,29 +373,29 @@ div.stButton > button:hover {{
 
 .page-kicker {{
   color: {GOLD};
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }}
 .page-rule {{
   height: 3px;
-  width: 88px;
+  width: 72px;
   background: linear-gradient(90deg, {GOLD_BRIGHT}, {GOLD});
-  margin: 8px 0 18px 0;
+  margin: 4px 0 8px 0;
 }}
 
 .se-bar {{
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
-  margin: 0 0 14px 0;
-  padding: 8px 12px;
+  gap: 6px;
+  margin: 0 0 8px 0;
+  padding: 4px 8px;
   background: #f8fafc;
   border: 1px solid #cbd5e1;
-  border-radius: 10px;
+  border-radius: 8px;
   overflow: visible;
 }}
 .se-label {{
@@ -556,10 +570,10 @@ div.stButton > button:hover {{
 .hold-tray, .action-card, .brief-sheet, .receipt-card, .hb-strip, .tt-strip {{
   background: #ffffff;
   border: 1.5px solid #475569;
-  border-radius: 12px;
-  box-shadow: 0 8px 22px rgba(15,23,42,0.10);
-  padding: 14px 16px;
-  margin: 8px 0 16px 0;
+  border-radius: 10px;
+  box-shadow: 0 6px 16px rgba(15,23,42,0.08);
+  padding: 10px 12px;
+  margin: 6px 0 10px 0;
 }}
 .hold-kicker, .action-kicker, .brief-kicker, .receipt-kicker, .hb-kicker, .tt-kicker {{
   color: {GOLD};
@@ -766,12 +780,12 @@ div.stButton > button:hover {{
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
-  margin: 0 0 16px 0;
-  padding: 10px 12px;
+  gap: 6px;
+  margin: 0 0 8px 0;
+  padding: 5px 8px;
   background: #f8fafc;
   border: 1px solid #cbd5e1;
-  border-radius: 10px;
+  border-radius: 8px;
 }}
 .ws-kicker {{
   color: {GOLD};
@@ -990,9 +1004,12 @@ def workspace_strip(items: list[dict]) -> None:
 
 
 def page_header(kicker: str, title: str, caption: str) -> None:
-    st.markdown(f'<div class="page-kicker">{html.escape(kicker)}</div>', unsafe_allow_html=True)
-    st.title(title)
-    st.markdown('<div class="page-rule"></div>', unsafe_allow_html=True)
+    st.markdown(
+        f'<div class="page-kicker">{html.escape(kicker)}</div>'
+        f'<h1 class="page-title">{html.escape(title)}</h1>'
+        f'<div class="page-rule"></div>',
+        unsafe_allow_html=True,
+    )
     if caption:
         st.caption(caption)
 
@@ -1618,3 +1635,4 @@ def style_fig(fig):
     except Exception:
         pass
     return fig
+ig

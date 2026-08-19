@@ -147,45 +147,10 @@ def _persist_export(cursor, catalog: str, rec: dict) -> None:
 def render_export_options():
     """Display export format options."""
     st.markdown("### Formats")
-
     col1, col2, col3 = st.columns(3)
-
-    with col1:
-        st.markdown("#### CSV")
-        st.markdown(
-            """
-        - Universal compatibility
-        - Lightweight, human-readable
-        - Excel, Google Sheets compatible
-        - Ideal for tabular data
-        """
-        )
-        csv_selected = st.checkbox("Include CSV", value=True, key="export_csv")
-
-    with col2:
-        st.markdown("#### JSON")
-        st.markdown(
-            """
-        - Web/API friendly
-        - Nested data structures
-        - JavaScript ecosystem native
-        - Ideal for API integration
-        """
-        )
-        json_selected = st.checkbox("Include JSON", value=True, key="export_json")
-
-    with col3:
-        st.markdown("#### Parquet")
-        st.markdown(
-            """
-        - Columnar storage
-        - Highly compressed
-        - Big data optimized
-        - Ideal for analytics
-        """
-        )
-        parquet_selected = st.checkbox("Include Parquet", value=True, key="export_parquet")
-
+    csv_selected = col1.checkbox("CSV", value=True, key="export_csv")
+    json_selected = col2.checkbox("JSON", value=True, key="export_json")
+    parquet_selected = col3.checkbox("Parquet", value=True, key="export_parquet")
     formats = []
     if csv_selected:
         formats.append("csv")
@@ -193,7 +158,6 @@ def render_export_options():
         formats.append("json")
     if parquet_selected:
         formats.append("parquet")
-
     return formats
 
 
@@ -218,21 +182,19 @@ def render_dataset_selection(cursor, catalog: str, schema: str):
     }
 
     selected_dataset = st.selectbox(
-        "Select Dataset",
+        "Dataset",
         options=list(datasets.keys()),
         key="export_dataset",
     )
-
-    # Show preview
     try:
         query = f"SELECT COUNT(*) as cnt FROM {datasets[selected_dataset]}"
         if not cursor:
             raise RuntimeError("no warehouse")
         cursor.execute(query)
         count = cursor.fetchone()[0]
-        st.info(f"**{selected_dataset}**: {count:,} records available for export")
+        st.caption(f"{selected_dataset}: {count:,} rows")
     except Exception:
-        st.info("Dataset count will appear once data is loaded.")
+        st.caption("Row count appears when the warehouse is connected.")
 
     return selected_dataset, datasets.get(selected_dataset)
 
@@ -249,26 +211,14 @@ def render_export_filters():
         "Narrow the range for a filtered bulk extract."
     )
 
-    col1, col2 = st.columns(2)
-
-    with col1:
-        date_range = st.date_input(
-            "Date Range",
-            value=(date(2025, 1, 1), date(2026, 12, 31)),
-            min_value=date(2018, 1, 1),
-            max_value=date(2027, 12, 31),
-            key="export_date_range",
-        )
-
-    with col2:
-        max_records = st.number_input(
-            "Maximum Records",
-            min_value=100,
-            max_value=1000000,
-            value=100000,
-            step=1000,
-            key="export_max_records",
-        )
+    date_range = st.date_input(
+        "Date range",
+        value=(date(2025, 1, 1), date(2026, 12, 31)),
+        min_value=date(2018, 1, 1),
+        max_value=date(2027, 12, 31),
+        key="export_date_range",
+    )
+    max_records = 100000
 
     if isinstance(date_range, (list, tuple)):
         date_start = date_range[0] if len(date_range) > 0 else None
@@ -292,24 +242,20 @@ def render_secure_export(cursor, catalog: str, schema: str, dataset_table: str, 
     where_sql, filter_label = _filter_clause(dataset_table, filters)
     col, _kind = _date_column_for_table(dataset_table)
     if col:
-        st.caption(f"Filter that will be applied: **{filter_label}** on `{col}`.")
-
-    st.caption(
-        "TLS to the warehouse · row written to `app.export_history` · mock data only."
-    )
+        st.caption(f"{filter_label} on `{col}` · logged to app.export_history.")
 
     if st.button("Execute export", type="primary", key="exec_export_btn"):
         with st.spinner("Preparing export..."):
             progress = st.progress(0)
             status = st.empty()
 
-            status.text("1️⃣ Validating access permissions...")
+            status.text("Validating access…")
             progress.progress(15)
 
-            status.text("2️⃣ Applying filters...")
+            status.text("Applying filters…")
             progress.progress(30)
 
-            status.text("3️⃣ Querying data...")
+            status.text("Querying data…")
             progress.progress(50)
 
             # Execute query
@@ -335,7 +281,7 @@ def render_secure_export(cursor, catalog: str, schema: str, dataset_table: str, 
                     df = _apply_filter_df(df, dataset_table, filters)
                     df = df.head(limit)
 
-                status.text("4️⃣ Generating export files...")
+                status.text("Generating files…")
                 progress.progress(70)
 
                 # Generate exports
@@ -361,7 +307,7 @@ def render_secure_export(cursor, catalog: str, schema: str, dataset_table: str, 
                     pq.to_parquet(parquet_buffer, index=False)
                     exports["parquet"] = parquet_buffer.getvalue()
 
-                status.text("5️⃣ Logging export to audit trail...")
+                status.text("Writing export_history…")
                 progress.progress(90)
 
                 file_size = 0
@@ -384,12 +330,12 @@ def render_secure_export(cursor, catalog: str, schema: str, dataset_table: str, 
                 st.session_state.setdefault("export_history", []).append(rec)
                 _persist_export(cursor, catalog, rec)
 
-                status.text("✅ Export complete!")
+                status.text("Export complete")
                 progress.progress(100)
 
                 st.success(
-                    f"✅ Exported {len(df):,} filtered records "
-                    f"({filter_label}). Logged to `app.export_history`."
+                    f"Exported {len(df):,} filtered records "
+                    f"({filter_label}). Logged to app.export_history."
                 )
 
                 # Download buttons

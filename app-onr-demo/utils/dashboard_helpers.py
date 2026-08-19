@@ -112,8 +112,6 @@ def render_executive_kpis(cursor=None, catalog: str = "onr_demo"):
         k = portfolio_kpis()
     from utils.ui import provenance_note
 
-    st.markdown("### Portfolio pulse")
-    
     col1, col2, col3, col4, col5 = st.columns(5)
     
     with col1:
@@ -521,10 +519,7 @@ def _ensure_routing_table(cursor, catalog: str) -> None:
 def render_routing(cursor=None, catalog: str = "onr_demo") -> None:
     """Accept / Defer a flagged grant. Writes app.routing_log. Not ServiceNow."""
     st.markdown("### Routing")
-    st.caption(
-        "Accept or Defer one flagged award. The row lands in app.routing_log — "
-        "who, grant, action, time. That is the approval path on this console."
-    )
+    st.caption("Accept or Defer one flagged award → app.routing_log.")
     flags = pd.DataFrame()
     if cursor:
         try:
@@ -607,99 +602,109 @@ def render_routing(cursor=None, catalog: str = "onr_demo") -> None:
         except Exception:
             log = pd.DataFrame(st.session_state.get("routing_history") or [])
     if not log.empty:
-        st.dataframe(log, use_container_width=True, hide_index=True)
+        with st.expander("Routing log"):
+            st.dataframe(log, use_container_width=True, hide_index=True)
 
 
 def render_search_extract(cursor, catalog: str, schema: str):
     """Display search and extract functionality for non-technical users."""
     st.markdown("### Search")
-    st.caption("No SQL. Search gold-backed silver.grants. Writes app.search_history.")
-    
-    # Clear must happen *before* the widget is instantiated
+    st.caption("No SQL. Writes app.search_history.")
+
     if st.session_state.pop("clear_exec_search", False):
         st.session_state["exec_search"] = ""
 
-    search_term = st.text_input(
-        "Search grants by title, awardee, grant number, or org unit:",
-        placeholder="e.g., 'quantum' or 'ONRD-2024'",
-        key="exec_search"
-    )
-    
-    col1, col2 = st.columns([3, 1])
-    
-    with col1:
-        if search_term:
-            t0 = time.perf_counter()
-            n_results = 0
-            try:
-                like = _like_term(search_term)
-                query = f"""
-                SELECT 
-                    grant_no,
-                    title,
-                    awardee,
-                    org_unit,
-                    program_area,
-                    amount_usd,
-                    classification_band
-                FROM `{catalog}`.`silver`.grants
-                WHERE LOWER(title) LIKE '%{like}%' ESCAPE '\\\\'
-                    OR LOWER(awardee) LIKE '%{like}%' ESCAPE '\\\\'
-                    OR LOWER(grant_no) LIKE '%{like}%' ESCAPE '\\\\'
-                    OR LOWER(org_unit) LIKE '%{like}%' ESCAPE '\\\\'
-                LIMIT 50
-                """
-                if not cursor:
-                    raise RuntimeError("no warehouse")
-                cursor.execute(query)
-                results = cursor.fetchall()
-                
-                if results:
-                    df = pd.DataFrame(results, columns=[
-                        "Grant No", "Title", "Awardee", "Org Unit",
-                        "Program Area", "Amount", "Classification"
-                    ])
-                    n_results = len(df)
-                    st.dataframe(
-                        df.style.format({"Amount": "${:,.0f}"}),
-                        use_container_width=True
-                    )
-                    
-                    # Export button
-                    csv = df.to_csv(index=False)
-                    st.download_button(
-                        label="Download results (CSV)",
-                        data=csv,
-                        file_name=f"grants_search_{datetime.now().strftime('%Y%m%d')}.csv",
-                        mime="text/csv"
-                    )
-                else:
-                    st.info("No results found. Try a different search term.")
-            except Exception:
-                from utils.portfolio_data import filter_grants
-                df = filter_grants(search=search_term).head(50)
-                if df.empty:
-                    st.info("No results found. Try a different search term.")
-                else:
-                    n_results = len(df)
-                    show = df[["grant_no", "title", "awardee", "org_unit", "program_area", "amount_usd", "classification_band"]]
-                    st.dataframe(show, use_container_width=True)
-            rec = {
-                "search_id": f"srch-{uuid.uuid4().hex[:12]}",
-                "term": search_term,
-                "search_type": "grants",
-                "results": n_results,
-                "execution_time_ms": int((time.perf_counter() - t0) * 1000),
-                "user": st.session_state.get("email") or "unknown",
-            }
-            st.session_state.setdefault("search_history", []).append(rec)
-            _persist_search(cursor, catalog, rec)
-    
-    with col2:
-        st.markdown("#### Quick Filters")
-        if st.button("Clear search"):
+    s1, s2 = st.columns([5, 1])
+    with s1:
+        search_term = st.text_input(
+            "Search grants",
+            placeholder="quantum",
+            key="exec_search",
+            label_visibility="collapsed",
+        )
+    with s2:
+        if st.button("Clear", key="clear_search_btn"):
             st.session_state["clear_exec_search"] = True
             st.rerun()
+
+    if not search_term:
+        return
+
+    t0 = time.perf_counter()
+    n_results = 0
+    df = pd.DataFrame()
+    try:
+        like = _like_term(search_term)
+        query = f"""
+        SELECT
+            grant_no,
+            title,
+            awardee,
+            org_unit,
+            program_area,
+            amount_usd,
+            classification_band
+        FROM `{catalog}`.`silver`.grants
+        WHERE LOWER(title) LIKE '%{like}%' ESCAPE '\\\\'
+            OR LOWER(awardee) LIKE '%{like}%' ESCAPE '\\\\'
+            OR LOWER(grant_no) LIKE '%{like}%' ESCAPE '\\\\'
+            OR LOWER(org_unit) LIKE '%{like}%' ESCAPE '\\\\'
+        LIMIT 50
+        """
+        if not cursor:
+            raise RuntimeError("no warehouse")
+        cursor.execute(query)
+        results = cursor.fetchall()
+        if results:
+            df = pd.DataFrame(
+                results,
+                columns=[
+                    "Grant No", "Title", "Awardee", "Org Unit",
+                    "Program Area", "Amount", "Classification",
+                ],
+            )
+    except Exception:
+        from utils.portfolio_data import filter_grants
+
+        raw = filter_grants(search=search_term).head(50)
+        if not raw.empty:
+            df = raw[
+                [
+                    "grant_no",
+                    "title",
+                    "awardee",
+                    "org_unit",
+                    "program_area",
+                    "amount_usd",
+                    "classification_band",
+                ]
+            ]
+    if df.empty:
+        st.caption("No results. Try quantum or ONRD-2024.")
+    else:
+        n_results = len(df)
+        try:
+            show = df.style.format({"Amount": "${:,.0f}"}) if "Amount" in df.columns else df
+            st.dataframe(show, use_container_width=True, hide_index=True, height=168)
+        except Exception:
+            st.dataframe(df, use_container_width=True, hide_index=True, height=168)
+        st.download_button(
+            label="Download results (CSV)",
+            data=df.to_csv(index=False),
+            file_name=f"grants_search_{datetime.now().strftime('%Y%m%d')}.csv",
+            mime="text/csv",
+        )
+    rec = {
+        "search_id": f"srch-{uuid.uuid4().hex[:12]}",
+        "term": search_term,
+        "search_type": "grants",
+        "results": n_results,
+        "execution_time_ms": int((time.perf_counter() - t0) * 1000),
+        "user": st.session_state.get("email") or "unknown",
+    }
+    st.session_state.setdefault("search_history", []).append(rec)
+    _persist_search(cursor, catalog, rec)
+
 
 
 # -------------------------------

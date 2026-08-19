@@ -100,11 +100,7 @@ def render_lineage_launch(catalog: str = "onr_demo") -> None:
     from utils.workspace_ops import catalog_table_url, workspace_action_row
 
     st.markdown("### Lineage")
-    st.caption(
-        "Native Catalog Explorer graph — not a drawing here. "
-        "Open gold.grants_summary after ingest so the graph is populated. "
-        "If it is empty, ingest inbound grants on Ingestion, then reopen."
-    )
+    st.caption("Native Catalog Explorer graph. Open gold.grants_summary after ingest.")
     c1, c2 = st.columns(2)
     with c1:
         workspace_action_row(
