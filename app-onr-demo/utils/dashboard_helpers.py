@@ -590,7 +590,9 @@ def render_routing(cursor=None, catalog: str = "onr_demo") -> None:
 
 def render_search_extract(cursor, catalog: str, schema: str):
     """Display search and extract functionality for non-technical users."""
-    st.markdown("### Search")
+    from utils.mission_themes import themed_heading
+
+    themed_heading("Search", "vendor", "portfolio", "search")
     st.caption("No SQL. Search gold-backed silver.grants. Writes app.search_history.")
     
     # Clear must happen *before* the widget is instantiated

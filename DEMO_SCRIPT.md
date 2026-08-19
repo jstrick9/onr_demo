@@ -12,13 +12,13 @@
 - Clock marks are the latest you should still be on that beat. If you are late, jump to the next **[CATCH-UP]** line.
 
 **On screen:** gold kicker is the Element number (`Element 3 · Data operations`); the title stays the product name (`Ingestion`). Sidebar nav stays product names.  
-**Operating-theme chips** under the kicker — Coexist · Budget · Boundary · Recover · Vendor — are product principles, not a rubric. Filled = this page is the proof. Do **not** read them. Click a chip only if a reviewer asks; the popover stays open while you talk. Letters (a)–(e) are inside the popover footer, not on the chip.  
+**Operating-theme chips** under the kicker show only the themes that connect to **this** page. Do **not** read them. Click a chip only if a reviewer asks; the popover names the live artifact on this page. Letters (a)–(e) are inside the popover footer, not on the chip.  
  
 **Out loud, still say “Element 3” through “Element 7.”**
 
 **Camera rule:** one take, live cloud + live repo, no slides, no overlays.
 
-**Path rule:** one app window. Forward only — Home → Ingestion → Catalog → Analytics → Portfolio → Export → Infrastructure. Do not go back. Do not pre-open notebooks, Volume, Repo, or MLflow. If a workspace object is required, click the button or link **on that page**.
+**Path rule:** one app window. Forward only — Home → Infrastructure → Ingestion → Catalog → Analytics → Portfolio → Export. Sidebar is that same element order. Do not go back. Do not pre-open notebooks, Volume, Repo, or MLflow. If a workspace object is required, click the button or link **on that page**.
 
 **Pace:** about 140 words per minute. Stream and score waits are covered by talk. Do not stare at a spinner in silence.
 
@@ -28,16 +28,16 @@
 
 | Clock | Page | Live action | Must say |
 |------:|------|-------------|----------|
-| 0:00–1:20 | Home | Point at **400**, then **Access** | Mock data; **Element 1** result (IdP + app SP) |
-| 1:20–8:30 | Ingestion | **Ingest selected files** then **Start stream** | **Element 3**; 400→408; Hold; **(a)**; **(d)** |
+| 0:00–1:00 | Home | Point at **400**, then **Access** | Mock data; **Element 1** result (IdP + app SP) |
+| 1:00–1:40 | Infrastructure | Estate + **Bundle** | **Element 2** inventory; no deploy button |
+| 1:40–8:30 | Ingestion | **Ingest selected files** then **Start stream** | **Element 3**; 400→408; Hold; **(a)**; **(d)** |
 | 8:30–12:00 | Catalog | **Open lineage** | **Element 4**; **(e)** |
 | 12:00–18:00 | Analytics | **Score registered models**; point at **Drift** | **Element 5**; **(b)**; Resource action |
 | 18:00–21:00 | Portfolio | Search `quantum`; **Generate daily brief** | **Element 6** |
-| 21:00–24:20 | Export | FY 2025–2026 export; **Execute live Statement API** | **Element 7**; **(c)** |
-| 24:20–25:00 | Infrastructure | Estate + **Bundle** | **Element 2** inventory; no deploy button |
+| 21:00–25:00 | Export | FY 2025–2026 export; **Execute live Statement API** | **Element 7**; **(c)** |
 
 **Never cut:** 400→408, Hold tray, stream heartbeat, Catalog Explorer lineage, score, search, live Statement API, all five prompts.  
-**Cut first if late:** Quality tab, Policies tab, Trends tab, Schema Docs, Infrastructure.
+**Cut first if late:** Quality tab, Policies tab, Trends tab, Schema Docs.
 
 ---
 
@@ -77,11 +77,23 @@ You are looking at catalog `onr_demo`, medallion layers bronze, silver, gold, an
 
 Each page kicker is the Element number. The Workspace strip opens the live notebook or Unity Catalog table for that Element.
 
-`[DO THIS]` Click **Ingestion**.
+`[DO THIS]` Click **Infrastructure**.
 
 ---
 
-### 1:00–8:30 — Element 3: ingest, quality, stream
+### 1:00–1:40 — Element 2: estate and bundle
+
+**Element two: infrastructure as code.**
+
+`[DO THIS]` Point at **Estate**, then **Bundle**. Do not click a deploy control — there is not one.
+
+Warehouse `onr demo warehouse`, score cluster `onr demo ml`, app `onr-demo-poc`, paused file-arrival job, SDP pipeline. Volumes, this app, that job, and that pipeline are in `databricks.yml`. Deploy is `databricks bundle deploy -t poc` from the repo — not a button on this console. The warehouse and clusters are pre-existing. This page is the inventory of what that deploy produced.
+
+`[DO THIS]` Click **Ingestion**. Do not return to Infrastructure.
+
+---
+
+### 1:40–8:30 — Element 3: ingest, quality, stream
 
 **Element three: automated ingestion, data operations, and streaming.**
 
@@ -217,21 +229,9 @@ This is the live, documented Databricks Statement Execution REST API — `POST /
 
 Strategic prompt (c). Three planes, same identity. The app has its **own** service principal; it does not borrow mine. The warehouse and the cluster are separate. Unity Catalog is the data-plane firewall. Least privilege: analysts `SELECT` gold, they never see bronze. This cell is unclassified mock on commercial AWS — FedRAMP Moderate. The IL5 production cell is GovCloud, PrivateLink, customer-managed KMS. We are not claiming this POC is IL5.
 
-`[DO THIS]` Click **Infrastructure**.
-
----
-
-### 24:20–25:00 — Element 2 close
-
-**Element two: infrastructure as code.**
-
-`[DO THIS]` Point at **Estate**, then **Bundle**. Do not click a deploy control — there is not one.
-
-Warehouse `onr demo warehouse`, score cluster `onr demo ml`, app `onr-demo-poc`, paused file-arrival job, SDP pipeline. Volumes, this app, that job, and that pipeline are in `databricks.yml`. Deploy is `databricks bundle deploy -t poc` from the repo — not a button on this console. The warehouse and clusters are pre-existing. This page is the inventory of what that deploy produced.
-
 Tomorrow another CSV lands on the same Volume. Same gold. Same registered models — we rescore from this console. Mock data only.
 
-`[DO THIS]` Stop talking. Leave Infrastructure on screen.
+`[DO THIS]` Stop talking. Leave Export on screen.
 
 ---
 
@@ -274,6 +274,8 @@ Tomorrow another CSV lands on the same Volume. Same gold. Same registered models
 - “We trained the models just now.” You scored from the registry. Training was last night.
 - Drift is accuracy decay. It is feature and score mix versus the baseline snapshot.
 - “We rewrite the legacy estate.” Strangler-fig only.
-- Any Element 1 or Element 2 deep-dive. Companion tape.
+- Any Element 1 or Element 2 deep-dive beyond the Access strip and the bundle inventory.
+- “MFA is this form.” MFA is the IdP.
+- “I am deploying from this button.” There is no deploy button.
 
 Longer prompt text, if a reviewer asks after the recording: [STRATEGIC_PROMPTS.md](STRATEGIC_PROMPTS.md). Do not read those 75-second versions on this 25-minute take.

@@ -228,7 +228,10 @@ def render_governance_policies(cursor, catalog: str, schema: str):
         st.dataframe(pd.DataFrame(tags_data), use_container_width=True)
     
     with col2:
+        from utils.mission_themes import theme_chip
+
         st.markdown("#### Access Policies")
+        theme_chip("boundary", "catalog", "grants")
         policies_data = [
             {"Principal": "data-engineers", "Permission": "CAN_MANAGE", "Scope": "All tables"},
             {"Principal": "analysts", "Permission": "SELECT", "Scope": "Gold tables"},

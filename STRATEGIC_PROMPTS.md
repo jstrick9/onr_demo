@@ -8,13 +8,13 @@
 
 Full prompt text is quoted from Volume IV §11.4. Show a live artifact while you talk — never a slide.
 
-| Prompt | Chip | Best moment | Live artifact to have on screen |
-|--------|------|-------------|----------------------------------|
-| (a) Legacy sustainment | **Coexist** | Element 3 or 7 | Ingestion inbound files + `landing/` volume, or Export bulk extract |
-| (b) Financial / budgetary | **Budget** | Element 5 + 6 | Analytics Scores + Resource action, or Portfolio AT_RISK |
-| (c) Zero Trust / IL5 | **Boundary** | Element 4 or 7 | Export Statement API, or Infrastructure identity |
-| (d) DR / resilience | **Recover** | Element 3 stream, or close | Ingestion Delta time travel, or Infrastructure inventory |
-| (e) Vendor / lifecycle | **Vendor** | Element 4 | Catalog tags (`vendor` / `license_id` / `renewal_date`) + quality scores |
+| Prompt | Chip | Pages that show it | Live artifact on that page |
+|--------|------|--------------------|----------------------------|
+| (a) Legacy sustainment | **Coexist** | Ingestion, Export | Inbound files / same bronze · Bulk extract |
+| (b) Financial / budgetary | **Budget** | Analytics, Portfolio | Scores / Resource action · AT_RISK + routing |
+| (c) Zero Trust / IL5 | **Boundary** | Home, Infrastructure, Catalog, Export | Access strip · Identity · Access policies · Statement API |
+| (d) DR / resilience | **Recover** | Ingestion, Infrastructure | Delta time travel · Estate / paused file-arrival |
+| (e) Vendor / lifecycle | **Vendor** | Catalog, Portfolio, Export | Tags + quality · Search history · Export history |
 
 On-screen chips use the product name. The letter lives in the popover footer. Do not read the popover on the 25-minute take.
 
