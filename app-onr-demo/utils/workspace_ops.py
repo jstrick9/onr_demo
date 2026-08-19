@@ -1019,6 +1019,7 @@ PAGE_LINKS = {
         {"kind": "table", "schema": "gold", "table": "budget_execution", "label": "budget_execution"},
         {"kind": "table", "schema": "app", "table": "daily_briefs", "label": "daily_briefs"},
         {"kind": "table", "schema": "app", "table": "search_history", "label": "search_history"},
+        {"kind": "table", "schema": "app", "table": "routing_log", "label": "routing_log"},
     ],
     "export": [
         {"kind": "table", "schema": "gold", "table": "grants_summary", "label": "grants_summary"},

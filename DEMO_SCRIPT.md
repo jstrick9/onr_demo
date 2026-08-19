@@ -140,7 +140,7 @@ Strategic prompt (e). Every external feed is a licensed product: owner, renewal 
 
 The models were trained last night and registered in Unity Catalog. I am **not** retraining on camera. I am triggering a live score against the portfolio we just ingested — including the eight new grants. Still this page.
 
-`[DO THIS]` Click **Score registered models**. If the run does not submit, Workspace strip **04c score** — Run all, then come straight back here. Keep talking.
+`[DO THIS]` Click **Score registered models**. Point at **Scores** on this page — Fund / Review / Defer and Flagged. Do not hunt tabs first. If the run does not submit, Workspace strip **04c score** — Run all, then come straight back here. Keep talking.
 
 Strategic prompt (b), financial and budgetary, while it scores.
 
@@ -178,7 +178,7 @@ Two-year OLS forecast with a ninety-five percent band. That declining program is
 
 A non-technical leader does not need SQL. Active grants is still four hundred and eight.
 
-`[DO THIS]` Change one filter — fiscal year or a program area — then clear it or leave it. Click **Search**. Type `quantum`. Press enter / search.
+`[DO THIS]` Search is on this page. Type `quantum`. Press enter. Point at **Routing** — Accept or Defer one flagged grant.
 
 Search is live against gold. It is also written to `app.search_history`. That is the audit Zero Trust asked for, and it is the usage meter for prompt (e).
 
@@ -198,7 +198,7 @@ Same gold the forecast used. `AT_RISK` plus `TREND-DECLINE` is the reallocation 
 
 **Element seven: interoperability, data portability, and secure export.**
 
-`[DO THIS]` Date range is already **2025 to 2026**. Leave **CSV** and **Parquet** on. Dataset **Grants Summary**. Click **Execute export**. Download Parquet or CSV once.
+`[DO THIS]` Date range is already **2025 to 2026**. Leave **CSV** and **Parquet** on. Dataset **Grants Summary**. Click **Execute export**. Download Parquet or CSV once. Stay on this screen.
 
 Filtered bulk extract — not `SELECT *`. Open formats: CSV, JSON, Parquet. Schema travels with the file: `grant_no`, `program_area`, `amount_usd`, `awardee`.
 

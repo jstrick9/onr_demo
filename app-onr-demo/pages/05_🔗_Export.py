@@ -26,7 +26,7 @@ setup_sidebar()
 page_header(
     "Element 7 · Interoperability",
     "Export & APIs",
-    "Filtered bulk extract in open formats. Every download is audited.",
+    "Integrator view. Execute export and the live Statement API on this screen. History is below.",
 )
 
 init_user_session_state()
@@ -45,30 +45,23 @@ render_page_links("export", onr_catalog)
 
 conn, cursor = get_connection()
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs(
-    ["Export", "API", "Interoperability", "Schema", "History"]
-)
+st.markdown("### Bulk extract")
+formats = render_export_options()
+dataset_name, dataset_table = render_dataset_selection(cursor, onr_catalog, onr_schema)
+filters = render_export_filters()
+if dataset_table and formats:
+    render_secure_export(cursor, onr_catalog, onr_schema, dataset_table, formats, filters)
+else:
+    st.caption("Select a dataset and at least one format.")
 
-with tab1:
-    formats = render_export_options()
-    dataset_name, dataset_table = render_dataset_selection(cursor, onr_catalog, onr_schema)
-    filters = render_export_filters()
-    if dataset_table and formats:
-        render_secure_export(cursor, onr_catalog, onr_schema, dataset_table, formats, filters)
-    else:
-        st.caption("Select a dataset and at least one format.")
+render_live_statement_api(cursor, onr_catalog)
 
-with tab2:
-    render_live_statement_api(cursor, onr_catalog)
-    render_api_documentation()
-
-with tab3:
-    render_interoperability()
-
-with tab4:
-    render_schema_documentation()
-
-with tab5:
+with st.expander("History"):
     render_export_history(cursor, onr_catalog)
+with st.expander("Schema"):
+    render_schema_documentation()
+with st.expander("Interoperability and Advana contract"):
+    render_interoperability()
+    render_api_documentation()
 
 render_architecture("export")

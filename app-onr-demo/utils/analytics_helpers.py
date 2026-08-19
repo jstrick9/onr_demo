@@ -271,6 +271,58 @@ def render_drift(cursor=None, catalog: str = "onr_demo") -> None:
         right.plotly_chart(style_fig(fig), use_container_width=True)
 
 
+def render_score_strip(cursor=None, catalog: str = "onr_demo") -> None:
+    """Fund / Review / Defer + flags on the canvas — no tab hunt."""
+    from utils.ui import provenance_note
+
+    rec = _query_df(
+        cursor,
+        f"""
+        SELECT recommendation, COUNT(*) AS n
+        FROM `{catalog}`.`gold`.grant_predictions
+        GROUP BY recommendation
+        """,
+    )
+    flags = _query_df(
+        cursor,
+        f"""
+        SELECT
+          SUM(CASE WHEN is_flagged THEN 1 ELSE 0 END) AS flagged,
+          COUNT(*) AS scored,
+          MAX(model_name) AS model_name
+        FROM `{catalog}`.`gold`.grant_anomaly_scores
+        """,
+    )
+    models = _query_df(
+        cursor,
+        f"""
+        SELECT MAX(model_name) AS model_name
+        FROM `{catalog}`.`gold`.grant_predictions
+        """,
+    )
+    if rec.empty and (flags.empty or int(flags.iloc[0].get("scored") or 0) == 0):
+        st.caption("No scored gold tables yet. Click **Score registered models**, then stay on this page.")
+        return
+    mix = {str(r.get("recommendation") or ""): int(r.get("n") or 0) for r in rec.to_dict("records")}
+    fund = mix.get("Fund", 0)
+    review = mix.get("Review", 0)
+    defer = mix.get("Defer", 0)
+    n_rf = fund + review + defer
+    flagged = int(flags.iloc[0]["flagged"] or 0) if not flags.empty else 0
+    rf_model = str(models.iloc[0]["model_name"] or "—") if not models.empty else "—"
+    if_model = str(flags.iloc[0].get("model_name") or "—") if not flags.empty else "—"
+    st.markdown("### Scores")
+    st.caption("Output of Score registered models — gold.grant_predictions and gold.grant_anomaly_scores.")
+    c1, c2, c3, c4, c5 = st.columns(5)
+    c1.metric("Scored", f"{n_rf:,}")
+    c2.metric("Fund", f"{fund:,}")
+    c3.metric("Review", f"{review:,}")
+    c4.metric("Defer", f"{defer:,}")
+    c5.metric("Flagged", f"{flagged:,}")
+    provenance_note("gold.grant_predictions", catalog)
+    st.caption(f"RF `{rf_model}` · IF `{if_model}` · open Predictions / Anomalies for the rows.")
+
+
 def render_score_controls(catalog: str = "onr_demo") -> None:
     """Score the current portfolio from registered models without leaving Analytics."""
     from utils.workspace_ops import (

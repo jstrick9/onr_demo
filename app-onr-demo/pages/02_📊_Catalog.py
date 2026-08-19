@@ -23,7 +23,7 @@ setup_sidebar()
 page_header(
     "Element 4 · Governance",
     "Catalog",
-    "Unity Catalog is the system of record for tables, tags, health, and lineage.",
+    "Governance view. Click Open lineage after ingest so the native graph is populated.",
 )
 
 init_user_session_state()
@@ -44,9 +44,7 @@ conn, cursor = get_connection()
 
 render_lineage_launch(onr_catalog)
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs(
-    ["Registry", "Quality", "Lineage", "Policies & tags", "Tracking"]
-)
+tab1, tab2, tab3 = st.tabs(["Registry", "Quality", "Policies & tags"])
 
 with tab1:
     render_catalog_registry(cursor, onr_catalog, onr_schema)
@@ -55,12 +53,10 @@ with tab2:
     render_quality_scores(cursor, onr_catalog, onr_schema)
 
 with tab3:
-    render_lineage_visualization()
-
-with tab4:
     render_governance_policies(cursor, onr_catalog, onr_schema)
 
-with tab5:
+with st.expander("Lineage sketch and tracking log"):
+    render_lineage_visualization()
     render_lineage_tracking(cursor, onr_catalog, onr_schema)
 
 render_architecture("catalog")

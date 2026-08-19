@@ -12,7 +12,7 @@ import pandas as pd
 # -------------------------------
 def render_catalog_registry(cursor, catalog: str, schema: str):
     """Display the data catalog registry."""
-    st.markdown("### 📚 Data Catalog Registry")
+    st.markdown("### Registry")
     
     try:
         query = f"""
@@ -49,7 +49,7 @@ def render_catalog_registry(cursor, catalog: str, schema: str):
 # -------------------------------
 def render_quality_scores(cursor, catalog: str, schema: str):
     """Display data quality health scores."""
-    st.markdown("### 🏥 Data Quality Health Scores")
+    st.markdown("### Quality")
     
     try:
         query = f"""
@@ -129,11 +129,21 @@ def render_lineage_launch(catalog: str = "onr_demo") -> None:
 
     st.markdown("### Lineage")
     st.caption(
-        "Unity Catalog lineage is the system of record. This opens Catalog Explorer "
-        "on silver.grants — the native graph, not a drawing in this console."
+        "Native Catalog Explorer graph — not a drawing here. "
+        "Open gold.grants_summary after ingest so the graph is populated. "
+        "If it is empty, ingest inbound grants on Ingestion, then reopen."
     )
-    url = catalog_table_url(catalog, "silver", "grants", tab="lineage")
-    workspace_action_row("Open lineage", url)
+    c1, c2 = st.columns(2)
+    with c1:
+        workspace_action_row(
+            "Open lineage · gold.grants_summary",
+            catalog_table_url(catalog, "gold", "grants_summary", tab="lineage"),
+        )
+    with c2:
+        workspace_action_row(
+            "Open lineage · silver.grants",
+            catalog_table_url(catalog, "silver", "grants", tab="lineage"),
+        )
 
 
 def render_lineage_visualization():
@@ -195,7 +205,7 @@ def render_lineage_visualization():
 # -------------------------------
 def render_governance_policies(cursor, catalog: str, schema: str):
     """Display governance tags and access policies."""
-    st.markdown("### 🏷️ Governance Tags & Policies")
+    st.markdown("### Tags and policies")
     
     col1, col2 = st.columns(2)
     
@@ -208,6 +218,10 @@ def render_governance_policies(cursor, catalog: str, schema: str):
             {"Table": "silver.financial", "Tag": "domain", "Value": "finance"},
             {"Table": "gold.grants_summary", "Tag": "data_sensitivity", "Value": "public"},
             {"Table": "gold.financial_summary", "Tag": "data_sensitivity", "Value": "internal"},
+            {"Table": "silver.grants", "Tag": "data_source", "Value": "mock"},
+            {"Table": "silver.grants", "Tag": "vendor", "Value": "compass.synthetic"},
+            {"Table": "silver.grants", "Tag": "license_id", "Value": "MOCK-LIC-08"},
+            {"Table": "silver.grants", "Tag": "renewal_date", "Value": "2026-09-30"},
         ]
         st.dataframe(pd.DataFrame(tags_data), use_container_width=True)
     

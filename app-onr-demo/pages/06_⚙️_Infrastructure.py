@@ -17,7 +17,7 @@ setup_sidebar()
 page_header(
     "Element 2 · glance",
     "Infrastructure",
-    "What is deployed in this workspace. Full IaC is the companion tape. The bundle does not create the warehouse or cluster.",
+    "Platform glance. What is deployed here. Full Terraform / CI-CD is the companion tape. The bundle does not create the warehouse or clusters.",
 )
 
 init_user_session_state()

@@ -25,7 +25,7 @@ setup_sidebar()
 page_header(
     "Element 3 · Data operations",
     "Ingestion",
-    "Land grants files, apply quality gates, and refresh the serving layer.",
+    "Data operations. Ingest the files, read Hold, then Start stream. Schema notes are in the expander.",
 )
 
 init_user_session_state()
@@ -62,9 +62,7 @@ render_stream_controls(onr_catalog)
 render_streaming_metrics(cursor, onr_catalog)
 render_time_travel_compare(cursor, onr_catalog)
 
-tab1, tab2, tab3, tab4 = st.tabs(
-    ["Pipeline", "Quality", "Schema & stream", "Auto Loader"]
-)
+tab1, tab2 = st.tabs(["Pipeline", "Quality"])
 
 with tab1:
     render_ingestion_status(cursor, onr_catalog, onr_schema)
@@ -72,15 +70,12 @@ with tab1:
 with tab2:
     render_quality_checks(cursor, onr_catalog, onr_schema)
 
-with tab3:
+with st.expander("Schema, stream notes, Auto Loader"):
     col1, col2 = st.columns(2)
     with col1:
         render_schema_evolution(cursor, onr_catalog, onr_schema)
     with col2:
         render_streaming_metrics(cursor, onr_catalog)
-        render_time_travel_compare(cursor, onr_catalog)
-
-with tab4:
     render_ingestion_demo(onr_catalog, onr_schema)
 
 render_architecture("ingestion")

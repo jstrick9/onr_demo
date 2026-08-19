@@ -14,8 +14,10 @@ from utils.dashboard_helpers import (
     render_process_automation,
     render_search_extract,
     render_activity_log,
+    render_routing,
 )
 from utils.brief_helpers import render_daily_brief
+from utils.analytics_helpers import render_resource_action
 from utils.ui import page_header, render_architecture
 from utils.workspace_ops import render_page_links
 
@@ -25,7 +27,7 @@ setup_sidebar()
 page_header(
     "Element 6 · Executive view",
     "Portfolio",
-    "Search, filter, and extract without SQL. Daily brief, AT_RISK rows, and the anomaly queue.",
+    "Officer view. Search first. Accept or Defer a flagged grant. Brief and AT_RISK stay on this page.",
 )
 
 init_user_session_state()
@@ -45,12 +47,13 @@ render_page_links("portfolio", onr_catalog)
 conn, cursor = get_connection()
 
 render_executive_kpis(cursor, onr_catalog)
+render_resource_action(cursor, onr_catalog)
+render_search_extract(cursor, onr_catalog, onr_schema)
+render_routing(cursor, onr_catalog)
 filters = render_dashboard_filters()
 render_grants_overview(cursor, onr_catalog, onr_schema, filters)
 
-tab1, tab2, tab3, tab4 = st.tabs(
-    ["Budget", "Automation", "Search", "Activity"]
-)
+tab1, tab2, tab3 = st.tabs(["Budget", "Automation", "Activity"])
 
 with tab1:
     render_budget_execution(cursor, onr_catalog)
@@ -60,9 +63,6 @@ with tab2:
     render_process_automation(cursor, onr_catalog)
 
 with tab3:
-    render_search_extract(cursor, onr_catalog, onr_schema)
-
-with tab4:
     render_activity_log(cursor, onr_catalog)
 
 render_architecture("portfolio")

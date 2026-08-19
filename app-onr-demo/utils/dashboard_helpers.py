@@ -478,10 +478,120 @@ def render_process_automation(cursor=None, catalog: str = "onr_demo"):
 # -------------------------------
 # SEARCH AND EXTRACT
 # -------------------------------
+def _ensure_routing_table(cursor, catalog: str) -> None:
+    if not cursor:
+        return
+    cursor.execute(
+        f"""
+        CREATE TABLE IF NOT EXISTS `{catalog}`.`app`.routing_log (
+            action_id STRING NOT NULL,
+            grant_no STRING,
+            action STRING,
+            user_email STRING,
+            note STRING,
+            created_at TIMESTAMP
+        ) USING DELTA
+        COMMENT 'Officer Accept / Defer routing — Element 6 approval path'
+        """
+    )
+
+
+def render_routing(cursor=None, catalog: str = "onr_demo") -> None:
+    """Accept / Defer a flagged grant. Writes app.routing_log. Not ServiceNow."""
+    st.markdown("### Routing")
+    st.caption(
+        "Accept or Defer one flagged award. The row lands in app.routing_log — "
+        "who, grant, action, time. That is the approval path on this console."
+    )
+    flags = pd.DataFrame()
+    if cursor:
+        try:
+            cursor.execute(
+                f"""
+                SELECT grant_no, program_area, amount_usd, predicted_type, anomaly_score
+                FROM `{catalog}`.`gold`.grant_anomaly_scores
+                WHERE is_flagged = true
+                ORDER BY anomaly_score DESC
+                LIMIT 12
+                """
+            )
+            cols = [str(d[0]).lower() for d in (cursor.description or [])]
+            flags = pd.DataFrame(cursor.fetchall() or [], columns=cols)
+        except Exception:
+            flags = pd.DataFrame()
+    if flags.empty:
+        st.caption("No flagged awards to route. Score registered models on Analytics first.")
+        return
+    ids = [str(x) for x in flags["grant_no"].tolist()]
+    pick = st.selectbox("Flagged grant", ids, key="route_grant")
+    row = flags[flags["grant_no"].astype(str) == pick]
+    if not row.empty:
+        rec = row.iloc[0]
+        try:
+            amt = f"${float(rec.get('amount_usd') or 0):,.0f}"
+        except (TypeError, ValueError):
+            amt = "—"
+        st.caption(
+            f"{rec.get('program_area') or '—'} · {amt} · "
+            f"{rec.get('predicted_type') or 'flagged'}"
+        )
+    c1, c2 = st.columns(2)
+    acted = None
+    if c1.button("Accept", key="route_accept"):
+        acted = "ACCEPT"
+    if c2.button("Defer", key="route_defer"):
+        acted = "DEFER"
+    if acted:
+        rec = {
+            "action_id": f"rt-{uuid.uuid4().hex[:12]}",
+            "grant_no": pick,
+            "action": acted,
+            "user": st.session_state.get("email") or "unknown",
+        }
+        try:
+            if cursor:
+                _ensure_routing_table(cursor, catalog)
+                cursor.execute(
+                    f"""
+                    INSERT INTO `{catalog}`.`app`.routing_log
+                    (action_id, grant_no, action, user_email, note, created_at)
+                    VALUES (
+                        {_sql_str(rec['action_id'])},
+                        {_sql_str(rec['grant_no'])},
+                        {_sql_str(rec['action'])},
+                        {_sql_str(rec['user'])},
+                        {_sql_str('officer routing')},
+                        CURRENT_TIMESTAMP()
+                    )
+                    """
+                )
+            st.session_state.setdefault("routing_history", []).append(rec)
+            st.success(f"{acted} {pick} · {rec['action_id']}")
+        except Exception as e:
+            st.error(f"Routing did not write: {e}")
+    log = pd.DataFrame()
+    if cursor:
+        try:
+            cursor.execute(
+                f"""
+                SELECT created_at, grant_no, action, user_email, action_id
+                FROM `{catalog}`.`app`.routing_log
+                ORDER BY created_at DESC
+                LIMIT 8
+                """
+            )
+            cols = [str(d[0]).lower() for d in (cursor.description or [])]
+            log = pd.DataFrame(cursor.fetchall() or [], columns=cols)
+        except Exception:
+            log = pd.DataFrame(st.session_state.get("routing_history") or [])
+    if not log.empty:
+        st.dataframe(log, use_container_width=True, hide_index=True)
+
+
 def render_search_extract(cursor, catalog: str, schema: str):
     """Display search and extract functionality for non-technical users."""
-    st.markdown("### 🔍 Search, Filter & Extract")
-    st.caption("Designed for non-technical leadership — no code required")
+    st.markdown("### Search")
+    st.caption("No SQL. Search gold-backed silver.grants. Writes app.search_history.")
     
     # Clear must happen *before* the widget is instantiated
     if st.session_state.pop("clear_exec_search", False):

@@ -9,13 +9,13 @@ from utils.user_helpers import init_user_session_state
 from utils.ui import page_header, capability_cards, render_architecture
 from utils.workspace_ops import render_page_links
 
-set_page_config(page_title="Elements 3–7 | ONR Portfolio")
+set_page_config(page_title="ONR Portfolio | Compass")
 setup_sidebar()
 
 page_header(
-    "Elements 3–7",
+    "ONR · Code 08",
     "ONR Portfolio",
-    "Office of Naval Research · Code 08. Self-service grants and ERP on catalog onr_demo.",
+    "Self-service grants and ERP on catalog onr_demo. Data path is Elements 3–7. Infrastructure is a glance. Secure access is the companion tape.",
 )
 render_page_links("home", "onr_demo")
 st.markdown(

@@ -15,6 +15,7 @@ from utils.analytics_helpers import (
     render_model_metrics,
     render_anomaly_detection,
     render_score_controls,
+    render_score_strip,
     render_drift,
 )
 from utils.ui import page_header, render_architecture
@@ -26,7 +27,7 @@ setup_sidebar()
 page_header(
     "Element 5 · Decision support",
     "Analytics",
-    "Fund / Review / Defer, award-level anomalies, FY forecast, and feature/score drift.",
+    "Scientist view. Scores sit on this page after Score registered models — Fund / Review / Defer and flags, then tabs.",
 )
 
 init_user_session_state()
@@ -46,6 +47,7 @@ render_page_links("analytics", onr_catalog)
 conn, cursor = get_connection()
 
 render_score_controls(onr_catalog)
+render_score_strip(cursor, onr_catalog)
 render_decision_support(cursor, onr_catalog)
 render_drift(cursor, onr_catalog)
 
