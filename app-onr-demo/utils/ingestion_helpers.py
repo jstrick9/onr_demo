@@ -751,7 +751,7 @@ def render_file_picker_and_reset(cursor, catalog: str):
         if not cursor:
             st.error("Warehouse is not connected.")
         elif not packs:
-            st.warning("Select a queued file or upload a CSV under Restore baseline / upload.")
+            st.warning("Select a queued file.")
         else:
             with st.spinner("Landing files…"):
                 try:
@@ -765,14 +765,19 @@ def render_file_picker_and_reset(cursor, catalog: str):
                 except Exception as e:
                     st.error(f"Ingest failed: {e}")
 
-    with st.expander("Restore baseline / upload"):
+
+def render_restore_baseline(cursor, catalog: str) -> None:
+    """Off-camera reset. Keep at the bottom of Ingestion."""
+    from utils.demo_actions import process_selected_files, reset_to_seed_sql
+    import pandas as pd
+
+    with st.expander("Restore baseline snapshot"):
+        st.caption("Not part of the live path. Do not restore on camera.")
         uploaded = st.file_uploader(
             "Or upload a grants CSV",
             type=["csv"],
             key="ingest_multi_upload",
         )
-        extra_rows = None
-        extra_name = "upload.csv"
         if uploaded:
             extra_rows = pd.read_csv(uploaded).to_dict(orient="records")
             extra_name = uploaded.name
@@ -813,7 +818,7 @@ def render_file_picker_and_reset(cursor, catalog: str):
                         st.error(f"Restore failed: {e}")
         st.caption(
             "Removes inbound and stream batches, rebuilds silver and gold, "
-            "and clears the quarantine log. Do not restore on camera."
+            "and clears the quarantine log."
         )
 
 

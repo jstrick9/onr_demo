@@ -178,9 +178,8 @@ def render_estate() -> None:
             (f"Warehouse · {rec['warehouse']}", rec["warehouse_state"]),
             (f"Score · {rec['ml_cluster']}", rec["ml_state"]),
             (f"Job · {rec['job']}", rec["job_state"]),
-            (f"App · {rec['app']}", rec["app_state"]),
         ],
-        columns=4,
+        columns=3,
     )
     if rec.get("note"):
         st.caption(rec["note"])

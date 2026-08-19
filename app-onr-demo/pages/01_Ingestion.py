@@ -13,6 +13,7 @@ from utils.ingestion_helpers import (
     render_streaming_metrics,
     render_ingestion_demo,
     render_file_picker_and_reset,
+    render_restore_baseline,
     render_time_travel_compare,
     render_stream_controls,
 )
@@ -77,3 +78,4 @@ with st.expander("Schema and Auto Loader"):
     render_ingestion_demo(onr_catalog, onr_schema)
 
 render_architecture("ingestion")
+render_restore_baseline(cursor, onr_catalog)
