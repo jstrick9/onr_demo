@@ -39,11 +39,13 @@ html, body, [class*="css"] {{
 [data-testid="stHeader"] {{
   background: transparent;
   z-index: 999;
+  overflow: visible !important;
 }}
 #MainMenu, footer {{ visibility: hidden; height: 0; }}
-/* Keep the toolbar box so the sidebar reopen control is not height:0 clipped. */
+/* Keep the toolbar box so the sidebar reopen control is not clipped. */
 [data-testid="stToolbar"] {{
   visibility: visible !important;
+  overflow: visible !important;
   height: auto !important;
 }}
 [data-testid="stToolbar"] [data-testid="stToolbarActions"],
@@ -54,28 +56,62 @@ html, body, [class*="css"] {{
   height: 0 !important;
   overflow: hidden !important;
 }}
-/* Native expand chevron stays in the DOM so #onr-nav-tab can click it.
-   Do not show it — Nav is the only reopen control. */
+/* The native Streamlit expand control IS the Nav tab.
+   Do not hide it, zero-size it, or disable pointer-events — that is what
+   broke reopen after 1.9.40. Hide only the chevron; label it NAV. */
 [data-testid="collapsedControl"],
 [data-testid="stSidebarCollapsedControl"],
 [data-testid="stExpandSidebarButton"] {{
-  opacity: 0 !important;
-  pointer-events: none !important;
-  width: 0 !important;
-  min-width: 0 !important;
-  height: 0 !important;
-  overflow: hidden !important;
-  border: none !important;
-  box-shadow: none !important;
+  position: fixed !important;
+  left: 0 !important;
+  top: 76px !important;
+  z-index: 2147483647 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  width: auto !important;
+  min-width: 40px !important;
+  height: auto !important;
+  min-height: 44px !important;
+  padding: 12px 8px !important;
+  overflow: visible !important;
+  background: {SIDEBAR} !important;
+  color: {GOLD_BRIGHT} !important;
+  border: 1px solid {GOLD_BRIGHT} !important;
+  border-left: none !important;
+  border-radius: 0 8px 8px 0 !important;
+  box-shadow: 0 6px 16px rgba(11,31,58,0.35) !important;
+  cursor: pointer !important;
 }}
 [data-testid="collapsedControl"] button,
-[data-testid="stSidebarCollapsedControl"] button,
-[data-testid="stExpandSidebarButton"] {{
-  opacity: 0 !important;
-  pointer-events: none !important;
-  width: 0 !important;
-  height: 0 !important;
-  overflow: hidden !important;
+[data-testid="stSidebarCollapsedControl"] button {{
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  width: auto !important;
+  height: auto !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: {GOLD_BRIGHT} !important;
+}}
+[data-testid="collapsedControl"] svg,
+[data-testid="stSidebarCollapsedControl"] svg,
+[data-testid="stExpandSidebarButton"] svg,
+[data-testid="collapsedControl"] [data-testid="stIcon"],
+[data-testid="stSidebarCollapsedControl"] [data-testid="stIcon"],
+[data-testid="stExpandSidebarButton"] [data-testid="stIcon"] {{
+  display: none !important;
+}}
+[data-testid="collapsedControl"]::after,
+[data-testid="stSidebarCollapsedControl"]::after,
+[data-testid="stExpandSidebarButton"]::after {{
+  content: "NAV";
+  color: {GOLD_BRIGHT};
+  font: 800 11px/1 "Segoe UI", sans-serif;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
 }}
 
 [data-testid="stSidebar"] {{
@@ -774,7 +810,14 @@ div.stButton > button:hover {{
 
 
 def _inject_sidebar_reopen() -> None:
-    """When the sidebar is closed, pin a Nav tab that clicks Streamlit's expand control."""
+    """Ensure the native expand control stays the only Nav tab.
+
+    1.9.40 hid Streamlit's expand button (0×0 + pointer-events:none) and left a
+    synthetic #onr-nav-tab that called .click() on the disabled control — that
+    is why Nav stopped reopening the sidebar. CSS now restyles the real button.
+    This helper only removes the leftover fake tab and, if a given Streamlit
+    build has no expand control, plants one last-resort Nav that clicks it.
+    """
     import streamlit.components.v1 as components
 
     components.html(
@@ -784,13 +827,34 @@ def _inject_sidebar_reopen() -> None:
 <script>
 (function () {
   const doc = window.parent.document;
+  const SEL = [
+    '[data-testid="stExpandSidebarButton"]',
+    '[data-testid="stSidebarCollapsedControl"] button',
+    '[data-testid="collapsedControl"] button',
+    '[data-testid="stSidebarCollapsedControl"]',
+    '[data-testid="collapsedControl"]',
+    '[data-testid="stBaseButton-headerNoPadding"]'
+  ];
+  function inSidebar(el) {
+    return !!(el && el.closest && el.closest('[data-testid="stSidebar"]'));
+  }
   function findExpand() {
-    return doc.querySelector(
-      '[data-testid="stExpandSidebarButton"],' +
-      '[data-testid="collapsedControl"] button,' +
-      '[data-testid="stSidebarCollapsedControl"] button,' +
-      '[data-testid="stSidebarCollapsedControl"]'
+    for (let i = 0; i < SEL.length; i++) {
+      const nodes = doc.querySelectorAll(SEL[i]);
+      for (let j = 0; j < nodes.length; j++) {
+        const el = nodes[j];
+        if (inSidebar(el)) continue;
+        const btn = el.tagName === "BUTTON" ? el : (el.querySelector("button") || el);
+        if (btn && !inSidebar(btn)) return btn;
+      }
+    }
+    const headerBtns = doc.querySelectorAll(
+      '[data-testid="stHeader"] button, [data-testid="stToolbar"] button'
     );
+    for (let k = 0; k < headerBtns.length; k++) {
+      if (!inSidebar(headerBtns[k])) return headerBtns[k];
+    }
+    return null;
   }
   function sidebarOpen() {
     const sb = doc.querySelector('[data-testid="stSidebar"]');
@@ -798,42 +862,78 @@ def _inject_sidebar_reopen() -> None:
     if (sb.getAttribute("aria-expanded") === "false") return false;
     return sb.getBoundingClientRect().width > 48;
   }
-  let tab = doc.getElementById("onr-nav-tab");
-  if (!tab) {
-    tab = doc.createElement("button");
-    tab.id = "onr-nav-tab";
-    tab.type = "button";
-    tab.textContent = "Nav";
-    tab.setAttribute("aria-label", "Open navigation");
-    Object.assign(tab.style, {
-      position: "fixed",
-      left: "0",
-      top: "76px",
-      zIndex: "2147483647",
-      background: "#0d2744",
-      color: "#f59e0b",
-      border: "1px solid #f59e0b",
-      borderLeft: "none",
-      borderRadius: "0 8px 8px 0",
-      padding: "12px 8px",
-      font: "800 11px/1 Segoe UI, sans-serif",
-      letterSpacing: "0.16em",
-      textTransform: "uppercase",
-      cursor: "pointer",
-      boxShadow: "0 6px 16px rgba(11,31,58,0.35)",
-      display: "none"
-    });
-    tab.onclick = function () {
-      const b = findExpand();
-      if (b) b.click();
-    };
-    doc.body.appendChild(tab);
+  function arm(btn) {
+    if (!btn) return;
+    btn.style.setProperty("pointer-events", "auto", "important");
+    btn.style.setProperty("opacity", "1", "important");
+    btn.setAttribute("aria-label", "Open navigation");
+    btn.setAttribute("title", "Open navigation");
   }
+  function clickExpand(btn) {
+    if (!btn) return;
+    arm(btn);
+    try { btn.focus(); } catch (e) {}
+    try { btn.click(); } catch (e) {}
+    const wrap = btn.closest(
+      '[data-testid="stExpandSidebarButton"],' +
+      '[data-testid="stSidebarCollapsedControl"],' +
+      '[data-testid="collapsedControl"]'
+    );
+    if (wrap && wrap !== btn) {
+      try { wrap.click(); } catch (e) {}
+    }
+  }
+  const leftover = doc.getElementById("onr-nav-tab");
+  if (leftover) leftover.remove();
+
   function tick() {
-    tab.style.display = sidebarOpen() ? "none" : "block";
+    const native = findExpand();
+    let tab = doc.getElementById("onr-nav-fallback");
+    if (sidebarOpen()) {
+      if (tab) tab.style.display = "none";
+      return;
+    }
+    if (native) {
+      arm(native);
+      if (tab) tab.style.display = "none";
+      return;
+    }
+    if (!tab) {
+      tab = doc.createElement("button");
+      tab.id = "onr-nav-fallback";
+      tab.type = "button";
+      tab.textContent = "Nav";
+      tab.setAttribute("aria-label", "Open navigation");
+      Object.assign(tab.style, {
+        position: "fixed",
+        left: "0",
+        top: "76px",
+        zIndex: "2147483647",
+        background: "#0d2744",
+        color: "#f59e0b",
+        border: "1px solid #f59e0b",
+        borderLeft: "none",
+        borderRadius: "0 8px 8px 0",
+        padding: "12px 8px",
+        font: "800 11px/1 Segoe UI, sans-serif",
+        letterSpacing: "0.16em",
+        textTransform: "uppercase",
+        cursor: "pointer",
+        boxShadow: "0 6px 16px rgba(11,31,58,0.35)",
+        display: "none"
+      });
+      tab.addEventListener("click", function () {
+        clickExpand(findExpand());
+      });
+      doc.body.appendChild(tab);
+    }
+    tab.style.display = "block";
   }
   tick();
-  setInterval(tick, 350);
+  if (!doc.documentElement.dataset.onrNavTick) {
+    doc.documentElement.dataset.onrNavTick = "1";
+    setInterval(tick, 400);
+  }
 })();
 </script>
 </body></html>
