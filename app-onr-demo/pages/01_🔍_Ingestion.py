@@ -72,12 +72,8 @@ with tab1:
 with tab2:
     render_quality_checks(cursor, onr_catalog, onr_schema)
 
-with st.expander("Schema, stream notes, Auto Loader"):
-    col1, col2 = st.columns(2)
-    with col1:
-        render_schema_evolution(cursor, onr_catalog, onr_schema)
-    with col2:
-        render_streaming_metrics(cursor, onr_catalog)
+with st.expander("Schema and Auto Loader"):
+    render_schema_evolution(cursor, onr_catalog, onr_schema)
     render_ingestion_demo(onr_catalog, onr_schema)
 
 render_architecture("ingestion")

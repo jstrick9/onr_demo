@@ -61,7 +61,7 @@ THEMES: dict[str, dict] = {
         ),
         "on_page": {
             "analytics": "Scores strip · Resource action · gold.grant_predictions.",
-            "portfolio": "AT_RISK rows · daily brief · Accept / Defer routing.",
+            "portfolio": "Budget execution · AT_RISK · daily brief · Accept / Defer routing.",
         },
     },
     "boundary": {

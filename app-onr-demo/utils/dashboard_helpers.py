@@ -290,7 +290,9 @@ def render_simulated_overview():
 # -------------------------------
 def render_budget_execution(cursor=None, catalog: str = "onr_demo"):
     """Budget vs actual from gold (falls back to derived ERP fixture)."""
-    st.markdown("### Budget execution")
+    from utils.mission_themes import themed_heading
+
+    themed_heading("Budget execution", "budget", "portfolio", "budget")
 
     categories, budget, actual = None, None, None
     if cursor:
@@ -686,16 +688,9 @@ def render_search_extract(cursor, catalog: str, schema: str):
 # RECENT ACTIVITY LOG
 # -------------------------------
 def render_activity_log(cursor=None, catalog: str = "onr_demo"):
-    """Export + search + quality log from UC / this session — no invented users."""
-    st.markdown("### Recent activity")
-    session_hist = st.session_state.get("export_history") or []
-    if session_hist:
-        st.markdown("#### This app session (exports)")
-        st.dataframe(pd.DataFrame(session_hist), use_container_width=True)
-    session_search = st.session_state.get("search_history") or []
-    if session_search:
-        st.markdown("#### This app session (searches)")
-        st.dataframe(pd.DataFrame(session_search), use_container_width=True)
+    """Officer audit on this page: search + routing. Export history lives on Export."""
+    st.markdown("### Officer activity")
+    st.caption("Search and Accept / Defer on this console. Export history is on Export.")
 
     def _uc(sql: str) -> pd.DataFrame:
         if not cursor:
@@ -707,19 +702,10 @@ def render_activity_log(cursor=None, catalog: str = "onr_demo"):
         except Exception:
             return pd.DataFrame()
 
-    exports = _uc(
-        f"""
-        SELECT created_at, user_email, dataset_name, format, record_count
-        FROM `{catalog}`.`app`.export_history
-        ORDER BY created_at DESC
-        LIMIT 20
-        """
-    )
-    st.markdown("#### Export audit (`app.export_history`)")
-    if exports.empty:
-        st.caption("No persisted exports yet.")
-    else:
-        st.dataframe(exports, use_container_width=True)
+    session_search = st.session_state.get("search_history") or []
+    if session_search:
+        st.markdown("#### This session (searches)")
+        st.dataframe(pd.DataFrame(session_search), use_container_width=True, hide_index=True)
 
     searches = _uc(
         f"""
@@ -735,17 +721,20 @@ def render_activity_log(cursor=None, catalog: str = "onr_demo"):
     else:
         st.dataframe(searches, use_container_width=True)
 
-    uc = _uc(
+    routes = _uc(
         f"""
-        SELECT check_timestamp, pipeline_name, check_name, check_status,
-               records_checked, records_failed
-        FROM `{catalog}`.`app`.ingestion_quality_log
-        ORDER BY check_timestamp DESC
+        SELECT created_at, grant_no, action, user_email, action_id
+        FROM `{catalog}`.`app`.routing_log
+        ORDER BY created_at DESC
         LIMIT 20
         """
     )
-    st.markdown("#### Ingestion quality log")
-    if uc.empty:
-        st.caption("No UC activity yet.")
+    st.markdown("#### Routing audit (`app.routing_log`)")
+    if routes.empty:
+        session_rt = st.session_state.get("routing_history") or []
+        if session_rt:
+            st.dataframe(pd.DataFrame(session_rt), use_container_width=True, hide_index=True)
+        else:
+            st.caption("No routing rows yet. Accept or Defer a flagged grant above.")
     else:
-        st.dataframe(uc, use_container_width=True)
+        st.dataframe(routes, use_container_width=True, hide_index=True)

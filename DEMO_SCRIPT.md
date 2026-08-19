@@ -37,7 +37,7 @@
 | 21:00–25:00 | Export | FY 2025–2026 export; **Execute live Statement API** | **Element 7**; **(c)** |
 
 **Never cut:** 400→408, Hold tray, stream heartbeat, Catalog Explorer lineage, score, search, live Statement API, all five prompts.  
-**Cut first if late:** Quality tab, Policies tab, Trends tab, Schema Docs.
+**Cut first if late:** Quality tab, Policies tab, Schema Docs.
 
 ---
 

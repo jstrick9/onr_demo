@@ -89,35 +89,7 @@ def render_quality_scores(cursor, catalog: str, schema: str):
     except Exception:
         st.caption("Quality scores appear after the next ingest.")
 
-    st.markdown("#### Published with a finding")
-    st.caption(
-        "These rows still landed in silver and gold. The finding is the error log — "
-        "missing abstract, unknown program area, or amount over $5M."
-    )
-    try:
-        from utils.demo_actions import load_quality_findings
-
-        warns = load_quality_findings(cursor, catalog) if cursor else []
-        if warns:
-            show = pd.DataFrame(warns)
-            keep = [
-                c
-                for c in (
-                    "grant_no",
-                    "check_name",
-                    "detail",
-                    "program_area",
-                    "amount_usd",
-                    "severity",
-                    "published",
-                )
-                if c in show.columns
-            ]
-            st.dataframe(show[keep] if keep else show, use_container_width=True, hide_index=True)
-        else:
-            st.caption("No published warning findings. Ingest inbound grants to populate this log.")
-    except Exception:
-        st.caption("Published findings appear after ingest.")
+    st.caption("Operational quarantine and published warnings live on Ingestion → Quality.")
 
 
 # -------------------------------

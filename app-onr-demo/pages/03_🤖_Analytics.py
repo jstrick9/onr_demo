@@ -7,16 +7,14 @@ from utils.runtime_env import get_runtime_env
 from utils.db_helpers import get_connection, read_yaml
 from utils.user_helpers import init_user_session_state
 from utils.analytics_helpers import (
-    render_model_execution,
     render_forecast_visualization,
     render_grant_predictions,
-    render_trend_analysis,
-    render_decision_support,
     render_model_metrics,
     render_anomaly_detection,
     render_score_controls,
     render_score_strip,
     render_drift,
+    render_resource_action,
 )
 from utils.ui import page_header, render_architecture
 from utils.workspace_ops import render_page_links
@@ -28,7 +26,7 @@ setup_sidebar()
 page_header(
     "Element 5 · Decision support",
     "Analytics",
-    "Scientist view. Scores sit on this page after Score registered models — Fund / Review / Defer and flags, then tabs.",
+    "Scientist view. Score the registered models. Fund / Review / Defer, flags, forecast, and the resource action live here — not on Portfolio.",
 )
 render_mission_ribbon("analytics")
 
@@ -50,16 +48,15 @@ conn, cursor = get_connection()
 
 render_score_controls(onr_catalog)
 render_score_strip(cursor, onr_catalog)
-render_decision_support(cursor, onr_catalog)
+render_resource_action(cursor, onr_catalog)
 render_drift(cursor, onr_catalog)
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs(
-    ["Predictions", "Anomalies", "Forecasting", "Trends", "Metrics"]
+tab1, tab2, tab3, tab4 = st.tabs(
+    ["Predictions", "Anomalies", "Forecasting", "Metrics"]
 )
 
 with tab1:
     render_grant_predictions(cursor, onr_catalog, onr_schema)
-    render_model_execution(cursor, onr_catalog)
 
 with tab2:
     render_anomaly_detection(cursor, onr_catalog)
@@ -68,9 +65,6 @@ with tab3:
     render_forecast_visualization(cursor, onr_catalog)
 
 with tab4:
-    render_trend_analysis(cursor, onr_catalog)
-
-with tab5:
     render_model_metrics(cursor, onr_catalog)
 
 render_architecture("analytics")

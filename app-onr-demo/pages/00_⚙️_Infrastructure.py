@@ -11,7 +11,6 @@ from utils.workspace_names import SQL_WAREHOUSE_NAME, ALL_PURPOSE_CLUSTER_NAME, 
 from utils.ui import page_header, render_architecture, fit_metrics, provenance_note
 from utils.workspace_ops import render_page_links
 from utils.mission_themes import render_mission_ribbon, theme_chip
-from utils.access_plane import render_access_plane
 from utils.infra_estate import render_estate, render_bundle, bundle_excerpt
 
 set_page_config(page_title="Element 2 · Infrastructure | ONR Portfolio")
@@ -116,8 +115,8 @@ with tab1:
 
 with tab2:
     theme_chip("boundary", "infrastructure", "identity")
-    render_access_plane(cursor, onr_catalog)
     st.caption(
+        "The signed-in IdP session is on Home → Access. "
         "This app authenticates as its own service principal. "
         "Warehouse access and catalog grants are scoped to that identity. "
         "Analysts read gold; they do not see bronze."

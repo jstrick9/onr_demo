@@ -11,16 +11,14 @@ from utils.dashboard_helpers import (
     render_dashboard_filters,
     render_grants_overview,
     render_budget_execution,
-    render_process_automation,
     render_search_extract,
     render_activity_log,
     render_routing,
 )
 from utils.brief_helpers import render_daily_brief
-from utils.analytics_helpers import render_resource_action
 from utils.ui import page_header, render_architecture
 from utils.workspace_ops import render_page_links
-from utils.mission_themes import render_mission_ribbon, theme_chip
+from utils.mission_themes import render_mission_ribbon
 
 set_page_config(page_title="Element 6 · Portfolio | ONR Portfolio")
 setup_sidebar()
@@ -28,7 +26,7 @@ setup_sidebar()
 page_header(
     "Element 6 · Executive view",
     "Portfolio",
-    "Officer view. Search first. Accept or Defer a flagged grant. Brief and AT_RISK stay on this page.",
+    "Officer view. Search, route, brief, and AT_RISK. Model scores and the resource action live on Analytics.",
 )
 render_mission_ribbon("portfolio")
 
@@ -49,8 +47,6 @@ render_page_links("portfolio", onr_catalog)
 conn, cursor = get_connection()
 
 render_executive_kpis(cursor, onr_catalog)
-theme_chip("budget", "portfolio", "resource_action")
-render_resource_action(cursor, onr_catalog)
 render_search_extract(cursor, onr_catalog, onr_schema)
 render_routing(cursor, onr_catalog)
 filters = render_dashboard_filters()
@@ -63,7 +59,6 @@ with tab1:
 
 with tab2:
     render_daily_brief(cursor, onr_catalog)
-    render_process_automation(cursor, onr_catalog)
 
 with tab3:
     render_activity_log(cursor, onr_catalog)
