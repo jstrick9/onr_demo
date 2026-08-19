@@ -1635,4 +1635,3 @@ def style_fig(fig):
     except Exception:
         pass
     return fig
-ig
