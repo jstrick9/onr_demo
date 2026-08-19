@@ -131,6 +131,39 @@ def _hold_row(code: str, rec: dict, gn: str, amount=None, detail: str = "") -> d
     }
 
 
+def _existing_grant_nos(cursor, catalog: str, gns: list[str]) -> set[str]:
+    want = [g for g in gns if g]
+    if not cursor or not want:
+        return set()
+    vals = ", ".join(_sql_str(g) for g in want)
+    cursor.execute(
+        f"SELECT DISTINCT grant_no FROM `{catalog}`.`bronze`.grants WHERE grant_no IN ({vals})"
+    )
+    return {str(r[0]) for r in (cursor.fetchall() or []) if r and r[0] is not None}
+
+
+def _bronze_row_sql(rec: dict, source_file: str) -> str:
+    gn = "" if rec.get("grant_no") is None else str(rec.get("grant_no")).strip()
+    try:
+        amount = float(rec.get("amount_usd") or 0)
+    except (TypeError, ValueError):
+        amount = 0.0
+    try:
+        fy = int(float(rec.get("fiscal_year") or 2026))
+    except (TypeError, ValueError):
+        fy = 2026
+    awardee = rec.get("awardee")
+    bid = rec.get("batch_id") or LIVE_BATCH_ID
+    return (
+        f"({_sql_str(gn)}, {_sql_str(rec.get('title'))}, {_sql_str(rec.get('abstract'))}, "
+        f"{_sql_str(rec.get('program_area'))}, {fy}, {amount}, "
+        f"{_sql_str(awardee) if awardee else 'NULL'}, {_sql_str(rec.get('org_unit'))}, "
+        f"{_sql_str(rec.get('classification_band'))}, {_sql_str(bid)}, "
+        f"{_sql_str(rec.get('created_at'))}, CURRENT_TIMESTAMP(), "
+        f"{_sql_str(source_file)}, {_sql_str(bid)})"
+    )
+
+
 def ingest_grant_rows(cursor, catalog: str, rows: list[dict], source_file: str, skip_existing: bool = True) -> dict:
     from utils.quality_rules import quarantine_reason, warn_findings
 
@@ -138,15 +171,18 @@ def ingest_grant_rows(cursor, catalog: str, rows: list[dict], source_file: str, 
     reasons: list[str] = []
     holds: list[dict] = []
     warnings: list[dict] = []
+    gns = []
     for rec in rows:
         gn_raw = rec.get("grant_no")
-        exists = False
         gn = "" if gn_raw is None else str(gn_raw).strip()
-        if skip_existing and gn and gn.lower() not in {"nan", "none", "null"}:
-            cursor.execute(
-                f"SELECT COUNT(*) FROM `{catalog}`.`bronze`.grants WHERE grant_no = {_sql_str(gn)}"
-            )
-            exists = int(cursor.fetchone()[0]) > 0
+        if gn and gn.lower() not in {"nan", "none", "null"}:
+            gns.append(gn)
+    existing = _existing_grant_nos(cursor, catalog, gns) if skip_existing else set()
+    good: list[dict] = []
+    for rec in rows:
+        gn_raw = rec.get("grant_no")
+        gn = "" if gn_raw is None else str(gn_raw).strip()
+        exists = bool(gn) and gn in existing
         q = quarantine_reason(rec, exists)
         if q:
             code, detail = q
@@ -156,12 +192,14 @@ def ingest_grant_rows(cursor, catalog: str, rows: list[dict], source_file: str, 
             else:
                 rejected += 1
             reasons.append(f"{gn or '—'}: {detail}")
-            holds.append({**_hold_row(code, rec, gn or "—", rec.get("amount_usd"), detail), "source_file": source_file, "record": rec})
+            holds.append(
+                {
+                    **_hold_row(code, rec, gn or "—", rec.get("amount_usd"), detail),
+                    "source_file": source_file,
+                    "record": rec,
+                }
+            )
             continue
-        try:
-            amount = float(rec.get("amount_usd") or 0)
-        except (TypeError, ValueError):
-            amount = 0.0
         for check_name, detail in warn_findings(rec):
             warnings.append(
                 {
@@ -174,38 +212,35 @@ def ingest_grant_rows(cursor, catalog: str, rows: list[dict], source_file: str, 
                     "program_area": rec.get("program_area"),
                 }
             )
+        good.append(rec)
+        existing.add(gn)
+    if good:
         try:
-            awardee = rec.get("awardee")
             cursor.execute(
                 f"""
                 INSERT INTO `{catalog}`.`bronze`.grants (
                     grant_no, title, abstract, program_area, fiscal_year, amount_usd,
                     awardee, org_unit, classification_band, batch_id, created_at,
                     _ingest_time, _source_file, _batch_id
-                ) VALUES (
-                    {_sql_str(gn)},
-                    {_sql_str(rec.get("title"))},
-                    {_sql_str(rec.get("abstract"))},
-                    {_sql_str(rec.get("program_area"))},
-                    {int(float(rec.get("fiscal_year") or 2026))},
-                    {amount},
-                    {_sql_str(awardee) if awardee else "NULL"},
-                    {_sql_str(rec.get("org_unit"))},
-                    {_sql_str(rec.get("classification_band"))},
-                    {_sql_str(rec.get("batch_id") or LIVE_BATCH_ID)},
-                    {_sql_str(rec.get("created_at"))},
-                    CURRENT_TIMESTAMP(),
-                    {_sql_str(source_file)},
-                    {_sql_str(rec.get("batch_id") or LIVE_BATCH_ID)}
-                )
+                ) VALUES {", ".join(_bronze_row_sql(rec, source_file) for rec in good)}
                 """
             )
-            landed += 1
+            landed = len(good)
         except Exception as e:
-            rejected += 1
-            held += 1
-            reasons.append(f"{gn}: {e}")
-            holds.append({**_hold_row("empty", rec, gn, amount, str(e)), "source_file": source_file, "record": rec})
+            rejected += len(good)
+            held += len(good)
+            for rec in good:
+                gn = "" if rec.get("grant_no") is None else str(rec.get("grant_no")).strip()
+                reasons.append(f"{gn}: {e}")
+                holds.append(
+                    {
+                        **_hold_row("empty", rec, gn, rec.get("amount_usd"), str(e)),
+                        "source_file": source_file,
+                        "record": rec,
+                    }
+                )
+            good = []
+            landed = 0
     return {
         "landed": landed,
         "skipped": skipped,
@@ -230,7 +265,10 @@ def process_selected_files(cursor, catalog: str, pack_keys: list[str], extra_row
         summaries.append({"file": path.name, **ingest_grant_rows(cursor, catalog, rows, path.name, skip_existing=True)})
     if extra_rows:
         summaries.append({"file": extra_name, **ingest_grant_rows(cursor, catalog, extra_rows, extra_name, True)})
-    refresh_silver_gold_sql(cursor, catalog)
+    try:
+        publish_new_grants_sql(cursor, catalog)
+    except Exception:
+        refresh_silver_gold_sql(cursor, catalog)
     holds = [h for s in summaries for h in (s.get("holds") or [])]
     warnings = [w for s in summaries for w in (s.get("warnings") or [])]
     held = sum(int(s.get("held") or 0) for s in summaries)
@@ -731,8 +769,58 @@ def clear_autoloader_checkpoints() -> str:
         )
 
 
+def publish_new_grants_sql(cursor, catalog: str) -> None:
+    """Insert only new silver grant_nos and rebuild grants_summary.
+
+    Used by Ingest selected files and Start stream. Does not rebuild financial,
+    predictions, or forecast — those are unchanged by the 8 inbound grants and
+    Score registered models owns gold.grant_predictions.
+    """
+    _ensure_app_tables(cursor, catalog)
+    cursor.execute(
+        f"""
+        INSERT INTO `{catalog}`.`silver`.grants
+        SELECT grant_no, title, abstract, program_area, fiscal_year, amount_usd,
+               awardee, org_unit, classification_band, batch_id,
+               TRY_CAST(created_at AS TIMESTAMP) as created_at,
+               _ingest_time, _source_file, true as _is_active,
+               CASE WHEN amount_usd > 0 THEN 1.0 ELSE 0.5 END as _quality_score
+        FROM (
+            SELECT b.*, ROW_NUMBER() OVER (PARTITION BY b.grant_no ORDER BY b._ingest_time DESC) rn
+            FROM `{catalog}`.`bronze`.grants b
+            WHERE NOT EXISTS (
+                SELECT 1 FROM `{catalog}`.`silver`.grants s WHERE s.grant_no = b.grant_no
+            )
+        )
+        WHERE rn = 1 AND grant_no IS NOT NULL AND trim(grant_no) <> ''
+          AND amount_usd > 0 AND awardee IS NOT NULL
+        """
+    )
+    cursor.execute(
+        f"""
+        CREATE OR REPLACE TABLE `{catalog}`.`gold`.grants_summary AS
+        SELECT program_area, fiscal_year, COUNT(*) grant_count,
+               SUM(amount_usd) total_funding, AVG(amount_usd) avg_award,
+               MIN(amount_usd) min_award, MAX(amount_usd) max_award,
+               SUM(CASE WHEN classification_band = 'CUI-Mock' THEN 1 ELSE 0 END) cui_mock_count,
+               SUM(CASE WHEN classification_band = 'Public-Mock' THEN 1 ELSE 0 END) public_mock_count,
+               CURRENT_TIMESTAMP() _updated_at
+        FROM `{catalog}`.`silver`.grants WHERE _is_active
+        GROUP BY program_area, fiscal_year
+        """
+    )
+
+
 def _ensure_app_tables(cursor, catalog: str) -> None:
     """Create app audit / quality tables if bootstrap has not yet."""
+    try:
+        import streamlit as st
+
+        key = f"_app_tables_{catalog}"
+        if st.session_state.get(key):
+            return
+    except Exception:
+        key = None
     cursor.execute(
         f"""
         CREATE TABLE IF NOT EXISTS `{catalog}`.`app`.data_quality_scores (
@@ -876,6 +964,13 @@ def _ensure_app_tables(cursor, catalog: str) -> None:
         COMMENT 'WARN findings on rows that still published'
         """
     )
+    if key:
+        try:
+            import streamlit as st
+
+            st.session_state[key] = True
+        except Exception:
+            pass
 
 
 def _write_data_quality_scores(cursor, catalog: str) -> None:

@@ -863,66 +863,59 @@ def copy_stream_file(catalog: str = "onr_demo") -> dict:
 
 
 def start_stream(catalog: str = "onr_demo") -> dict:
-    """Land the stream CSV, try Auto Loader on serverless/cluster, else warehouse load.
+    """Land a new Volume CSV and load it into bronze on the warehouse.
 
-    SQL warehouses cannot run spark.readStream / cloudFiles. They can still
-    INSERT the same Volume file into bronze.grants so the heartbeat ticks.
+    Jobs serverless Auto Loader is a 60–90s cold start — too slow for the
+    25-minute tape. The file still lands on the Volume (Open stream notebook
+    is the Auto Loader path). Warehouse read_files() appends the same rows
+    to bronze.grants so the heartbeat ticks in seconds. Silver dedupes.
     """
     landed = copy_stream_file(catalog)
-    # Browser link can point at the human Git folder. Job submit cannot —
-    # the app SP is not that user.
     path = resolve_notebook(STREAM_NOTEBOOK)
-    # Always overwrite Shared 01b so a stale processingTime copy cannot keep failing.
-    run_path = runnable_notebook_path(STREAM_NOTEBOOK, refresh=True)
     run = None
     error = None
-    via = None
     warehouse = None
-    if run_path:
-        try:
-            run = submit_notebook(
-                run_path,
-                run_name="onr-demo-stream",
-                params={
-                    "catalog": catalog,
-                    "processing_seconds": "30",
-                    "run_for_seconds": "90",
-                    # File is already landed. Serverless cannot run ProcessingTime.
-                    "trigger_mode": "availableNow",
-                },
-            )
-            via = (run or {}).get("via") or "cluster"
-        except Exception as e:
-            error = str(e)
-    else:
-        error = (
-            "App principal cannot read the stream notebook under the user folder. "
-            "Open stream notebook runs as you. Bronze will load on the warehouse."
-        )
+    via = None
+    try:
+        from utils.db_helpers import get_connection
+        from utils.demo_actions import ingest_volume_csv_sql, publish_new_grants_sql
 
-    if run is None:
+        _conn, cursor = get_connection()
+        if not cursor:
+            raise RuntimeError("SQL warehouse is not connected")
+        warehouse = ingest_volume_csv_sql(cursor, catalog, landed["dst"], "stream-demo-2026")
         try:
-            from utils.db_helpers import get_connection
-            from utils.demo_actions import ingest_volume_csv_sql
-
-            _conn, cursor = get_connection()
-            if not cursor:
-                raise RuntimeError("SQL warehouse is not connected")
-            warehouse = ingest_volume_csv_sql(cursor, catalog, landed["dst"], "stream-demo-2026")
+            publish_new_grants_sql(cursor, catalog)
+            warehouse["silver_published"] = True
+        except Exception as pub_e:
             try:
                 from utils.demo_actions import refresh_silver_gold_sql
 
                 refresh_silver_gold_sql(cursor, catalog, quality_pipeline="stream_warehouse")
                 warehouse["silver_published"] = True
-            except Exception as pub_e:
+            except Exception:
                 warehouse["silver_published"] = False
                 warehouse["publish_error"] = str(pub_e)
-            via = "warehouse"
-            # Bronze loaded. Cluster/serverless miss is an explanation, not a hard fail.
-            error = None
-        except Exception as e:
-            extra = str(e)
-            error = f"{error} Warehouse file load also failed ({extra})." if error else extra
+        via = "warehouse"
+    except Exception as e:
+        error = str(e)
+        run_path = runnable_notebook_path(STREAM_NOTEBOOK, refresh=True)
+        if run_path:
+            try:
+                run = submit_notebook(
+                    run_path,
+                    run_name="onr-demo-stream",
+                    params={
+                        "catalog": catalog,
+                        "processing_seconds": "30",
+                        "run_for_seconds": "90",
+                        "trigger_mode": "availableNow",
+                    },
+                )
+                via = (run or {}).get("via") or "cluster"
+                error = None
+            except Exception as job_e:
+                error = f"{error} Auto Loader job also failed ({job_e})."
 
     return {
         "file": landed,
@@ -1119,12 +1112,7 @@ def render_run_status(kind: str, payload: dict | None) -> None:
         bronze = payload.get("bronze")
         st.caption(
             f"{kind} · warehouse file load · bronze {bronze if bronze is not None else '—'} · "
-            f"+{inserted if inserted is not None else '—'}"
-        )
-        st.caption(
-            "SQL warehouses cannot run Auto Loader (cloudFiles). "
-            "The same Volume file was appended to bronze.grants so the landing heartbeat ticks. "
-            "Open the stream notebook for the Spark Auto Loader run."
+            f"+{inserted if inserted is not None else '—'} · Open stream notebook for Auto Loader"
         )
         landed = (payload.get("file") or {}).get("dst")
         if landed:

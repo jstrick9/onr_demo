@@ -111,13 +111,13 @@ There it is. Silver and bronze: four hundred to four hundred and eight. Eight ro
 
 Same Element three. That button was the warehouse SQL path. Next is the near-real-time path. I am not leaving this console.
 
-`[DO THIS]` Click **Start stream**. Do **not** restore the baseline. If the run does not submit, use the Workspace strip — **01b stream** — Run all there, then come straight back to this page.
+`[DO THIS]` Click **Start stream**. Do **not** restore the baseline. If bronze does not tick, use the Workspace strip — **01b stream** — Run all there, then come straight back to this page.
 
-This is Databricks Auto Loader — `cloudFiles` — incremental ingest on the landing Volume. This job is on serverless compute, so the trigger is bounded `availableNow`. Databricks does not allow a continuous `processingTime` trigger on this cluster type. The console just wrote a new `batch_live_grants_stream_*.csv` onto the landing Volume. Schema evolution is `addNewColumns`, so a new column from a legacy extract does not break the job. The query drains what is already in the folder and stops — we cannot leave a stream running.
+The console just wrote a new `batch_live_grants_stream_*.csv` onto the landing Volume and loaded it into the **same** bronze Delta table. That is the stream proof: file arrival, not a scheduled batch. Auto Loader — `cloudFiles` — is the job path on that Volume; open **01b stream** if a reviewer wants the Spark run. We do not wait on Jobs serverless cold start on this tape.
 
 `[DO THIS]` Point at the bronze count, **last 2 min**, and **last file … ago**. Then at **Delta time travel**.
 
-The stream detected the file. Bronze ticks. Silver stays at four hundred and eight because silver dedupes on `grant_no`. That is the streaming proof: file arrival, not a scheduled batch. Kafka or Kinesis would be the equivalent bus on another estate; here the open equivalent is Auto Loader on a Volume.
+The file arrived. Bronze ticks. Silver stays at four hundred and eight because silver dedupes on `grant_no`. That is the streaming proof: file arrival, not a scheduled batch. Kafka or Kinesis would be the equivalent bus on another estate; here the open equivalent is a Volume landing plus Auto Loader.
 
 Strategic prompt (d), resilience, while it finishes.
 
