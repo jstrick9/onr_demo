@@ -8,6 +8,7 @@ from utils.db_helpers import get_connection, read_yaml, validate_source_tables
 from utils.user_helpers import init_user_session_state
 from utils.ui import page_header, capability_cards, render_architecture
 from utils.workspace_ops import render_page_links
+from utils.mission_themes import render_mission_ribbon
 
 set_page_config(page_title="ONR Portfolio | Compass")
 setup_sidebar()
@@ -17,6 +18,7 @@ page_header(
     "ONR Portfolio",
     "Self-service grants and ERP on catalog onr_demo. Data path is Elements 3–7. Infrastructure is a glance. Secure access is the companion tape.",
 )
+render_mission_ribbon("home")
 render_page_links("home", "onr_demo")
 st.markdown(
     '<span class="unclass-chip">UNCLASSIFIED // MOCK DATA</span>',

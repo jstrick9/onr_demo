@@ -19,6 +19,7 @@ from utils.export_helpers import (
 from utils.api_helpers import render_live_statement_api
 from utils.ui import page_header, render_architecture
 from utils.workspace_ops import render_page_links
+from utils.mission_themes import render_mission_ribbon, themed_heading
 
 set_page_config(page_title="Element 7 · Export | ONR Portfolio")
 setup_sidebar()
@@ -28,6 +29,7 @@ page_header(
     "Export & APIs",
     "Integrator view. Execute export and the live Statement API on this screen. History is below.",
 )
+render_mission_ribbon("export")
 
 init_user_session_state()
 get_runtime_env()
@@ -45,7 +47,7 @@ render_page_links("export", onr_catalog)
 
 conn, cursor = get_connection()
 
-st.markdown("### Bulk extract")
+themed_heading("Bulk extract", "coexist", "export", "bulk")
 formats = render_export_options()
 dataset_name, dataset_table = render_dataset_selection(cursor, onr_catalog, onr_schema)
 filters = render_export_filters()

@@ -205,8 +205,10 @@ def render_lineage_visualization():
 # -------------------------------
 def render_governance_policies(cursor, catalog: str, schema: str):
     """Display governance tags and access policies."""
-    st.markdown("### Tags and policies")
-    
+    from utils.mission_themes import themed_heading
+
+    themed_heading("Tags and policies", "vendor", "catalog", "tags")
+
     col1, col2 = st.columns(2)
     
     with col1:

@@ -11,6 +11,8 @@
 - Clock marks are the latest you should still be on that beat. If you are late, jump to the next **[CATCH-UP]** line.
 
 **On screen:** gold kicker is the Element number (`Element 3 · Data operations`); the title stays the product name (`Ingestion`). Sidebar nav stays product names.  
+**Operating-theme chips** under the kicker — Coexist · Budget · Boundary · Recover · Vendor — are product principles, not a rubric. Filled = this page is the proof. Do **not** read them. Click a chip only if a reviewer asks; the popover stays open while you talk. Letters (a)–(e) are inside the popover footer, not on the chip.  
+ 
 **Out loud, still say “Element 3” through “Element 7.”**
 
 **Camera rule:** one take, live cloud + live repo, no slides, no overlays.

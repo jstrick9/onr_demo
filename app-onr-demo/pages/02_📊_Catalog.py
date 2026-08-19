@@ -16,6 +16,7 @@ from utils.governance_helpers import (
 )
 from utils.ui import page_header, render_architecture
 from utils.workspace_ops import render_page_links
+from utils.mission_themes import render_mission_ribbon
 
 set_page_config(page_title="Element 4 · Catalog | ONR Portfolio")
 setup_sidebar()
@@ -25,6 +26,7 @@ page_header(
     "Catalog",
     "Governance view. Click Open lineage after ingest so the native graph is populated.",
 )
+render_mission_ribbon("catalog")
 
 init_user_session_state()
 get_runtime_env()

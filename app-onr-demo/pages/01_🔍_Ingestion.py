@@ -18,6 +18,7 @@ from utils.ingestion_helpers import (
 )
 from utils.ui import page_header, render_architecture, live_chip
 from utils.workspace_ops import render_page_links
+from utils.mission_themes import render_mission_ribbon
 
 set_page_config(page_title="Element 3 · Ingestion | ONR Portfolio")
 setup_sidebar()
@@ -27,6 +28,7 @@ page_header(
     "Ingestion",
     "Data operations. Ingest the files, read Hold, then Start stream. Schema notes are in the expander.",
 )
+render_mission_ribbon("ingestion")
 
 init_user_session_state()
 get_runtime_env()

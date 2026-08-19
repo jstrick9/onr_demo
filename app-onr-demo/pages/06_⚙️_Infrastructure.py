@@ -10,6 +10,7 @@ from utils.user_helpers import init_user_session_state
 from utils.workspace_names import SQL_WAREHOUSE_NAME, ALL_PURPOSE_CLUSTER_NAME, ML_CLUSTER_NAME
 from utils.ui import page_header, render_architecture, fit_metrics, provenance_note
 from utils.workspace_ops import render_page_links
+from utils.mission_themes import render_mission_ribbon, theme_chip
 
 set_page_config(page_title="Element 2 · Infrastructure | ONR Portfolio")
 setup_sidebar()
@@ -19,6 +20,7 @@ page_header(
     "Infrastructure",
     "Platform glance. What is deployed here. Full Terraform / CI-CD is the companion tape. The bundle does not create the warehouse or clusters.",
 )
+render_mission_ribbon("infrastructure")
 
 init_user_session_state()
 get_runtime_env()
@@ -49,6 +51,7 @@ if cursor:
     except Exception:
         uc_ok = False
 
+theme_chip("recover", "infrastructure", "inventory")
 fit_metrics(
     [
         ("Catalog", onr_catalog),
@@ -106,6 +109,7 @@ with tab1:
     )
 
     st.markdown("#### Identity")
+    theme_chip("boundary", "infrastructure", "identity")
     st.caption(
         "This app authenticates as its own service principal. "
         "Warehouse access and catalog grants are scoped to that identity. "

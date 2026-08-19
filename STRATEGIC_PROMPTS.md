@@ -8,13 +8,15 @@
 
 Full prompt text is quoted from Volume IV §11.4. Show a live artifact while you talk — never a slide.
 
-| Prompt | Best moment | Live artifact to have on screen |
-|--------|-------------|----------------------------------|
-| (a) Legacy sustainment | Element 3 or 7 | Ingestion page + `landing/` volume, or Export tab |
-| (b) Financial / budgetary | Element 5 + 6 | Analytics predictions + Dashboard budget gauge |
-| (c) Zero Trust / IL5 | Element 4 or 7 | Catalog Explorer grants, or Export Security + live Statement API |
-| (d) DR / resilience | Element 3 reset, or close | Reset-to-seed + `databricks.yml` file-arrival job |
-| (e) Vendor / lifecycle | Element 4 | Quality scores + UC tags (`data_source=mock`) |
+| Prompt | Chip | Best moment | Live artifact to have on screen |
+|--------|------|-------------|----------------------------------|
+| (a) Legacy sustainment | **Coexist** | Element 3 or 7 | Ingestion inbound files + `landing/` volume, or Export bulk extract |
+| (b) Financial / budgetary | **Budget** | Element 5 + 6 | Analytics Scores + Resource action, or Portfolio AT_RISK |
+| (c) Zero Trust / IL5 | **Boundary** | Element 4 or 7 | Export Statement API, or Infrastructure identity |
+| (d) DR / resilience | **Recover** | Element 3 stream, or close | Ingestion Delta time travel, or Infrastructure inventory |
+| (e) Vendor / lifecycle | **Vendor** | Element 4 | Catalog tags (`vendor` / `license_id` / `renewal_date`) + quality scores |
+
+On-screen chips use the product name. The letter lives in the popover footer. Do not read the popover on the 25-minute take.
 
 ---
 

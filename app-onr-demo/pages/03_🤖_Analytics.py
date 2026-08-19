@@ -20,6 +20,7 @@ from utils.analytics_helpers import (
 )
 from utils.ui import page_header, render_architecture
 from utils.workspace_ops import render_page_links
+from utils.mission_themes import render_mission_ribbon
 
 set_page_config(page_title="Element 5 · Analytics | ONR Portfolio")
 setup_sidebar()
@@ -29,6 +30,7 @@ page_header(
     "Analytics",
     "Scientist view. Scores sit on this page after Score registered models — Fund / Review / Defer and flags, then tabs.",
 )
+render_mission_ribbon("analytics")
 
 init_user_session_state()
 get_runtime_env()

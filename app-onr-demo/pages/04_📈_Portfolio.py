@@ -20,6 +20,7 @@ from utils.brief_helpers import render_daily_brief
 from utils.analytics_helpers import render_resource_action
 from utils.ui import page_header, render_architecture
 from utils.workspace_ops import render_page_links
+from utils.mission_themes import render_mission_ribbon, theme_chip
 
 set_page_config(page_title="Element 6 · Portfolio | ONR Portfolio")
 setup_sidebar()
@@ -29,6 +30,7 @@ page_header(
     "Portfolio",
     "Officer view. Search first. Accept or Defer a flagged grant. Brief and AT_RISK stay on this page.",
 )
+render_mission_ribbon("portfolio")
 
 init_user_session_state()
 get_runtime_env()
@@ -47,6 +49,7 @@ render_page_links("portfolio", onr_catalog)
 conn, cursor = get_connection()
 
 render_executive_kpis(cursor, onr_catalog)
+theme_chip("budget", "portfolio", "resource_action")
 render_resource_action(cursor, onr_catalog)
 render_search_extract(cursor, onr_catalog, onr_schema)
 render_routing(cursor, onr_catalog)

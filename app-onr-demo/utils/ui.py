@@ -334,6 +334,76 @@ div.stButton > button:hover {{
   margin: 8px 0 18px 0;
 }}
 
+.mission-kicker {{
+  color: {MUTED};
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin: 2px 0 8px 0;
+}}
+.mission-hint {{
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  color: #8b9bb4;
+  margin-left: 10px;
+}}
+[data-testid="column"]:has(.mission-pri) [data-testid="stPopover"] button,
+[data-testid="stVerticalBlock"]:has(> div .mission-pri) [data-testid="stPopover"] button {{
+  background: #fffbeb !important;
+  color: {GOLD} !important;
+  border: 1.5px solid {GOLD} !important;
+  box-shadow: 0 4px 12px rgba(180,83,9,0.18) !important;
+}}
+[data-testid="column"]:has(.mission-sec) [data-testid="stPopover"] button,
+[data-testid="stVerticalBlock"]:has(> div .mission-sec) [data-testid="stPopover"] button {{
+  background: #ffffff !important;
+  color: {NAVY} !important;
+  border: 1.5px solid #475569 !important;
+  box-shadow: none !important;
+}}
+[data-testid="stPopover"] button {{
+  border-radius: 999px !important;
+  font-size: 0.72rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  min-height: 34px !important;
+  padding: 4px 10px !important;
+}}
+[data-testid="stPopover"] button:hover {{
+  border-color: {GOLD} !important;
+  color: {GOLD} !important;
+}}
+.theme-title {{
+  color: {NAVY};
+  font-size: 1.02rem;
+  font-weight: 800;
+  margin: 0 0 8px 0;
+}}
+.theme-body {{
+  color: {INK};
+  font-size: 0.9rem;
+  line-height: 1.45;
+}}
+.theme-on {{
+  color: {NAVY};
+  font-size: 0.82rem;
+  font-weight: 700;
+  margin-top: 10px;
+}}
+.theme-letter {{
+  color: {MUTED};
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid #e2e8f0;
+}}
+
 .unclass-chip {{
   display: inline-block;
   border: 1px solid #d5deea;

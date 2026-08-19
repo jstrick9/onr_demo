@@ -311,7 +311,9 @@ def render_score_strip(cursor=None, catalog: str = "onr_demo") -> None:
     flagged = int(flags.iloc[0]["flagged"] or 0) if not flags.empty else 0
     rf_model = str(models.iloc[0]["model_name"] or "—") if not models.empty else "—"
     if_model = str(flags.iloc[0].get("model_name") or "—") if not flags.empty else "—"
-    st.markdown("### Scores")
+    from utils.mission_themes import themed_heading
+
+    themed_heading("Scores", "budget", "analytics", "scores")
     st.caption("Output of Score registered models — gold.grant_predictions and gold.grant_anomaly_scores.")
     c1, c2, c3, c4, c5 = st.columns(5)
     c1.metric("Scored", f"{n_rf:,}")
