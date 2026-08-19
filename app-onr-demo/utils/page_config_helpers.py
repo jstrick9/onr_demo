@@ -12,15 +12,15 @@ APP_ROOT = Path(__file__).resolve().parent.parent
 COMPASS_ICON = APP_ROOT / "resources" / "images" / "compass_icon.png"
 
 _COMPASS_SVG = """<svg class="hud-compass" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-  <circle cx="32" cy="32" r="30" fill="#0b1f3a" stroke="#f59e0b" stroke-width="3"/>
-  <circle cx="32" cy="32" r="24" fill="none" stroke="#b45309" stroke-width="1.2"/>
-  <polygon points="32,10 36.8,32 32,29 27.2,32" fill="#f59e0b"/>
-  <polygon points="32,54 36.8,32 32,35 27.2,32" fill="#b45309"/>
-  <polygon points="54,32 32,36.8 35,32 32,27.2" fill="#e8d5a3"/>
-  <polygon points="10,32 32,36.8 29,32 32,27.2" fill="#e8d5a3"/>
-  <circle cx="32" cy="32" r="3.2" fill="#f59e0b"/>
-  <circle cx="32" cy="32" r="1.2" fill="#0b1f3a"/>
-  <text x="32" y="16" text-anchor="middle" fill="#f59e0b" font-size="7" font-weight="800" font-family="Segoe UI, sans-serif">N</text>
+  <circle cx="32" cy="32" r="30" fill="#082B46" stroke="#D5B665" stroke-width="3"/>
+  <circle cx="32" cy="32" r="24" fill="none" stroke="#8C6A22" stroke-width="1.2"/>
+  <polygon points="32,10 36.8,32 32,29 27.2,32" fill="#D5B665"/>
+  <polygon points="32,54 36.8,32 32,35 27.2,32" fill="#8C6A22"/>
+  <polygon points="54,32 32,36.8 35,32 32,27.2" fill="#F5EDD9"/>
+  <polygon points="10,32 32,36.8 29,32 32,27.2" fill="#F5EDD9"/>
+  <circle cx="32" cy="32" r="3.2" fill="#D5B665"/>
+  <circle cx="32" cy="32" r="1.2" fill="#082B46"/>
+  <text x="32" y="16" text-anchor="middle" fill="#D5B665" font-size="7" font-weight="800" font-family="Segoe UI, sans-serif">N</text>
 </svg>"""
 
 

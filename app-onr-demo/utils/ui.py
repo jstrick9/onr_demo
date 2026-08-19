@@ -5,22 +5,28 @@ from __future__ import annotations
 import html
 import streamlit as st
 
-NAVY = "#0b1f3a"
-NAVY_CARD = "#122a4a"
-NAVY_EDGE = "#1e3a5f"
-GOLD = "#b45309"
-GOLD_SOFT = "#7c2d12"
-GOLD_BRIGHT = "#f59e0b"
-INK = "#1a2332"
+NAVY = "#082B46"
+NAVY_DARK = "#061F34"
+NAVY_DEEPER = "#031522"
+NAVY_HOVER = "#10496F"
+NAVY_CARD = "#061F34"
+NAVY_EDGE = "#10496F"
+NAVY_LIGHT = "#B9CEDD"
+NAVY_TINT = "#E7EFF4"
+GOLD = "#8C6A22"
+GOLD_SOFT = "#745415"
+GOLD_BRIGHT = "#D5B665"
+GOLD_PALE = "#F5EDD9"
+INK = "#031522"
 MUTED = "#5b6b80"
-TEAL = "#2f6f86"
+TEAL = "#10496F"
 OK = "#2f7d57"
-BRONZE = "#8a5a2b"
+BRONZE = "#745415"
 SILVER = "#5d738a"
-GOLD_LANE = "#b45309"
-APP_LANE = "#3d6b8a"
-SIDEBAR = "#0d2744"
-CANVAS = "#f7f9fc"
+GOLD_LANE = "#8C6A22"
+APP_LANE = "#10496F"
+SIDEBAR = "#061F34"
+CANVAS = "#E7EFF4"
 
 _CSS = f"""
 <style>
@@ -133,21 +139,21 @@ html, body, [class*="css"] {{
   letter-spacing: 0.04em;
 }}
 [data-testid="stSidebarNav"] a:hover {{
-  background: rgba(180,83,9,0.16) !important;
+  background: rgba(16,73,111,0.45) !important;
 }}
 [data-testid="stSidebarNav"] [aria-current="page"] {{
   border-left: 3px solid {GOLD_BRIGHT} !important;
-  background: rgba(180,83,9,0.22) !important;
+  background: rgba(140,106,34,0.28) !important;
 }}
 .hud {{
   position: relative;
   overflow: hidden;
-  background: linear-gradient(180deg, #123152, #0b1f3a);
-  border: 1px solid #2a4a70;
+  background: {NAVY_DEEPER};
+  border: 1px solid {NAVY_HOVER};
   border-radius: 12px;
   padding: 12px 12px 10px 12px;
   margin-bottom: 10px;
-  box-shadow: 0 0 24px rgba(74,144,164,0.18);
+  box-shadow: 0 0 24px rgba(8,43,70,0.28);
 }}
 .hud-row {{
   display: flex; align-items: center; gap: 8px;
@@ -171,7 +177,7 @@ html, body, [class*="css"] {{
   gap: 10px;
   margin: 0 0 10px 0;
   padding-bottom: 10px;
-  border-bottom: 1px solid #2a4a70;
+  border-bottom: 1px solid {NAVY_HOVER};
 }}
 .hud-compass {{
   width: 36px;
@@ -179,7 +185,7 @@ html, body, [class*="css"] {{
   flex: 0 0 36px;
   display: block;
   border-radius: 50%;
-  filter: drop-shadow(0 0 8px rgba(245,158,11,0.40));
+  filter: drop-shadow(0 0 8px rgba(213,182,101,0.40));
 }}
 .hud-word {{
   font-size: 1.12rem;
@@ -194,10 +200,10 @@ html, body, [class*="css"] {{
   text-transform: uppercase;
   margin-top: 4px;
 }}
-[data-testid="stSidebar"] .hud-word {{ color: #f59e0b !important; }}
-[data-testid="stSidebar"] .hud-sub {{ color: #8b9bb4 !important; }}
-[data-testid="stSidebar"] .hud-user {{ color: #f59e0b !important; }}
-[data-testid="stSidebar"] .hud-user-label {{ color: #8b9bb4 !important; }}
+[data-testid="stSidebar"] .hud-word {{ color: {GOLD_BRIGHT} !important; }}
+[data-testid="stSidebar"] .hud-sub {{ color: {NAVY_LIGHT} !important; }}
+[data-testid="stSidebar"] .hud-user {{ color: {GOLD_BRIGHT} !important; }}
+[data-testid="stSidebar"] .hud-user-label {{ color: {NAVY_LIGHT} !important; }}
 .hud-user-label {{
   color: #8b9bb4; font-size: 0.66rem; letter-spacing: 0.12em;
   text-transform: uppercase; margin-top: 8px; font-weight: 700;
@@ -307,8 +313,8 @@ div[data-testid="column"] {{
 }}
 
 @keyframes metricFlash {{
-  0% {{ box-shadow: 0 0 0 0 rgba(180,83,9,0.55); }}
-  100% {{ box-shadow: 0 0 0 12px rgba(180,83,9,0); }}
+  0% {{ box-shadow: 0 0 0 0 rgba(140,106,34,0.55); }}
+  100% {{ box-shadow: 0 0 0 12px rgba(140,106,34,0); }}
 }}
 [data-testid="stMetric"]:has([data-testid="stMetricDelta"]) {{
   animation: metricFlash 1.6s ease-out 2;
@@ -324,17 +330,29 @@ div[data-testid="column"] {{
   font-weight: 700;
 }}
 
-div.stButton > button {{
-  background: linear-gradient(180deg, {GOLD_BRIGHT}, {GOLD});
-  color: #1c1004;
-  border: 1px solid #7c2d12;
+div.stButton > button,
+div.stDownloadButton > button,
+[data-testid="stBaseButton-primary"],
+[data-testid="baseButton-primary"],
+[data-testid="stLinkButton"] a {{
+  background: {NAVY} !important;
+  background-image: none !important;
+  color: #ffffff !important;
+  border: 1px solid {NAVY} !important;
   font-weight: 800;
   border-radius: 8px;
-  box-shadow: 0 6px 16px rgba(180,83,9,0.35);
+  box-shadow: 0 6px 16px rgba(8,43,70,0.28);
 }}
-div.stButton > button:hover {{
-  filter: brightness(1.08);
-  box-shadow: 0 8px 20px rgba(180,83,9,0.45);
+div.stButton > button:hover,
+div.stDownloadButton > button:hover,
+[data-testid="stBaseButton-primary"]:hover,
+[data-testid="baseButton-primary"]:hover,
+[data-testid="stLinkButton"] a:hover {{
+  background: {NAVY_HOVER} !important;
+  background-image: none !important;
+  border-color: {NAVY_HOVER} !important;
+  filter: none;
+  box-shadow: 0 8px 20px rgba(16,73,111,0.35);
 }}
 
 [data-testid="stDataFrame"], .stDataFrame {{
@@ -360,7 +378,7 @@ div.stButton > button:hover {{
 [data-testid="stTextArea"] textarea:focus,
 [data-baseweb="select"] > div:focus-within {{
   border-color: {GOLD} !important;
-  box-shadow: 0 0 0 3px rgba(180,83,9,0.28) !important;
+  box-shadow: 0 0 0 3px rgba(140,106,34,0.28) !important;
 }}
 
 [data-testid="stExpander"] {{
@@ -372,7 +390,7 @@ div.stButton > button:hover {{
 [data-testid="stFileUploader"] {{
   border: 1.5px dashed {GOLD} !important;
   border-radius: 10px;
-  background: #fffbeb;
+  background: {GOLD_PALE};
 }}
 
 .page-kicker {{
@@ -386,7 +404,7 @@ div.stButton > button:hover {{
 .page-rule {{
   height: 3px;
   width: 72px;
-  background: linear-gradient(90deg, {GOLD_BRIGHT}, {GOLD});
+  background: {GOLD};
   margin: 4px 0 8px 0;
 }}
 
@@ -417,7 +435,7 @@ div.stButton > button:hover {{
   list-style: none;
   cursor: pointer;
   border: 1.5px solid {GOLD};
-  background: #fffbeb;
+  background: {GOLD_PALE};
   color: {GOLD};
   border-radius: 999px;
   padding: 4px 12px;
@@ -425,7 +443,7 @@ div.stButton > button:hover {{
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  box-shadow: 0 2px 8px rgba(180,83,9,0.12);
+  box-shadow: 0 2px 8px rgba(140,106,34,0.12);
 }}
 .se-chip summary::-webkit-details-marker {{ display: none; }}
 .se-chip summary::marker {{ content: ""; }}
@@ -633,7 +651,7 @@ div.stButton > button:hover {{
 
 .action-card {{
   border-left: 4px solid {GOLD};
-  background: #fffbeb;
+  background: {GOLD_PALE};
 }}
 .action-line {{
   color: {NAVY};
@@ -693,7 +711,7 @@ div.stButton > button:hover {{
 }}
 .brief-action {{
   margin: 10px 16px 14px 16px;
-  background: #fffbeb;
+  background: {GOLD_PALE};
   border: 1px solid {GOLD};
   border-radius: 10px;
   padding: 10px 12px;
@@ -927,9 +945,9 @@ def _inject_sidebar_reopen() -> None:
         left: "0",
         top: "76px",
         zIndex: "2147483647",
-        background: "#0d2744",
-        color: "#f59e0b",
-        border: "1px solid #f59e0b",
+        background: "#061F34",
+        color: "#D5B665",
+        border: "1px solid #D5B665",
         borderLeft: "none",
         borderRadius: "0 8px 8px 0",
         padding: "12px 8px",
@@ -973,9 +991,9 @@ def inject_theme() -> None:
         pio.templates["onr"] = go.layout.Template(
             layout=go.Layout(
                 paper_bgcolor="rgba(0,0,0,0)",
-                plot_bgcolor="#f4f7fb",
+                plot_bgcolor="#E7EFF4",
                 font=dict(color=INK, family="Source Sans 3, Segoe UI, sans-serif"),
-                colorway=[GOLD, TEAL, "#7aa2c4", OK, "#c45c5c", NAVY],
+                colorway=[GOLD, TEAL, NAVY_LIGHT, OK, GOLD_SOFT, NAVY],
                 title=dict(font=dict(color=NAVY, size=16)),
                 xaxis=dict(gridcolor="#d5deea", zerolinecolor="#d5deea"),
                 yaxis=dict(gridcolor="#d5deea", zerolinecolor="#d5deea"),
@@ -1241,7 +1259,7 @@ def _defs() -> str:
     <defs>
       <marker id="arrowGold" viewBox="0 0 10 10" refX="8" refY="5"
               markerWidth="4" markerHeight="4" orient="auto-start-reverse">
-        <path d="M 0 1.2 L 8 5 L 0 8.8 z" fill="#b45309"/>
+        <path d="M 0 1.2 L 8 5 L 0 8.8 z" fill="{GOLD}"/>
       </marker>
       <pattern id="grid" width="16" height="16" patternUnits="userSpaceOnUse">
         <path d="M 16 0 L 0 0 0 16" fill="none" stroke="#e6edf5" stroke-width="1"/>
@@ -1250,7 +1268,7 @@ def _defs() -> str:
     """
 
 
-def _lane(x, y, w, h, label, fill="#eef3f8") -> str:
+def _lane(x, y, w, h, label, fill="#E7EFF4") -> str:
     return f"""
     <rect x="{x}" y="{y}" width="{w}" height="{h}" rx="10" fill="{fill}" stroke="#cbd5e1"/>
     <text x="{x+14}" y="{y+20}" fill="{MUTED}" font-size="11" font-weight="700"
@@ -1325,24 +1343,24 @@ def _wrap(title: str, svg_body: str, w: int, h: int, note: str = "") -> None:
 <head>
 <meta charset="utf-8"/>
 <style>
-  html, body {{ margin: 0; padding: 0; background: #f7f9fc; }}
+  html, body {{ margin: 0; padding: 0; background: {CANVAS}; }}
   .board {{
     font-family: "Segoe UI", "Source Sans 3", sans-serif;
     border: 1.5px solid #475569;
     border-radius: 14px;
-    background: #f7f9fc;
+    background: {CANVAS};
     padding: 8px 8px 6px 8px;
     box-shadow: 0 8px 22px rgba(15,23,42,0.10);
   }}
   .kicker {{
-    color: #b45309;
+    color: {GOLD};
     font-size: 13px;
     font-weight: 800;
     letter-spacing: 0.16em;
     text-transform: uppercase;
   }}
   .title {{
-    color: #0b1f3a;
+    color: {NAVY};
     font-size: 20px;
     font-weight: 800;
     margin: 2px 0 8px 0;
@@ -1376,17 +1394,17 @@ def _wrap(title: str, svg_body: str, w: int, h: int, note: str = "") -> None:
 def _diagram_ingestion() -> tuple[str, int, int, str, str]:
     body = "".join(
         [
-            _lane(12, 10, 270, 340, "Source", "#f4efe6"),
-            _lane(314, 10, 270, 340, "Ingest", "#eef6f8"),
-            _lane(616, 10, 270, 340, "Quality", "#f8f1ee"),
-            _lane(918, 10, 270, 340, "Serve", "#eef4ea"),
+            _lane(12, 10, 270, 340, "Source", "#F5EDD9"),
+            _lane(314, 10, 270, 340, "Ingest", "#E7EFF4"),
+            _lane(616, 10, 270, 340, "Quality", "#F5EDD9"),
+            _lane(918, 10, 270, 340, "Serve", "#E7EFF4"),
             _box(28, 48, 238, 130, "Landing Volume", "CSV / JSON files", "/bronze/landing", BRONZE),
             _box(28, 202, 238, 128, "Checkpoints", "Auto Loader offsets", "resumable", SILVER),
             _box(330, 48, 238, 130, "Detect", "cloudFiles / warehouse", "addNewColumns", TEAL),
             _box(330, 202, 238, 128, "bronze.grants", "Raw Delta + metadata", "_ingest_time", BRONZE),
-            _box(632, 48, 238, 110, "Quality gates", "grant_no, amount positive", "dedupe", "#a15c4a"),
+            _box(632, 48, 238, 110, "Quality gates", "grant_no, amount positive", "dedupe", GOLD_SOFT),
             _box(632, 186, 110, 144, "Pass", "to silver", "", OK),
-            _box(760, 186, 110, 144, "Hold", head="#a15c4a", bullets=["empty", "dup", "amt"]),
+            _box(760, 186, 110, 144, "Hold", head=GOLD_SOFT, bullets=["empty", "dup", "amt"]),
             _box(934, 48, 238, 130, "silver.grants", "Cleansed, _is_active", "leadership-ready", SILVER),
             _box(934, 202, 238, 128, "gold.*", "KPIs, forecast, scores", "app reads here", GOLD_LANE),
             _arrow(266, 113, 330, 113, "arrive"),
@@ -1410,7 +1428,7 @@ def _diagram_ingestion() -> tuple[str, int, int, str, str]:
 def _diagram_catalog() -> tuple[str, int, int, str, str]:
     body = "".join(
         [
-            _lane(12, 10, 1176, 350, "Unity Catalog   onr_demo", "#eef3f8"),
+            _lane(12, 10, 1176, 350, "Unity Catalog   onr_demo", "#E7EFF4"),
             _box(32, 46, 250, 130, "bronze", "grants · financial", "landing + checkpoints", BRONZE),
             _box(326, 46, 250, 130, "silver", "quality gates", "_is_active", SILVER),
             _box(620, 46, 250, 130, "gold", "summaries · models", "forecast · anomalies", GOLD_LANE),
@@ -1438,13 +1456,13 @@ def _diagram_catalog() -> tuple[str, int, int, str, str]:
 def _diagram_analytics() -> tuple[str, int, int, str, str]:
     body = "".join(
         [
-            _lane(12, 10, 250, 350, "Features", "#eef3f8"),
-            _lane(302, 10, 586, 350, "Models", "#f7f3ea"),
-            _lane(928, 10, 260, 350, "Decisions", "#eef4ea"),
+            _lane(12, 10, 250, 350, "Features", "#E7EFF4"),
+            _lane(302, 10, 586, 350, "Models", "#F5EDD9"),
+            _lane(928, 10, 260, 350, "Decisions", "#E7EFF4"),
             _box(28, 50, 218, 136, "gold features", "grants + ERP", "funding_features", GOLD_LANE),
             _box(28, 210, 218, 130, "Same portfolio", "no second dataset", "408 after inbound", TEAL),
             _box(322, 48, 166, 136, "Random Forest", "large award >= $1M", "Fund / Review / Defer", NAVY),
-            _box(512, 48, 166, 136, "IsolationForest", "spike · collapse", "low-return", "#a15c4a"),
+            _box(512, 48, 166, 136, "IsolationForest", "spike · collapse", "low-return", GOLD_SOFT),
             _box(702, 48, 166, 136, "OLS forecast", "2-yr + 95% band", "TREND-* IDs", TEAL),
             _box(322, 214, 166, 126, "predictions", "grant_predictions", "", SILVER),
             _box(512, 214, 166, 126, "anomalies", "grant_anomaly_scores", "", SILVER),
@@ -1472,16 +1490,16 @@ def _diagram_analytics() -> tuple[str, int, int, str, str]:
 def _diagram_portfolio() -> tuple[str, int, int, str, str]:
     body = "".join(
         [
-            _lane(12, 10, 260, 340, "Leader", "#eef3f8"),
-            _lane(312, 10, 560, 340, "Console", "#f7f3ea"),
-            _lane(912, 10, 276, 340, "Act", "#eef4ea"),
+            _lane(12, 10, 260, 340, "Leader", "#E7EFF4"),
+            _lane(312, 10, 560, 340, "Console", "#F5EDD9"),
+            _lane(912, 10, 276, 340, "Act", "#E7EFF4"),
             _box(28, 50, 228, 130, "No SQL required", "Code 08 officer", "signed-in identity", TEAL),
             _box(28, 206, 228, 124, "gold.*", "single catalog", "", GOLD_LANE),
             _box(332, 48, 160, 130, "Filter", "FY · area · amount", "", NAVY),
             _box(516, 48, 160, 130, "Search", "quantum · ONRD", "search_history", TEAL),
             _box(700, 48, 152, 130, "Visuals", "KPIs · charts", "budget gauge", GOLD_LANE),
             _box(332, 206, 252, 124, "Daily brief", "automated summary", "daily_briefs", OK),
-            _box(608, 206, 244, 124, "Flags", "AT_RISK · anomalies", "", "#a15c4a"),
+            _box(608, 206, 244, 124, "Flags", "AT_RISK · anomalies", "", GOLD_SOFT),
             _box(928, 50, 244, 130, "Extract", "CSV from search", "", SILVER),
             _box(928, 206, 244, 124, "Follow up", "declining + AT_RISK", "", GOLD_LANE),
             _arrow(256, 115, 332, 115),
@@ -1504,9 +1522,9 @@ def _diagram_portfolio() -> tuple[str, int, int, str, str]:
 def _diagram_export() -> tuple[str, int, int, str, str]:
     body = "".join(
         [
-            _lane(12, 10, 260, 340, "Select", "#eef3f8"),
-            _lane(312, 10, 420, 340, "Package", "#f7f3ea"),
-            _lane(772, 10, 416, 340, "Leave the platform", "#eef4ea"),
+            _lane(12, 10, 260, 340, "Select", "#E7EFF4"),
+            _lane(312, 10, 420, 340, "Package", "#F5EDD9"),
+            _lane(772, 10, 416, 340, "Leave the platform", "#E7EFF4"),
             _box(28, 50, 228, 130, "Filtered query", "FY 2025-2026", "never SELECT *", TEAL),
             _box(28, 206, 228, 124, "gold / silver", "business-ready", "", GOLD_LANE),
             _box(332, 48, 120, 130, "CSV", "sheets", "", SILVER),
@@ -1535,10 +1553,10 @@ def _diagram_export() -> tuple[str, int, int, str, str]:
 def _diagram_infrastructure() -> tuple[str, int, int, str, str]:
     body = "".join(
         [
-            _lane(12, 10, 276, 340, "Compute", "#eef3f8"),
-            _lane(324, 10, 312, 340, "Bundle", "#f7f3ea"),
-            _lane(672, 10, 246, 340, "Catalog", "#eef4ea"),
-            _lane(954, 10, 234, 340, "Identity", "#f8f1ee"),
+            _lane(12, 10, 276, 340, "Compute", "#E7EFF4"),
+            _lane(324, 10, 312, 340, "Bundle", "#F5EDD9"),
+            _lane(672, 10, 246, 340, "Catalog", "#E7EFF4"),
+            _lane(954, 10, 234, 340, "Identity", "#F5EDD9"),
             _box(28, 50, 244, 130, "Warehouse", "onr demo warehouse", "serverless SQL", TEAL, fs=10),
             _box(28, 206, 244, 124, "Cluster", "onr demo cluster", "jobs / stream", NAVY, fs=10),
             _box(340, 48, 136, 130, "Volumes", "landing", "checkpoints", BRONZE),
@@ -1547,7 +1565,7 @@ def _diagram_infrastructure() -> tuple[str, int, int, str, str]:
             _box(492, 206, 128, 124, "SDP", "grants_stream", "", SILVER),
             _box(688, 50, 214, 130, "onr_demo", "bronze to silver", "gold to app", GOLD_LANE),
             _box(688, 206, 214, 124, "Models", "RF · IsolationForest", "OLS", NAVY),
-            _box(970, 50, 202, 130, "App SP", "own principal", "OAuth", "#a15c4a"),
+            _box(970, 50, 202, 130, "App SP", "own principal", "OAuth", GOLD_SOFT),
             _box(970, 206, 202, 124, "Least privilege", "gold SELECT", "no bronze", OK),
             _arrow(272, 115, 340, 113),
             _arrow(636, 113, 688, 115, "bind"),
@@ -1567,7 +1585,7 @@ def _diagram_infrastructure() -> tuple[str, int, int, str, str]:
 def _diagram_home() -> tuple[str, int, int, str, str]:
     body = "".join(
         [
-            _box(12, 36, 148, 140, "Access", "IdP session", "Element 1", "#a15c4a", fs=12),
+            _box(12, 36, 148, 140, "Access", "IdP session", "Element 1", GOLD_SOFT, fs=12),
             _box(176, 36, 148, 140, "Infra", "bundle inventory", "Element 2", NAVY, fs=12),
             _box(340, 36, 148, 140, "Ingest", "Volume + quality", "Element 3", BRONZE, fs=12),
             _box(504, 36, 148, 140, "Catalog", "UC + lineage", "Element 4", SILVER, fs=12),
@@ -1630,7 +1648,7 @@ def style_fig(fig):
     try:
         fig.update_layout(
             paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="#f4f7fb",
+            plot_bgcolor="#E7EFF4",
             font=dict(color=INK),
             title_font=dict(color=NAVY),
         )
