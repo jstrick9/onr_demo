@@ -2,7 +2,8 @@
 
 **Persona:** one Key Personnel voice (platform / data lead). You click and you talk.  
 **This tape:** Elements **3–7** + strategic prompts **(a)–(e)** woven at 20–30 seconds each.  
-**Not this tape:** Element 1 (MFA / IdP) and Element 2 (Terraform / CI-CD). Infrastructure is a 10-second glance.
+**On this console:** Element 1 is the **Access** strip (IdP session + app SP). Element 2 is the Infrastructure **estate + bundle** inventory. Those are the *result*, not the live MFA challenge and not a live `bundle deploy`.  
+**Still not in this app:** an MFA prompt, a Deploy button, Terraform apply, or a GitHub Action run. If Volume IV is this file only, say that out loud on Home and on Infrastructure. Do not invent those actions.
 
 **How to read this page**
 
@@ -27,13 +28,13 @@
 
 | Clock | Page | Live action | Must say |
 |------:|------|-------------|----------|
-| 0:00–1:00 | Home | Point at **400** | Mock data; catalog |
-| 1:00–8:30 | Ingestion | **Ingest selected files** then **Start stream** | **Element 3**; 400→408; Hold; **(a)**; **(d)** |
+| 0:00–1:20 | Home | Point at **400**, then **Access** | Mock data; **Element 1** result (IdP + app SP) |
+| 1:20–8:30 | Ingestion | **Ingest selected files** then **Start stream** | **Element 3**; 400→408; Hold; **(a)**; **(d)** |
 | 8:30–12:00 | Catalog | **Open lineage** | **Element 4**; **(e)** |
 | 12:00–18:00 | Analytics | **Score registered models**; point at **Drift** | **Element 5**; **(b)**; Resource action |
 | 18:00–21:00 | Portfolio | Search `quantum`; **Generate daily brief** | **Element 6** |
 | 21:00–24:20 | Export | FY 2025–2026 export; **Execute live Statement API** | **Element 7**; **(c)** |
-| 24:20–25:00 | Infrastructure | Inventory 10 s | Close; companion tape |
+| 24:20–25:00 | Infrastructure | Estate + **Bundle** | **Element 2** inventory; no deploy button |
 
 **Never cut:** 400→408, Hold tray, stream heartbeat, Catalog Explorer lineage, score, search, live Statement API, all five prompts.  
 **Cut first if late:** Quality tab, Policies tab, Trends tab, Schema Docs, Infrastructure.
@@ -64,15 +65,17 @@ That is the only window you need. Do **not** open MFA, Terraform, GitHub Actions
 
 ## Word-for-word script
 
-### 0:00–1:00 — Home
+### 0:00–1:20 — Home
 
-`[DO THIS]` App on **Home**. Cursor on **Active grants = 400**. Do not scroll.
+`[DO THIS]` App on **Home**. Cursor on **Active grants = 400**. Then on **Access**.
 
 This is the ONR Code 08 portfolio on Databricks. Everything on this screen is mock, synthetic Compass data — four hundred S-and-T grants and twelve hundred derived ERP lines. No CUI, no PII, no classified.
 
-You are looking at catalog `onr_demo`, medallion layers bronze, silver, gold, and app. SQL runs on the serverless warehouse named `onr demo warehouse`. Training jobs run on `onr demo cluster`. Score runs on `onr demo ml`, dedicated to the app. The product in front of you is the Databricks App `onr-demo-poc`.
+**Element one: access.** You are looking at a live workspace IdP session — my name is in the HUD and on this Access strip. Multi-factor authentication happened at the identity provider before this console loaded. There is no password form here. The app has its **own** service principal. It does not borrow my token. Analysts `SELECT` gold; they never see bronze. This cell is unclassified mock on commercial AWS. We are not claiming IL5.
 
-This recording is the data-and-analytics path — Elements three through seven. Secure access and infrastructure-as-code are the companion tape. Each page kicker is the Element number. The Workspace strip on every page opens the live notebook or Unity Catalog table for that Element.
+You are looking at catalog `onr_demo`, medallion layers bronze, silver, gold, and app. SQL runs on the serverless warehouse named `onr demo warehouse`. Score runs on `onr demo ml`, dedicated to the app. The product is the Databricks App `onr-demo-poc`.
+
+Each page kicker is the Element number. The Workspace strip opens the live notebook or Unity Catalog table for that Element.
 
 `[DO THIS]` Click **Ingestion**.
 
@@ -218,9 +221,13 @@ Strategic prompt (c). Three planes, same identity. The app has its **own** servi
 
 ---
 
-### 24:20–25:00 — Close
+### 24:20–25:00 — Element 2 close
 
-Ten seconds. Warehouse `onr demo warehouse`, cluster `onr demo cluster`, score cluster `onr demo ml`, app `onr-demo-poc`, paused file-arrival job, SDP pipeline — all named in `databricks.yml`. Full IaC and CI-CD are the companion tape.
+**Element two: infrastructure as code.**
+
+`[DO THIS]` Point at **Estate**, then **Bundle**. Do not click a deploy control — there is not one.
+
+Warehouse `onr demo warehouse`, score cluster `onr demo ml`, app `onr-demo-poc`, paused file-arrival job, SDP pipeline. Volumes, this app, that job, and that pipeline are in `databricks.yml`. Deploy is `databricks bundle deploy -t poc` from the repo — not a button on this console. The warehouse and clusters are pre-existing. This page is the inventory of what that deploy produced.
 
 Tomorrow another CSV lands on the same Volume. Same gold. Same registered models — we rescore from this console. Mock data only.
 

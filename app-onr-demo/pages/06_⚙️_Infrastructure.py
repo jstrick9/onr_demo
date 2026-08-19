@@ -11,16 +11,19 @@ from utils.workspace_names import SQL_WAREHOUSE_NAME, ALL_PURPOSE_CLUSTER_NAME, 
 from utils.ui import page_header, render_architecture, fit_metrics, provenance_note
 from utils.workspace_ops import render_page_links
 from utils.mission_themes import render_mission_ribbon, theme_chip
+from utils.access_plane import render_access_plane
+from utils.infra_estate import render_estate, render_bundle, bundle_excerpt
 
 set_page_config(page_title="Element 2 · Infrastructure | ONR Portfolio")
 setup_sidebar()
 
 page_header(
-    "Element 2 · glance",
+    "Element 2 · Inventory",
     "Infrastructure",
-    "Platform glance. What is deployed here. Full Terraform / CI-CD is the companion tape. The bundle does not create the warehouse or clusters.",
+    "Live estate and the Asset Bundle that manages volumes, this app, the paused file-arrival job, and the SDP pipeline. Warehouse and clusters are pre-existing. There is no deploy control here.",
 )
 render_mission_ribbon("infrastructure")
+render_page_links("infrastructure", "onr_demo")
 
 init_user_session_state()
 get_runtime_env()
@@ -52,6 +55,7 @@ if cursor:
         uc_ok = False
 
 theme_chip("recover", "infrastructure", "inventory")
+render_estate()
 fit_metrics(
     [
         ("Catalog", onr_catalog),
@@ -67,7 +71,9 @@ if cursor and not uc_ok:
 elif not cursor:
     st.caption("Warehouse not connected — inventory below is the intended deployment.")
 
-tab1, tab2 = st.tabs(["Inventory", "Bundle"])
+render_bundle()
+
+tab1, tab2, tab3 = st.tabs(["Inventory", "Identity", "Full bundle"])
 
 with tab1:
     st.markdown("#### Workspace objects")
@@ -108,24 +114,24 @@ with tab1:
         hide_index=True,
     )
 
-    st.markdown("#### Identity")
+with tab2:
     theme_chip("boundary", "infrastructure", "identity")
+    render_access_plane(cursor, onr_catalog)
     st.caption(
         "This app authenticates as its own service principal. "
         "Warehouse access and catalog grants are scoped to that identity. "
         "Analysts read gold; they do not see bronze."
     )
 
-with tab2:
-    st.caption("Databricks Asset Bundle — volumes, app, paused file-arrival job, SDP pipeline.")
+with tab3:
+    st.caption("Full bundle definition packaged next to the app, or the repo-root databricks.yml.")
+    label, text = bundle_excerpt()
+    st.caption(f"Source · {label}")
     dab_candidates = [
         app_root / "config" / "databricks.yml",
         app_root.parent / "databricks.yml",
     ]
     dab = next((p for p in dab_candidates if p.exists()), None)
-    if dab:
-        st.code(dab.read_text(), language="yaml")
-    else:
-        st.caption("Bundle definition is not packaged next to the app.")
+    st.code(dab.read_text() if dab else text, language="yaml")
 
 render_architecture("infrastructure")

@@ -66,6 +66,12 @@ def setup_sidebar():
         who = html.escape(
             str(user.get("display_name") or user.get("email") or "Workspace session")
         )
+        app_name = html.escape(
+            str(
+                __import__("os").getenv("DATABRICKS_APP_NAME")
+                or "onr-demo-poc"
+            )
+        )
         st.markdown(
             f"""
 <div class="hud">
@@ -76,10 +82,10 @@ def setup_sidebar():
       <div class="hud-sub">ONR · Code 08</div>
     </div>
   </div>
-  <div class="hud-row"><span class="hud-orb"></span> Link up</div>
+  <div class="hud-row"><span class="hud-orb"></span> IdP session</div>
   <div class="hud-row"><span class="hud-orb gold"></span> Console live</div>
   <div class="hud-user">{who}</div>
-  <div class="hud-foot">UNCLASSIFIED // MOCK</div>
+  <div class="hud-foot">App SP · {app_name} · not your token</div>
 </div>
             """,
             unsafe_allow_html=True,

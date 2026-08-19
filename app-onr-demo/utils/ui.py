@@ -1431,22 +1431,24 @@ def _diagram_infrastructure() -> tuple[str, int, int, str, str]:
 def _diagram_home() -> tuple[str, int, int, str, str]:
     body = "".join(
         [
-            _box(16, 36, 168, 140, "Infra", "warehouse · cluster", "Element 2", NAVY),
-            _box(208, 36, 168, 140, "Ingest", "Volume + quality", "Element 3", BRONZE),
-            _box(400, 36, 168, 140, "Catalog", "UC + lineage", "Element 4", SILVER),
-            _box(592, 36, 168, 140, "Analytics", "RF · IF · OLS", "Element 5", TEAL),
-            _box(784, 36, 168, 140, "Portfolio", "search · brief", "Element 6", APP_LANE),
-            _box(976, 36, 204, 140, "Export", "open formats + API", "Element 7", GOLD_LANE),
-            _arrow(184, 106, 208, 106),
-            _arrow(376, 106, 400, 106),
-            _arrow(568, 106, 592, 106),
-            _arrow(760, 106, 784, 106),
-            _arrow(952, 106, 976, 106),
-            _box(208, 214, 776, 116, "Unity Catalog  onr_demo", "bronze to silver to gold to app", "one identity plane", OK),
-            _arrow(292, 176, 292, 214),
-            _arrow(484, 176, 484, 214),
-            _arrow(676, 176, 676, 214),
-            _arrow(868, 176, 868, 214),
+            _box(12, 36, 148, 140, "Access", "IdP session", "Element 1", "#a15c4a", fs=12),
+            _box(176, 36, 148, 140, "Infra", "bundle inventory", "Element 2", NAVY, fs=12),
+            _box(340, 36, 148, 140, "Ingest", "Volume + quality", "Element 3", BRONZE, fs=12),
+            _box(504, 36, 148, 140, "Catalog", "UC + lineage", "Element 4", SILVER, fs=12),
+            _box(668, 36, 148, 140, "Analytics", "RF · IF · OLS", "Element 5", TEAL, fs=12),
+            _box(832, 36, 148, 140, "Portfolio", "search · brief", "Element 6", APP_LANE, fs=12),
+            _box(996, 36, 192, 140, "Export", "open formats + API", "Element 7", GOLD_LANE, fs=12),
+            _arrow(160, 106, 176, 106),
+            _arrow(324, 106, 340, 106),
+            _arrow(488, 106, 504, 106),
+            _arrow(652, 106, 668, 106),
+            _arrow(816, 106, 832, 106),
+            _arrow(980, 106, 996, 106),
+            _box(340, 214, 688, 116, "Unity Catalog  onr_demo", "bronze to silver to gold to app", "one identity plane", OK),
+            _arrow(414, 176, 414, 214),
+            _arrow(578, 176, 578, 214),
+            _arrow(742, 176, 742, 214),
+            _arrow(906, 176, 906, 214),
         ]
     )
     return (
@@ -1454,7 +1456,7 @@ def _diagram_home() -> tuple[str, int, int, str, str]:
         body,
         1200,
         350,
-        "One catalog. Leadership never leaves the console.",
+        "IdP signs you in. The app is a different principal. One catalog from ingest through export.",
     )
 
 

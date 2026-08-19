@@ -9,6 +9,7 @@ from utils.user_helpers import init_user_session_state
 from utils.ui import page_header, capability_cards, render_architecture
 from utils.workspace_ops import render_page_links
 from utils.mission_themes import render_mission_ribbon
+from utils.access_plane import render_access_plane
 
 set_page_config(page_title="ONR Portfolio | Compass")
 setup_sidebar()
@@ -16,7 +17,7 @@ setup_sidebar()
 page_header(
     "ONR · Code 08",
     "ONR Portfolio",
-    "Self-service grants and ERP on catalog onr_demo. Data path is Elements 3–7. Infrastructure is a glance. Secure access is the companion tape.",
+    "Self-service grants and ERP on catalog onr_demo. Access is the IdP session on this page. Infrastructure is the live bundle inventory.",
 )
 render_mission_ribbon("home")
 render_page_links("home", "onr_demo")
@@ -78,6 +79,7 @@ try:
     c3.metric("ERP lines", f"{int(n_fin or 0):,}")
     c4.metric("Execution", f"{float(exe or 0):.1f}%")
     provenance_note("silver.grants", onr_catalog)
+    _access_cursor = cursor
 except Exception:
     from utils.portfolio_data import portfolio_kpis
 
@@ -91,13 +93,17 @@ except Exception:
     d.metric("Execution", f"{k['execution_rate']:.1f}%")
     provenance_note("silver.grants", onr_catalog, via="fixture")
     st.caption("Showing the packaged portfolio while the warehouse is unavailable.")
+    _access_cursor = None
+
+render_access_plane(_access_cursor, onr_catalog)
 
 st.markdown("")
 render_architecture("home")
 
 capability_cards(
     [
-        {"title": "Element 2 · Infrastructure", "body": "Deployed catalog, compute, and bundle inventory. Companion tape."},
+        {"title": "Element 1 · Access", "body": "Workspace IdP session. App has its own principal. MFA is the IdP, not this form."},
+        {"title": "Element 2 · Infrastructure", "body": "Live bundle inventory. Warehouse and clusters are pre-existing."},
         {"title": "Element 3 · Ingestion", "body": "Land files, apply quality gates, refresh silver and gold."},
         {"title": "Element 4 · Catalog", "body": "Registry, health scores, lineage, and classification tags."},
         {"title": "Element 5 · Analytics", "body": "Fund / Review / Defer, anomaly queue, FY forecast, drift, and trend IDs."},

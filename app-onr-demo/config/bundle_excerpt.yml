@@ -1,0 +1,42 @@
+# Databricks Asset Bundle — onr_demo / target poc
+# Does NOT create the SQL warehouse or the clusters.
+#   databricks bundle deploy -t poc
+
+bundle:
+  name: onr_demo
+
+targets:
+  poc:
+    mode: development
+    default: true
+
+resources:
+  volumes:
+    landing:
+      name: landing
+      catalog_name: onr_demo
+      schema_name: bronze
+    checkpoints:
+      name: checkpoints
+      catalog_name: onr_demo
+      schema_name: bronze
+
+  apps:
+    onr_demo_app:
+      name: onr-demo-poc
+      source_code_path: ./app-onr-demo
+
+  jobs:
+    grants_file_arrival:
+      name: onr-demo-grants-file-arrival
+      trigger:
+        pause_status: PAUSED
+        file_arrival:
+          url: /Volumes/onr_demo/bronze/landing/grants
+
+  pipelines:
+    onr_grants_stream:
+      name: onr-demo-grants-stream
+      catalog: onr_demo
+      serverless: true
+      continuous: false
