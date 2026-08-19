@@ -240,7 +240,7 @@ Tomorrow another CSV lands on the same Volume. Same gold. Same registered models
 | If the clock says | Skip and go to |
 |-------------------|----------------|
 | 4:30 and Ingest is still spinning | Keep talking (a); do not open Quality |
-| 7:30 and bronze has not ticked | Say “waiting for availableNow to drain the landing file.” If still nothing, click **Open stream notebook**, then come back. At 8:30 go to **Catalog** anyway |
+| 7:30 and bronze has not ticked | Say “file is on the Volume.” If still nothing, click **Open stream notebook**, then come back. At 8:30 go to **Catalog** anyway |
 | 11:30 still on Catalog | Skip Policies; say (e) in two sentences; go to **Analytics** |
 | 16:30 and score is still running | Stay on Analytics; skip Metrics; go **Portfolio** at 18:00 |
 | 20:00 still on Analytics | Skip Anomalies **or** Forecast (keep one); go **Portfolio** search |
