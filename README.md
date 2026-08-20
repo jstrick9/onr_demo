@@ -14,7 +14,7 @@ Single-environment proof of concept for Office of Naval Research Code 08 ITSS.
 | Portfolio | KPIs, search, daily brief, AT_RISK / anomaly flags |
 | Export | CSV / JSON / Parquet, Statement Execution API |
 
-**25-minute recording:** [DEMO_SCRIPT.md](DEMO_SCRIPT.md) is the word-for-word presenter script (Elements 3–7). Night-before train `04` + `04b`; on camera run `01b` + `04c`.
+**Speaker script:** [ONR_ITSS_Databricks_Speaker_Script.docx](ONR_ITSS_Databricks_Speaker_Script.docx) is the word-for-word presenter script (Elements 3–7, brief Element 2 inventory). Night-before train `04` + `04b`; on camera ingest, stream, score `04c`.
 
 ---
 
