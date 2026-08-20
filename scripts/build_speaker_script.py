@@ -206,7 +206,7 @@ def build():
     )
     p(
         doc,
-        "One Key Personnel  ·  live console  ·  no slides  ·  mock data only",
+        "Word-for-word  ·  roman is what you say  ·  gold is what you click",
         size=11,
         color=INK,
         space_after=14,
@@ -239,7 +239,7 @@ def build():
     )
     speak(
         doc,
-        "This is Project Compass, the Code 08 portfolio console. Four hundred synthetic grants, four hundred thirty-seven million dollars. Everything on this tape is mock data. No CUI, no PII, no classified.",
+        "This is Project Compass — Code 08’s portfolio console. Four hundred synthetic grants, about four hundred thirty-seven million dollars. All mock. No CUI, no PII, nothing classified. Let me show you the estate real quick, then we’ll take a file.",
     )
     do_this(doc, "Click Infrastructure.")
 
@@ -248,27 +248,24 @@ def build():
         doc,
         "Cursor on Estate. Three tiles: warehouse, score cluster, file-arrival job. Do not open Inventory, Identity, or Full bundle. Do not look for a Deploy button — there is not one.",
     )
-    speak(doc, "Element two: infrastructure as code.")
     speak(
         doc,
-        "This page is the inventory of the estate that was deployed from version control. It is not a second provision. The warehouse serves this console. The score cluster is dedicated to the application identity, not to me. File-arrival is paused. There is no Deploy button in this console. Configuration is reviewed in Git, not clicked here.",
+        "Quick beat on Element two. This is the inventory of what we deployed from version control — we didn’t provision it from this screen. Warehouse serving the console. Score cluster dedicated to the application identity, not to me. File-arrival is paused. There’s no Deploy button in here. Config gets reviewed in Git, not clicked in a console. File’s waiting — let’s take it.",
     )
     do_this(doc, "Click Ingestion. Do not return to Infrastructure.")
 
     heading(doc, "Ingestion  ·  Element 3  ·  prompts (a) and (d)")
-    speak(doc, "Element three: automated ingestion, data operations, and streaming.")
     speak(
         doc,
-        "A new grants file has arrived. I am not recoding a pipeline. Inbound grants is the good file. Quarantine sample is three bad rows — empty grant number, negative amount, and a duplicate.",
+        "Element three is data operations. A grants file showed up. I’m not recoding a pipeline to take it. Inbound grants is the good file. Quarantine sample is the three bad rows — empty grant number, negative amount, and a duplicate. I’ll take both so you can see publish and hold in the same pass.",
     )
     do_this(
         doc,
         "Confirm both Inbound grants and Quarantine sample are selected. Click Ingest selected files. Keep talking.",
     )
-    speak(doc, "Strategic prompt (a) — sustainment of the legacy footprint.")
     speak(
         doc,
-        "We do not cut over the D-and-A Portal, the reporting stack, or the existing ETL in a weekend. The pattern is strangler-fig coexistence. New files land in a governed landing zone. Both the path this button just used and the file-arrival path I will start next write the same bronze table — the landing table. Legacy reports keep reading the serving layer over a standard connection. When a report is ready to retire, we point it at the table this console already uses. Rollback is delete-the-batch, not rewrite-the-estate.",
+        "While that’s landing — this is prompt (a), the legacy footprint. We’re not cutting over the D-and-A Portal, the reporting stack, or the existing ETL this weekend. Strangler-fig. New files go to a governed landing zone. This button and the file-arrival path I’m about to start both write the same bronze table. Legacy reports keep reading the serving layer over a standard connection. When a report’s ready to retire, we point it at the table this console already uses. Rollback is delete-the-batch, not rewrite-the-estate.",
     )
     do_this(
         doc,
@@ -276,11 +273,11 @@ def build():
     )
     speak(
         doc,
-        "Eight rows published. The three quarantine rows never entered the landing table — they are held. One live grant published with a warning, missing abstract. Quality is the tab if a reviewer wants the scoreboard. We do not need it here.",
+        "There it is. Eight published. Those three never entered landing — they’re held. Empty, dup, amt. One of the live grants went through with a warning, missing abstract. Quality tab’s there if you want the scoreboard. We don’t need it.",
     )
     speak(
         doc,
-        "Same Element three. That button was the warehouse path. Next is file arrival. I am not leaving this console.",
+        "Same Element three. That was the warehouse path. Next is file arrival. I’m staying right here.",
     )
     do_this(
         doc,
@@ -288,53 +285,53 @@ def build():
     )
     speak(
         doc,
-        "The console just landed a new file and loaded it into the same bronze table. That is file-arrival, not a scheduled batch. Open stream notebook is there if a reviewer wants the job. We do not wait on a cold start.",
+        "Console just dropped a new file into the landing zone and loaded it into the same bronze table. That’s file-arrival, not a scheduled batch. Open stream notebook is there if you want the job. We’re not waiting on a cold start.",
     )
     do_this(doc, "Point at bronze count, last 2 min, last file ago, then Delta time travel.")
     speak(
         doc,
-        "Bronze ticks. Silver — the trusted table — stays at four hundred and eight because it dedupes on grant number. The serving layer does not double-count the same award.",
+        "Bronze ticks. Silver — the trusted table — stays at four hundred and eight. It dedupes on grant number, so we don’t double-count the same award.",
     )
-    speak(doc, "Strategic prompt (d) — disaster recovery, resilience, and failover.")
     speak(
         doc,
-        "Contract targets: RPO fifteen minutes for the serving layer, essentially zero for landing — the file is still sitting in object storage. Time travel is the row-level RPO — baseline snapshot versus now. We are not restoring on camera. RTO thirty minutes to serving gold, about five minutes to serving the app. Annual DR is non-disruptive: pause file-arrival, restore yesterday’s gold into a side catalog, point a clone of the console at it, validate, tear down.",
+        "That’s also prompt (d), disaster recovery. Contract is RPO fifteen minutes on the serving layer, essentially zero on landing, because the file’s still sitting in object storage. Time travel is the row-level RPO — baseline versus now. We’re not restoring on camera. RTO thirty minutes to serving gold, about five to serving the app. Annual DR is non-disruptive: pause file-arrival, restore yesterday’s gold into a side catalog, point a clone of the console at it, validate, tear down. Let’s look at lineage on those eight.",
     )
     do_this(doc, "Click Catalog. Do not return to Ingestion.")
 
     heading(doc, "Catalog  ·  Element 4  ·  prompt (e)")
-    speak(doc, "Element four: data governance, quality, and cataloging.")
+    speak(
+        doc,
+        "Element four is governance. I want you to see the graph, not a picture we drew in this console.",
+    )
     do_this(
         doc,
         "Click Open lineage · gold.grants_summary. That is the only workspace jump. If the graph is empty, open gold.grants_summary from the same explorer. Come back immediately.",
     )
     speak(
         doc,
-        "Open lineage is the catalog’s native graph — landing, to bronze, to silver, to gold, to this console. That graph is the Element four visual. This console is the operator surface, not the system of record.",
+        "That’s the catalog’s own graph. Landing, bronze, silver, gold, this console. That’s the Element four visual. This screen is the operator surface, not the system of record.",
     )
     do_this(doc, "Back on Catalog — Registry. Show bronze, silver, gold, app.")
     speak(
         doc,
-        "Four schemas. The eight grants we just ingested are already registered. Metadata — source file, ingest time, tags — is on the table, not in a spreadsheet.",
+        "Four schemas. The eight we just took in are already registered. Source file, ingest time, tags — on the table, not in a spreadsheet.",
     )
     do_this(doc, "Quality tab. Point at the health scores. Do not open every expander.")
     speak(
         doc,
-        "Completeness, accuracy, consistency, timeliness. A lapsed vendor feed shows up here as a timeliness drop, not a blank dashboard.",
+        "Completeness, accuracy, consistency, timeliness. If a vendor feed lapses, you see it here as a timeliness drop — not a blank dashboard.",
     )
     do_this(doc, "Policies and tags. Point at data_source = mock.")
-    speak(doc, "Strategic prompt (e) — data vendor and lifecycle management.")
     speak(
         doc,
-        "Every external feed is a licensed product: owner, renewal date, quality SLO. Today the tags are data_source, domain, data_sensitivity. In production we add vendor, license_id, renewal_date. Usage is metered on every search and every export. If a subscription stops, nothing new lands. Last-good gold stays. We do not auto-delete.",
+        "And that’s prompt (e), vendor and lifecycle. Every external feed is a licensed product — owner, renewal date, quality SLO. Today the tags are data_source, domain, data_sensitivity. In production we add vendor, license_id, renewal_date. Usage is metered on every search and every export. If a subscription stops, nothing new lands. Last-good gold stays. We don’t auto-delete. Let’s score what we just took in.",
     )
     do_this(doc, "Click Analytics. Do not return to Catalog.")
 
     heading(doc, "Analytics  ·  Element 5  ·  prompt (b)")
-    speak(doc, "Element five: decision-support analytics and modeling.")
     speak(
         doc,
-        "The models were trained last night and registered in the catalog. I am not retraining on camera. I am triggering a live score against the portfolio we just ingested — including the eight new grants.",
+        "Element five is decision support. Models were trained last night and registered in the catalog. I’m not retraining. I’m scoring the portfolio we just ingested — including those eight.",
     )
     do_this(
         doc,
@@ -342,20 +339,15 @@ def build():
     )
     speak(
         doc,
-        "Score registered models — that button scores the current portfolio from models already in the catalog. It does not train.",
-    )
-    speak(doc, "Strategic prompt (b) — financial and budgetary analytical integration.")
-    speak(
-        doc,
-        "Financial execution is a first-class feed: twelve hundred ERP lines — budget, actual, execution rate. Three complementary models, all on this ingested portfolio, not a second dataset.",
+        "That button scores from models already in the catalog. It doesn’t train. While it runs — this is prompt (b), financial and budgetary integration. Execution is a first-class feed. Twelve hundred ERP lines: budget, actual, execution rate. Three models, all on this same portfolio, not a second dataset.",
     )
     speak(
         doc,
-        "Descriptive: the Portfolio page a Code 08 resource officer opens — dollars, execution, ON_TARGET, WARNING, AT_RISK.",
+        "Descriptive is the page a resource officer actually opens — dollars, execution, ON_TARGET, WARNING, AT_RISK. That’s Portfolio, next.",
     )
     speak(
         doc,
-        "Predictive: a Random Forest large-award classifier — Fund, Review, or Defer. An IsolationForest for budget spike, execution collapse, and low-return concentration. And ordinary least squares, two-year horizon, ninety-five percent band, trend IDs TREND-ACCEL, TREND-STEADY, TREND-DECLINE. That is OLS, not Prophet.",
+        "Predictive: a Random Forest that returns Fund, Review, or Defer on large awards. An IsolationForest for budget spike, execution collapse, and low-return concentration. And ordinary least squares — two-year horizon, ninety-five percent band, TREND-ACCEL, TREND-STEADY, TREND-DECLINE. That’s OLS, not Prophet.",
     )
     speak(
         doc,
@@ -364,7 +356,7 @@ def build():
     do_this(doc, "Point at Resource action. Then Drift — program-mix PSI, award-size PSI, Fund share.")
     speak(
         doc,
-        "That is feature and score mix versus the baseline snapshot, not a fake accuracy drop. The live grants moved the mix.",
+        "That’s feature and score mix versus the baseline snapshot — not a fake accuracy drop. The live grants moved the mix.",
     )
     do_this(
         doc,
@@ -372,59 +364,53 @@ def build():
     )
     speak(
         doc,
-        "The Resource action sentence is the close a resource officer would sign — Defer dollars off one area onto AT_RISK plus TREND-DECLINE. The declining program is the reallocation candidate on the next page.",
+        "Resource action is the sentence a resource officer would sign — Defer dollars off one area onto AT_RISK plus TREND-DECLINE. That declining program is the reallocation candidate. Let’s look at it the way they would.",
     )
     do_this(doc, "Click Portfolio. Do not return to Analytics.")
 
     heading(doc, "Portfolio  ·  Element 6")
-    speak(doc, "Element six: unified dashboard, visualizations, and process automation.")
-    speak(doc, "A non-technical leader does not need SQL. Active grants is still four hundred and eight.")
+    speak(
+        doc,
+        "Element six — this is the officer view. Nobody here needs SQL. Active grants is still four hundred and eight.",
+    )
     do_this(
         doc,
         "Search box on this page. Type quantum. Press enter. Point at Routing. Accept or Defer one flagged grant.",
     )
     speak(
         doc,
-        "Search is live against the serving layer. It is written to the search history. That is the audit Zero Trust asked for, and it is the usage meter for prompt (e).",
+        "Search is live against the serving layer, and it writes a history row. That’s the audit Zero Trust asked for, and it’s the usage meter for prompt (e).",
     )
     do_this(doc, "Click Generate daily brief. Wait for the letterhead. Stay on this page.")
     speak(
         doc,
-        "Generate daily brief — automated summary. Classification banner, three bullets, one recommended action. A row lands in the brief log. That is process automation — not a staffer writing the morning book.",
+        "That’s the morning book, without a staffer writing it. Classification banner, three bullets, one recommended action. A row lands in the brief log.",
     )
     do_this(doc, "Budget tab. Point at one AT_RISK row. Then click Export.")
     speak(
         doc,
-        "Same serving layer the forecast used. AT_RISK plus TREND-DECLINE is the reallocation set. Extract is next.",
+        "Same serving layer the forecast used. AT_RISK plus TREND-DECLINE is the reallocation set. Last stop — get it out of here in an open format.",
     )
 
     heading(doc, "Export  ·  Element 7  ·  prompt (c)")
-    speak(doc, "Element seven: interoperability, data portability, and secure export.")
+    speak(doc, "Element seven is interoperability. Filtered extract — not every column, every year.")
     do_this(
         doc,
         "Date range is already 2025 to 2026. Leave CSV and Parquet on. Dataset Grants Summary. Click Execute export. Download Parquet or CSV once. Stay on this screen.",
     )
     speak(
         doc,
-        "Filtered bulk extract — not every column, every year. Open formats: CSV, JSON, Parquet. Schema travels with the file: grant number, program area, amount, awardee.",
+        "Open formats — CSV, JSON, Parquet. Schema travels with the file: grant number, program area, amount, awardee.",
     )
     do_this(doc, "Open History. Point at the new row.")
-    speak(
-        doc,
-        "Export history — who, what, filter, row count. Continuous authorization, not a static password file.",
-    )
+    speak(doc, "Who, what, filter, row count. Continuous authorization — not a static password file.")
     do_this(
         doc,
         "Click Execute live Statement API call. Point at the statement receipt — statement_id, SUCCEEDED, row_count, warehouse, elapsed.",
     )
     speak(
         doc,
-        "Execute live Statement API call — that is the documented SQL REST contract. Short-lived token, same warehouse this dashboard uses. That is what Advana or Cloud One would call. It is not a vendor-only extract and it is not a fictional host.",
-    )
-    speak(doc, "Strategic prompt (c) — Zero Trust and IL5.")
-    speak(
-        doc,
-        "Three planes, same identity. The application has its own service principal; it does not borrow mine. The warehouse and the cluster are separate compute — micro-segmentation at the control plane. The catalog is the data-plane firewall. Least privilege: analysts read gold, they never see bronze. This cell is unclassified mock on commercial AWS — FedRAMP Moderate. The IL5 production cell is GovCloud, PrivateLink, customer-managed keys, continuous compliance against the same least-privilege grants. We are not claiming this POC is IL5.",
+        "That’s the documented SQL REST contract. Short-lived token, same warehouse this dashboard uses. That’s what Advana or Cloud One would call. Not a vendor-only extract, not a fictional host. And that’s prompt (c), Zero Trust and IL5. Three planes, same identity. The application has its own service principal; it doesn’t borrow mine. Warehouse and cluster are separate compute — micro-segmentation at the control plane. The catalog is the data-plane firewall. Least privilege: analysts read gold, they never see bronze. This cell is unclassified mock on commercial AWS, FedRAMP Moderate. The IL5 production cell is GovCloud, PrivateLink, customer-managed keys, continuous compliance against the same least-privilege grants. We’re not claiming this POC is IL5.",
     )
     speak(
         doc,
