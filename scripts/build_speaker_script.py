@@ -250,7 +250,7 @@ def build():
     )
     speak(
         doc,
-        "Quick beat on Element two. This is the inventory of what we deployed from version control — we didn’t provision it from this screen. Warehouse serving the console. Score cluster dedicated to the application identity, not to me. File-arrival is paused. There’s no Deploy button in here. Config gets reviewed in Git, not clicked in a console. File’s waiting — let’s take it.",
+        "This is the live estate. Warehouse this console runs on, cluster that scores the models, file-arrival job left paused. That’s Element two — infrastructure defined in Git, showing up here as inventory. Let’s take the grants file.",
     )
     do_this(doc, "Click Ingestion. Do not return to Infrastructure.")
 
